@@ -1,0 +1,15 @@
+---
+description: Reglas del proyecto Consultorio Renew Lab (Tauri + React + SQLite)
+globs: "**/*.{ts,tsx,rs}"
+alwaysApply: true
+---
+
+# Consultorio Renew Lab — reglas estrictas
+
+- **Stack estricto:** Tauri + React + SQLite. No proponer tecnologías web hospedadas en la nube ni SaaS de pago como sustituto del diseño local, salvo que el usuario lo pida explícitamente.
+
+- **Calendario:** Prohibido usar librerías externas de calendario (por ejemplo FullCalendar). El calendario se implementa con **CSS Grid** (y posicionamiento propio para bloques de citas).
+
+- **Modularidad:** El módulo de calendario **no** debe incorporar lógica de inventario ni finanzas. Solo coordina vistas y citas; los demás dominios reaccionarán a **eventos locales** cuando existan consumidores.
+
+- **Cambios estructurales:** Antes de crear nuevas tablas en la base de datos o alterar la arquitectura de módulos, **revisar** `docs/PROJECT.md` y `docs/ARQUITECTURA.md` (raíz del proyecto) y mantenerlos alineados tras el cambio.
