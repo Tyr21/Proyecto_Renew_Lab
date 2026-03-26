@@ -94,19 +94,17 @@ export function WeekCalendarView({
 			</header>
 
 			<div className="flex flex-1 min-h-0 overflow-auto">
-				{/* Columna de horas */}
+				{/* Columna de horas: misma altura por fila que los slots (sin absolute) */}
 				<div
-					className="shrink-0 w-[4.5rem] border-r border-slate-300 bg-white sticky left-0 z-20"
+					className="sticky left-0 z-20 flex shrink-0 flex-col border-r border-slate-300 bg-white"
 					style={{ paddingTop: HEADER_TOP_H }}
 				>
-					<div style={{ height: gridBodyHeight }} className="relative">
-						{SLOT_LABELS.map((slot, i) => (
+					<div className="flex w-[4.5rem] flex-col">
+						{SLOT_LABELS.map((slot) => (
 							<div
 								key={slot}
-								className="absolute right-1 text-xs text-slate-500 tabular-nums leading-none"
-								style={{
-									top: i * SLOT_HEIGHT_PX + 2,
-								}}
+								className="flex shrink-0 items-start justify-end pr-1 pt-0.5 text-xs text-slate-500 tabular-nums leading-none"
+								style={{ height: SLOT_HEIGHT_PX }}
 							>
 								{formatTimeLabel(slot, settings.timeDisplay)}
 							</div>
@@ -114,9 +112,9 @@ export function WeekCalendarView({
 					</div>
 				</div>
 
-				{/* Días */}
+				{/* Días: columna = flex-col + border-r; celdas = border-b; citas = única capa absolute */}
 				<div
-					className="grid flex-1 min-w-0"
+					className="grid min-w-0 flex-1"
 					style={{
 						gridTemplateColumns: `repeat(${days.length}, minmax(110px, 1fr))`,
 					}}
@@ -129,10 +127,10 @@ export function WeekCalendarView({
 						return (
 							<div
 								key={iso}
-								className="flex min-w-[110px] flex-col border-l border-slate-300 bg-white"
+								className="flex min-w-[110px] flex-col border-r border-slate-200 bg-white"
 							>
 								<div
-									className="sticky top-0 z-10 flex h-10 shrink-0 flex-col items-center justify-center border-b border-slate-300 bg-slate-100/95 px-1 backdrop-blur-sm"
+									className="sticky top-0 z-10 flex shrink-0 flex-col items-center justify-center border-b border-slate-200 bg-slate-100 px-1"
 									style={{ height: HEADER_TOP_H }}
 								>
 									<span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
@@ -144,42 +142,37 @@ export function WeekCalendarView({
 								</div>
 
 								<div
-									className="relative flex-1"
+									className="relative flex shrink-0 flex-col"
 									style={{ height: gridBodyHeight }}
 								>
-									<div
-										className="absolute inset-0 grid"
-										style={{
-											gridTemplateRows: `repeat(${NUM_SLOTS}, ${SLOT_HEIGHT_PX}px)`,
-										}}
-									>
-										{SLOT_LABELS.map((slot) => {
-											const slotCreatable =
-												isSlotCreatable?.(iso, slot) ?? true;
-											return (
-												<button
-													key={`${iso}-${slot}`}
-													type="button"
-													disabled={!slotCreatable}
-													className={
-														slotCreatable
-															? "w-full cursor-pointer border-b border-slate-200 bg-white transition-colors hover:bg-sky-50/50"
-															: "w-full cursor-not-allowed border-b border-slate-200 bg-slate-50/90 text-slate-500"
-													}
-													onClick={() => {
-														if (slotCreatable) onSlotClick(iso, slot);
-													}}
-													aria-label={
-														slotCreatable
-															? `Nueva cita el ${iso} a las ${slot}`
-															: `Horario no disponible para nueva cita el ${iso} a las ${slot} (periodo de gracia de ${MAX_GRACE_PERIOD_MINUTES} min vencido u otra regla)`
-													}
-												/>
-											);
-										})}
-									</div>
+									{SLOT_LABELS.map((slot) => {
+										const slotCreatable =
+											isSlotCreatable?.(iso, slot) ?? true;
+										return (
+											<button
+												key={`${iso}-${slot}`}
+												type="button"
+												disabled={!slotCreatable}
+												style={{ height: SLOT_HEIGHT_PX }}
+												className={
+													"w-full shrink-0 border-b border-slate-200 " +
+													(slotCreatable
+														? "cursor-pointer bg-white transition-colors hover:bg-sky-50/50"
+														: "cursor-not-allowed bg-slate-100 text-slate-500")
+												}
+												onClick={() => {
+													if (slotCreatable) onSlotClick(iso, slot);
+												}}
+												aria-label={
+													slotCreatable
+														? `Nueva cita el ${iso} a las ${slot}`
+														: `Horario no disponible para nueva cita el ${iso} a las ${slot} (periodo de gracia de ${MAX_GRACE_PERIOD_MINUTES} min vencido u otra regla)`
+												}
+											/>
+										);
+									})}
 
-									<div className="absolute inset-0 pointer-events-none">
+									<div className="pointer-events-none absolute inset-0 z-10">
 										{layouts.map(({ appointment: a, column, columnCount }) => {
 											const sm =
 												minutesFromHHMM(a.startTime) ?? dayStartMinutes();
