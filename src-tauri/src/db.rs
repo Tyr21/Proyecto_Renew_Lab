@@ -47,6 +47,18 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
 				id INTEGER PRIMARY KEY CHECK (id = 1),
 				settings_json TEXT NOT NULL
 			);
+
+			CREATE TABLE IF NOT EXISTS ingresos (
+				id TEXT PRIMARY KEY,
+				cita_id TEXT,
+				paciente_documento TEXT NOT NULL,
+				concepto TEXT NOT NULL,
+				monto REAL NOT NULL,
+				metodo_pago TEXT NOT NULL,
+				fecha_pago TEXT NOT NULL
+			);
+
+			CREATE INDEX IF NOT EXISTS idx_ingresos_fecha ON ingresos(fecha_pago);
 		"#,
 		)
 		.map_err(|e| e.to_string())?;

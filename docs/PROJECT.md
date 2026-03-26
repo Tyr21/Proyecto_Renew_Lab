@@ -13,7 +13,7 @@ La numeración sigue el plan acordado: cada fase es un bloque de producto; el **
 | **Fase 1** | Completada | Setup de **Tauri**, **React (Vite)**, **Tailwind**, **SQLite** y construcción visual del calendario con **CSS Grid** (celdas de **30 min**, citas por defecto de **1 h**), navegación semanal y ajustes de vista (domingos, formato de hora). |
 | **Fase 2** | Completada (refinamiento continuo) | **Conexión calendario ↔ base de datos**: CRUD de citas, configuración (tipos de documento/servicio, capacidades concurrentes), validaciones de **choques de horarios** y reglas de negocio ya persistidas. Lo que sigue aquí es pulir UX, pruebas y reglas adicionales según el consultorio. |
 | **Fase 3** | Completada | **Bus de eventos local**: emisión **solo desde Rust** tras persistir (`tauri::Emitter::emit` + payload JSON en `commands.rs`); el frontend se suscribe con `@tauri-apps/api/event` (`listen`). Consumidor de prueba: `CitaEventNotifier` (consola + toast). **Extender consumidores** (Inventario/Finanzas) en fases posteriores sin acoplar al calendario. |
-| **Fase 4** | Futuro | Módulos de **Inventario** y **Facturación**, **desacoplados** del calendario (solo reaccionan a eventos de dominio). |
+| **Fase 4** | En curso | **Finanzas (inicio):** tabla `ingresos`, comandos `crear_ingreso` / `obtener_ingresos`, modal de pago abierto por **`FinanceEventListener`** al evento `cita_completada` (sin tocar el calendario). **Inventario** y el resto de facturación pendientes. |
 
 ## Decisiones clave
 

@@ -41,11 +41,25 @@ Representa una cita agendada. Los nombres de columna coinciden con el modelo per
 
 Una fila (`id = 1`) con `settings_json`: configuración global (domingos, formato de hora, duración por defecto, listas de tipos de documento/servicio y capacidades concurrentes).
 
+### Tabla `ingresos` (Fase 4 — finanzas)
+
+Registro de pagos/ingresos locales. `cita_id` opcional (texto UUID) para enlazar con una cita; el módulo de UI **no** invoca al calendario: el flujo típico es escuchar `cita_completada` y ofrecer registro con datos pre-rellenados.
+
+| Campo (SQL) | Descripción |
+|-------------|-------------|
+| `id` | PK (UUID en texto) |
+| `cita_id` | Opcional, referencia lógica a `appointments.id` |
+| `paciente_documento` | Documento del paciente |
+| `concepto` | Texto (p. ej. etiqueta o id de servicio) |
+| `monto` | REAL |
+| `metodo_pago` | `Efectivo` \| `Tarjeta` \| `Transferencia` |
+| `fecha_pago` | ISO-8601 |
+
 ## Patrón: arquitectura orientada a eventos local
 
 - La UI **solo invoca** comandos Tauri (`invoke`), sin publicar eventos de dominio duplicados en el cliente.
 - Tras una transacción SQLite exitosa en `commands.rs`, Rust emite eventos con **`AppHandle::emit`** (Tauri 2), visibles para todos los webviews (`listen` en el frontend).
-- **No** se acoplan inventario ni facturación al módulo de calendario: los consumidores futuros se suscriben al mismo **contrato de payload** (snake_case).
+- **No** se acoplan inventario ni facturación al módulo de calendario: los consumidores se suscriben al mismo **contrato de payload** (snake_case). Ejemplo: `FinanceEventListener` escucha solo `cita_completada` y abre el modal de pago; el calendario no importa ese componente.
 
 Flujo conceptual:
 

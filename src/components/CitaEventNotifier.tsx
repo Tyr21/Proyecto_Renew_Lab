@@ -2,11 +2,11 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 import type { CitaEventName } from "../core/types";
 
+/** `cita_completada` lo gestiona `FinanceEventListener` (modal de pago). */
 const CITA_EVENTS: CitaEventName[] = [
 	"cita_creada",
 	"cita_actualizada",
 	"cita_cancelada",
-	"cita_completada",
 ];
 
 const TOAST_MS = 4500;

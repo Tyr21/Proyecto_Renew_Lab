@@ -1,6 +1,7 @@
 mod appointment_model;
 mod commands;
 mod db;
+mod finance;
 mod settings_model;
 mod time_rules;
 
@@ -27,6 +28,8 @@ pub fn run() {
 			commands::update_appointment,
 			commands::delete_appointment,
 			commands::get_appointment,
+			finance::crear_ingreso,
+			finance::obtener_ingresos,
 		])
 		.run(tauri::generate_context!())
 		.expect("error while running tauri application");

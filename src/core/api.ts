@@ -1,6 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { TAURI_COMMANDS } from "./constants";
-import type { AppSettings, Appointment, AppointmentInput } from "./types";
+import type {
+	AppSettings,
+	Appointment,
+	AppointmentInput,
+	CrearIngresoInput,
+	Ingreso,
+} from "./types";
 
 export async function getSettings(): Promise<AppSettings> {
 	return invoke<AppSettings>(TAURI_COMMANDS.getSettings);
@@ -44,4 +50,14 @@ export async function deleteAppointment(id: string): Promise<void> {
 
 export async function getAppointment(id: string): Promise<Appointment> {
 	return invoke<Appointment>(TAURI_COMMANDS.getAppointment, { id });
+}
+
+export async function crearIngreso(
+	input: CrearIngresoInput,
+): Promise<Ingreso> {
+	return invoke<Ingreso>(TAURI_COMMANDS.crearIngreso, { input });
+}
+
+export async function obtenerIngresos(): Promise<Ingreso[]> {
+	return invoke<Ingreso[]>(TAURI_COMMANDS.obtenerIngresos);
 }

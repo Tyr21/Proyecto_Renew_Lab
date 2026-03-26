@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CitaEventNotifier } from "./components/CitaEventNotifier";
+import { FinanceEventListener } from "./components/FinanceEventListener";
 import { getSettings, listAppointmentsRange } from "./core/api";
 import { isSlotBookableWithGracePeriod } from "./core/leadTime";
 import type { AppSettings, Appointment } from "./core/types";
@@ -195,6 +196,7 @@ function App() {
 				onSaved={() => void refreshAppointments()}
 			/>
 			<CitaEventNotifier />
+			<FinanceEventListener />
 		</div>
 	);
 }

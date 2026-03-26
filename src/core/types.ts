@@ -63,3 +63,20 @@ export type CitaEventName =
 	| "cita_cancelada"
 	| "cita_completada";
 
+export interface Ingreso {
+	id: string;
+	citaId: string | null;
+	pacienteDocumento: string;
+	concepto: string;
+	monto: number;
+	metodoPago: string;
+	fechaPago: string;
+}
+
+export interface CrearIngresoInput {
+	citaId?: string | null;
+	pacienteDocumento: string;
+	concepto: string;
+	monto: number;
+	metodoPago: string;
+}
