@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getSettings, listAppointmentsRange } from "./core/api";
-import { isSlotBookableWithLeadTime } from "./core/leadTime";
+import { isSlotBookableWithGracePeriod } from "./core/leadTime";
 import type { AppSettings, Appointment } from "./core/types";
 import { addDays, getWeekDates, startOfWeekMonday, toISODateLocal } from "./core/weekUtils";
 import { AppointmentModal } from "./modules/appointments/AppointmentModal";
@@ -162,7 +162,7 @@ function App() {
 							settings={settings}
 							appointments={appointments}
 							isSlotCreatable={(dateIso, startTime) =>
-								isSlotBookableWithLeadTime(dateIso, startTime)
+								isSlotBookableWithGracePeriod(dateIso, startTime)
 							}
 							isRefreshing={calendarRefreshing}
 							onSlotClick={openCreate}

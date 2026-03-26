@@ -4,22 +4,22 @@ use chrono::Timelike;
 pub const DAY_START_HOUR: u32 = 7;
 pub const DAY_END_HOUR: u32 = 20;
 
-/// Antelación mínima para **nuevas** citas o al reprogramar fecha/hora (misma regla en cliente; alineado al slot de 30 min).
-pub const MIN_LEAD_MINUTES_FOR_NEW_APPOINTMENT: i64 = 30;
+/// Tras el inicio del slot, solo se puede agendar hasta este máximo (walk-ins; alineado al cliente).
+pub const MAX_GRACE_PERIOD_MINUTES: i64 = 15;
 
-/// Inicio de cita debe ser ≥ `now` + antelación mínima (hora local).
-pub fn validate_minimum_lead_time_for_new_booking(
+/// Válido si `now` ≤ inicio del slot + periodo de gracia (hora local).
+pub fn validate_grace_period_for_new_booking(
 	appointment_date: &str,
 	start_time_str: &str,
 ) -> Result<(), String> {
-	validate_minimum_lead_time_for_new_booking_at(
+	validate_grace_period_for_new_booking_at(
 		appointment_date,
 		start_time_str,
 		Local::now(),
 	)
 }
 
-pub(crate) fn validate_minimum_lead_time_for_new_booking_at(
+pub(crate) fn validate_grace_period_for_new_booking_at(
 	appointment_date: &str,
 	start_time_str: &str,
 	now: DateTime<Local>,
@@ -32,12 +32,12 @@ pub(crate) fn validate_minimum_lead_time_for_new_booking_at(
 		.from_local_datetime(&naive_start)
 		.single()
 		.ok_or_else(|| "Fecha y hora local inválidas".to_string())?;
-	let limit = now + Duration::minutes(MIN_LEAD_MINUTES_FOR_NEW_APPOINTMENT);
-	if start_local < limit {
-		return Err(
-			"La cita debe programarse con al menos 30 minutos de antelación respecto a la hora actual."
-				.into(),
-		);
+	let deadline = start_local + Duration::minutes(MAX_GRACE_PERIOD_MINUTES);
+	if now > deadline {
+		return Err(format!(
+			"El periodo de gracia ({} min) para agendar en este horario ha expirado.",
+			MAX_GRACE_PERIOD_MINUTES
+		));
 	}
 	Ok(())
 }
@@ -121,32 +121,47 @@ mod tests {
 	}
 
 	#[test]
-	fn lead_time_rejects_when_start_before_limit() {
+	fn grace_period_slot_12_00_ok_when_now_before_start() {
 		let d = NaiveDate::parse_from_str("2025-06-15", "%Y-%m-%d").unwrap();
 		let now = Local
 			.from_local_datetime(&NaiveDateTime::new(
 				d,
-				NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+				NaiveTime::from_hms_opt(11, 50, 0).unwrap(),
 			))
 			.single()
 			.unwrap();
 		assert!(
-			validate_minimum_lead_time_for_new_booking_at("2025-06-15", "10:15", now).is_err()
+			validate_grace_period_for_new_booking_at("2025-06-15", "12:00", now).is_ok()
 		);
 	}
 
 	#[test]
-	fn lead_time_accepts_when_start_after_limit() {
+	fn grace_period_slot_12_00_ok_when_now_within_grace_after_start() {
 		let d = NaiveDate::parse_from_str("2025-06-15", "%Y-%m-%d").unwrap();
 		let now = Local
 			.from_local_datetime(&NaiveDateTime::new(
 				d,
-				NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+				NaiveTime::from_hms_opt(12, 10, 0).unwrap(),
 			))
 			.single()
 			.unwrap();
 		assert!(
-			validate_minimum_lead_time_for_new_booking_at("2025-06-15", "10:30", now).is_ok()
+			validate_grace_period_for_new_booking_at("2025-06-15", "12:00", now).is_ok()
+		);
+	}
+
+	#[test]
+	fn grace_period_slot_12_00_err_when_grace_expired() {
+		let d = NaiveDate::parse_from_str("2025-06-15", "%Y-%m-%d").unwrap();
+		let now = Local
+			.from_local_datetime(&NaiveDateTime::new(
+				d,
+				NaiveTime::from_hms_opt(12, 16, 0).unwrap(),
+			))
+			.single()
+			.unwrap();
+		assert!(
+			validate_grace_period_for_new_booking_at("2025-06-15", "12:00", now).is_err()
 		);
 	}
 }

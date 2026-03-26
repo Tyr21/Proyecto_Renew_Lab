@@ -11,7 +11,7 @@ import {
 	updateAppointment,
 } from "../../core/api";
 import { formatInvokeError } from "../../core/errors";
-import { leadTimeErrorMessage } from "../../core/leadTime";
+import { gracePeriodBookingErrorMessage } from "../../core/leadTime";
 import { serviceLabelFromSettings } from "../../core/serviceLabels";
 import { publishDomainEvent } from "../../core/domainEvents";
 import {
@@ -251,9 +251,12 @@ export function AppointmentModal({
 				return;
 			}
 			if (mode === "create" || scheduleChanged) {
-				const leadErr = leadTimeErrorMessage(appointmentDate, startTime);
-				if (leadErr) {
-					setError(leadErr);
+				const graceErr = gracePeriodBookingErrorMessage(
+					appointmentDate,
+					startTime,
+				);
+				if (graceErr) {
+					setError(graceErr);
 					return;
 				}
 			}

@@ -1,10 +1,14 @@
-import { MIN_LEAD_MINUTES_FOR_NEW_APPOINTMENT } from "./constants";
+import { MAX_GRACE_PERIOD_MINUTES } from "./constants";
 
-const LEAD_TIME_MESSAGE =
-	"La cita debe programarse con al menos 30 minutos de antelación respecto a la hora actual.";
+function gracePeriodExpiredMessage(): string {
+	return `El periodo de gracia (${MAX_GRACE_PERIOD_MINUTES} min) para agendar en este horario ha expirado.`;
+}
 
-/** Inicio de cita (fecha local + HH:MM) debe ser ≥ ahora + antelación mínima. */
-export function isSlotBookableWithLeadTime(
+/**
+ * El slot es agendable si la hora local actual no supera el inicio del slot
+ * más el periodo de gracia (walk-ins en franjas ya iniciadas).
+ */
+export function isSlotBookableWithGracePeriod(
 	dateIso: string,
 	startHHMM: string,
 ): boolean {
@@ -17,16 +21,16 @@ export function isSlotBookableWithLeadTime(
 	const h = Number(m[1]);
 	const min = Number(m[2]);
 	const startMs = new Date(y, mo - 1, d, h, min, 0, 0).getTime();
-	const limit =
-		Date.now() + MIN_LEAD_MINUTES_FOR_NEW_APPOINTMENT * 60 * 1000;
-	return startMs >= limit;
+	const deadlineMs =
+		startMs + MAX_GRACE_PERIOD_MINUTES * 60 * 1000;
+	return Date.now() <= deadlineMs;
 }
 
-/** `null` si válido; mismo texto que el backend en español. */
-export function leadTimeErrorMessage(
+/** `null` si válido; mismo criterio que el backend. */
+export function gracePeriodBookingErrorMessage(
 	dateIso: string,
 	startHHMM: string,
 ): string | null {
-	if (isSlotBookableWithLeadTime(dateIso, startHHMM)) return null;
-	return LEAD_TIME_MESSAGE;
+	if (isSlotBookableWithGracePeriod(dateIso, startHHMM)) return null;
+	return gracePeriodExpiredMessage();
 }

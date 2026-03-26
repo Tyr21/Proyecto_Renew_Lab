@@ -73,8 +73,8 @@ Los eventos como `cita_creada`, `cita_completada` o `cita_cancelada` deben lleva
 
 ## Validación duplicada (Fase 2)
 
-- **Servidor (Rust):** comandos de creación/actualización de citas aplican `validate_against_settings`, ventana horaria (30 min, `07:00`–`20:00`), conteo de solapes por `service_type` frente a `concurrent_capacity`, y **antelación mínima** (`MIN_LEAD_MINUTES_FOR_NEW_APPOINTMENT`, 30 min, alineada al slot) en **creación** y al **reprogramar** fecha u hora de inicio/fin.
-- **Cliente (TypeScript):** `validateAppointmentFormFields`, `countOverlappingSameService` e `isSlotBookableWithLeadTime` / `leadTimeErrorMessage` repiten las mismas reglas para feedback inmediato, cupos y huecos; el backend sigue siendo la fuente de verdad.
+- **Servidor (Rust):** comandos de creación/actualización de citas aplican `validate_against_settings`, ventana horaria (30 min, `07:00`–`20:00`), conteo de solapes por `service_type` frente a `concurrent_capacity`, y **periodo de gracia** (`MAX_GRACE_PERIOD_MINUTES`, 15 min tras el inicio del slot, walk-ins) en **creación** y al **reprogramar** fecha u hora de inicio/fin.
+- **Cliente (TypeScript):** `validateAppointmentFormFields`, `countOverlappingSameService` e `isSlotBookableWithGracePeriod` / `gracePeriodBookingErrorMessage` repiten las mismas reglas para feedback inmediato, cupos y huecos; el backend sigue siendo la fuente de verdad.
 
 ## Vista semanal: solapes y franja clicable
 

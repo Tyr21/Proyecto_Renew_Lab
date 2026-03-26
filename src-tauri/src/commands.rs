@@ -8,7 +8,7 @@ use crate::appointment_model::{AppointmentInput, AppointmentRow};
 use crate::settings_model::AppSettings;
 use crate::time_rules::{
 	is_duration_multiple_30, is_half_hour_aligned, is_appointment_past, minutes_since_midnight,
-	overlaps_intervals, parse_hh_mm, validate_minimum_lead_time_for_new_booking,
+	overlaps_intervals, parse_hh_mm, validate_grace_period_for_new_booking,
 	within_business_window,
 };
 
@@ -219,7 +219,7 @@ pub(crate) fn create_appointment_core(
 	let settings = load_settings_json(conn)?;
 	validate_against_settings(&settings, &input)?;
 	let (start_t, end_t) = validate_input_times(&input)?;
-	validate_minimum_lead_time_for_new_booking(&input.appointment_date, &input.start_time)?;
+	validate_grace_period_for_new_booking(&input.appointment_date, &input.start_time)?;
 	let start_min = minutes_since_midnight(start_t);
 	let end_min = minutes_since_midnight(end_t);
 	let cap = settings
@@ -347,7 +347,7 @@ pub fn update_appointment(
 		|| input.start_time != existing.start_time
 		|| input.end_time != existing.end_time;
 	if schedule_changed {
-		validate_minimum_lead_time_for_new_booking(&input.appointment_date, &input.start_time)?;
+		validate_grace_period_for_new_booking(&input.appointment_date, &input.start_time)?;
 	}
 	let start_min = minutes_since_midnight(start_t);
 	let end_min = minutes_since_midnight(end_t);

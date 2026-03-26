@@ -1,31 +1,40 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { isSlotBookableWithLeadTime, leadTimeErrorMessage } from "./leadTime";
+import { MAX_GRACE_PERIOD_MINUTES } from "./constants";
+import {
+	gracePeriodBookingErrorMessage,
+	isSlotBookableWithGracePeriod,
+} from "./leadTime";
 
-describe("leadTime", () => {
+describe("grace period (agendamiento)", () => {
 	afterEach(() => {
 		vi.useRealTimers();
 	});
 
-	it("rechaza inicio antes del límite", () => {
-		vi.useFakeTimers();
-		vi.setSystemTime(new Date("2025-06-15T10:00:00"));
+	const dateIso = "2025-06-15";
 
-		expect(isSlotBookableWithLeadTime("2025-06-15", "10:15")).toBe(false);
-		expect(leadTimeErrorMessage("2025-06-15", "10:15")).toBeTruthy();
+	it("slot 12:00 — now 11:50: OK", () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date(2025, 5, 15, 11, 50, 0));
+
+		expect(isSlotBookableWithGracePeriod(dateIso, "12:00")).toBe(true);
+		expect(gracePeriodBookingErrorMessage(dateIso, "12:00")).toBeNull();
 	});
 
-	it("acepta inicio después del límite", () => {
+	it("slot 12:00 — now 12:10: OK (walk-in dentro del periodo)", () => {
 		vi.useFakeTimers();
-		vi.setSystemTime(new Date("2025-06-15T10:00:00"));
+		vi.setSystemTime(new Date(2025, 5, 15, 12, 10, 0));
 
-		expect(isSlotBookableWithLeadTime("2025-06-15", "10:30")).toBe(true);
-		expect(leadTimeErrorMessage("2025-06-15", "10:30")).toBeNull();
+		expect(isSlotBookableWithGracePeriod(dateIso, "12:00")).toBe(true);
+		expect(gracePeriodBookingErrorMessage(dateIso, "12:00")).toBeNull();
 	});
 
-	it("permite mediodía cuando faltan más de 30 min (caso 11:21 → 12:00)", () => {
+	it("slot 12:00 — now 12:16: rechazado (gracia vencida)", () => {
 		vi.useFakeTimers();
-		vi.setSystemTime(new Date(2026, 2, 26, 11, 21, 0));
+		vi.setSystemTime(new Date(2025, 5, 15, 12, 16, 0));
 
-		expect(isSlotBookableWithLeadTime("2026-03-26", "12:00")).toBe(true);
+		expect(isSlotBookableWithGracePeriod(dateIso, "12:00")).toBe(false);
+		expect(gracePeriodBookingErrorMessage(dateIso, "12:00")).toBe(
+			`El periodo de gracia (${MAX_GRACE_PERIOD_MINUTES} min) para agendar en este horario ha expirado.`,
+		);
 	});
 });

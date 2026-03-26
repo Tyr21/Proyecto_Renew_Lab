@@ -1,5 +1,6 @@
 import {
 	APPOINTMENT_BLOCK_WIDTH_FRACTION,
+	MAX_GRACE_PERIOD_MINUTES,
 	SLOT_HEIGHT_PX,
 	dayStartMinutes,
 	slotCountForDay,
@@ -27,7 +28,7 @@ interface WeekCalendarViewProps {
 	weekStartMonday: Date;
 	settings: AppSettings;
 	appointments: Appointment[];
-	/** Si devuelve false, el hueco no abre el modal de nueva cita (p. ej. antelación mínima). */
+	/** Si devuelve false, el hueco no abre el modal de nueva cita (p. ej. periodo de gracia vencido). */
 	isSlotCreatable?: (dateIso: string, startTime: string) => boolean;
 	/** Mientras se recargan citas, indicador suave sin vaciar la grilla. */
 	isRefreshing?: boolean;
@@ -171,7 +172,7 @@ export function WeekCalendarView({
 													aria-label={
 														slotCreatable
 															? `Nueva cita el ${iso} a las ${slot}`
-															: `Horario no disponible para nueva cita el ${iso} a las ${slot} (antelación mínima 30 minutos u otra regla)`
+															: `Horario no disponible para nueva cita el ${iso} a las ${slot} (periodo de gracia de ${MAX_GRACE_PERIOD_MINUTES} min vencido u otra regla)`
 													}
 												/>
 											);
