@@ -66,7 +66,7 @@ export function WeekCalendarView({
 			className="flex min-h-0 flex-1 min-w-0 flex-col bg-slate-50 text-slate-900"
 			aria-label="Calendario semanal de citas"
 		>
-			<header className="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 shadow-sm shrink-0">
+			<header className="flex flex-wrap items-center gap-3 border-b border-slate-300 bg-white px-4 py-3 shadow-sm shrink-0">
 				<div className="flex items-center gap-2">
 					<button
 						type="button"
@@ -96,7 +96,7 @@ export function WeekCalendarView({
 			<div className="flex flex-1 min-h-0 overflow-auto">
 				{/* Columna de horas */}
 				<div
-					className="shrink-0 w-[4.5rem] border-r border-slate-200 bg-white sticky left-0 z-20"
+					className="shrink-0 w-[4.5rem] border-r border-slate-300 bg-white sticky left-0 z-20"
 					style={{ paddingTop: HEADER_TOP_H }}
 				>
 					<div style={{ height: gridBodyHeight }} className="relative">
@@ -129,10 +129,10 @@ export function WeekCalendarView({
 						return (
 							<div
 								key={iso}
-								className="flex min-w-[110px] flex-col border-l border-slate-200 bg-white"
+								className="flex min-w-[110px] flex-col border-l border-slate-300 bg-white"
 							>
 								<div
-									className="sticky top-0 z-10 flex h-10 shrink-0 flex-col items-center justify-center border-b border-slate-200 bg-slate-100/95 px-1 backdrop-blur-sm"
+									className="sticky top-0 z-10 flex h-10 shrink-0 flex-col items-center justify-center border-b border-slate-300 bg-slate-100/95 px-1 backdrop-blur-sm"
 									style={{ height: HEADER_TOP_H }}
 								>
 									<span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
@@ -163,8 +163,8 @@ export function WeekCalendarView({
 													disabled={!slotCreatable}
 													className={
 														slotCreatable
-															? "w-full cursor-pointer border-b border-slate-100 bg-white transition-colors hover:bg-sky-50/50"
-															: "w-full cursor-not-allowed border-b border-slate-100 bg-slate-50/90 text-slate-500"
+															? "w-full cursor-pointer border-b border-slate-200 bg-white transition-colors hover:bg-sky-50/50"
+															: "w-full cursor-not-allowed border-b border-slate-200 bg-slate-50/90 text-slate-500"
 													}
 													onClick={() => {
 														if (slotCreatable) onSlotClick(iso, slot);
