@@ -50,6 +50,7 @@ export interface AppointmentInput {
 
 export interface DomainEventPayload {
 	cita_id: string;
+	paciente_nombre: string;
 	paciente_documento: string;
 	tipo_servicio: string;
 	estado: string;

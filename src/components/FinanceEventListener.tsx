@@ -32,6 +32,10 @@ export function FinanceEventListener() {
 						setPrefill({
 							citaId:
 								typeof p?.cita_id === "string" ? p.cita_id : "",
+							pacienteNombre:
+								typeof p?.paciente_nombre === "string"
+									? p.paciente_nombre
+									: "",
 							pacienteDocumento:
 								typeof p?.paciente_documento === "string"
 									? p.paciente_documento

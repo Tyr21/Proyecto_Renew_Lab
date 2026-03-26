@@ -75,6 +75,7 @@ Los eventos como `cita_creada`, `cita_actualizada`, `cita_completada` o `cita_ca
 ```json
 {
   "cita_id": "<uuid>",
+  "paciente_nombre": "<nombre completo>",
   "paciente_documento": "<documento>",
   "tipo_servicio": "<id de servicio>",
   "estado": "pendiente | asistio | no_asistio",

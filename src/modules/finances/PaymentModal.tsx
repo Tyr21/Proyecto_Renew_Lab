@@ -7,6 +7,7 @@ export const PAYMENT_METHODS = ["Efectivo", "Tarjeta", "Transferencia"] as const
 
 export interface PaymentPrefill {
 	citaId: string;
+	pacienteNombre: string;
 	pacienteDocumento: string;
 	concepto: string;
 }
@@ -85,6 +86,12 @@ export function PaymentModal({ open, prefill, onClose }: PaymentModalProps) {
 					Cita completada — complete el ingreso. Puede ajustar concepto o
 					documento si hace falta.
 				</p>
+				{prefill.pacienteNombre.trim() ? (
+					<p className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
+						<span className="font-medium text-slate-600">Cliente: </span>
+						{prefill.pacienteNombre.trim()}
+					</p>
+				) : null}
 				<form className="mt-4 space-y-3" onSubmit={handleSubmit}>
 					<div>
 						<label className="block text-xs font-medium text-slate-600">

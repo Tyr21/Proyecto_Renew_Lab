@@ -19,6 +19,7 @@ pub type DbConn = Mutex<rusqlite::Connection>;
 fn cita_event_payload(row: &AppointmentRow) -> serde_json::Value {
 	serde_json::json!({
 		"cita_id": row.id,
+		"paciente_nombre": row.patient_full_name,
 		"paciente_documento": row.document_number,
 		"tipo_servicio": row.service_type,
 		"estado": row.status,
