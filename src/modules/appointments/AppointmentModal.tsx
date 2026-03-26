@@ -11,6 +11,7 @@ import {
 	updateAppointment,
 } from "../../core/api";
 import { formatInvokeError } from "../../core/errors";
+import { serviceLabelFromSettings } from "../../core/serviceLabels";
 import { publishDomainEvent } from "../../core/domainEvents";
 import {
 	addMinutesToHHMM,
@@ -88,6 +89,11 @@ export function AppointmentModal({
 	const [busy, setBusy] = useState(false);
 
 	const ends = useMemo(() => endOptionsForStart(startTime), [startTime]);
+
+	const currentServiceLabel = useMemo(
+		() => serviceLabelFromSettings(settings, serviceType),
+		[settings, serviceType],
+	);
 
 	const capacityPreview = useMemo(() => {
 		const st = settings.serviceTypes.find((s) => s.id === serviceType);
@@ -289,6 +295,12 @@ export function AppointmentModal({
 								? "Nueva cita"
 								: "Editar cita"}
 					</h2>
+					<p className="mt-1.5 text-sm text-slate-600">
+						<span className="font-medium text-slate-700">
+							Procedimiento:
+						</span>{" "}
+						<span className="text-slate-800">{currentServiceLabel}</span>
+					</p>
 				</div>
 
 				<form onSubmit={handleSubmit} className="space-y-3 px-5 py-4">
@@ -303,6 +315,10 @@ export function AppointmentModal({
 							<p>
 								<span className="font-medium">Paciente:</span>{" "}
 								{patientFullName}
+							</p>
+							<p>
+								<span className="font-medium">Procedimiento:</span>{" "}
+								{currentServiceLabel}
 							</p>
 							<p>
 								<span className="font-medium">Documento:</span> {documentType}{" "}
@@ -446,7 +462,7 @@ export function AppointmentModal({
 							</div>
 
 							<label className="block text-sm font-medium text-slate-700">
-								Tipo de servicio
+								Tipo de servicio (procedimiento)
 								<select
 									className="mt-1 w-full rounded border border-slate-300 px-2 py-2"
 									value={serviceType}

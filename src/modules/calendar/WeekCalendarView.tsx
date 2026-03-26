@@ -1,10 +1,12 @@
 import {
+	APPOINTMENT_BLOCK_WIDTH_FRACTION,
 	CALENDAR_DAY_END_HOUR,
 	CALENDAR_DAY_START_HOUR,
 	SLOT_HEIGHT_PX,
 	dayStartMinutes,
 	slotCountForDay,
 } from "../../core/constants";
+import { serviceLabelFromSettings } from "../../core/serviceLabels";
 import type { AppSettings, Appointment } from "../../core/types";
 import {
 	formatTimeLabel,
@@ -162,38 +164,59 @@ export function WeekCalendarView({
 											const open = dayStartMinutes();
 											const top = ((sm - open) / 30) * SLOT_HEIGHT_PX;
 											const height = ((em - sm) / 30) * SLOT_HEIGHT_PX;
-											const wPct = 100 / columnCount;
-											const leftPct = column * wPct;
+											// Banda coloreada = APPOINTMENT_BLOCK_WIDTH_FRACTION del ancho; cada columna = banda / columnCount (sin huecos).
+											const bandPct =
+												APPOINTMENT_BLOCK_WIDTH_FRACTION * 100;
+											const widthPct = bandPct / columnCount;
+											const leftPct = column * widthPct;
 											const colors = serviceColorClasses(a.serviceType);
+											const serviceLabel = serviceLabelFromSettings(
+												settings,
+												a.serviceType,
+											);
+											const edgeRound = [
+												columnCount === 1 && "rounded-md",
+												columnCount > 1 && column === 0 && "rounded-l-md",
+												columnCount > 1 &&
+													column === columnCount - 1 &&
+													"rounded-r-md",
+											]
+												.filter(Boolean)
+												.join(" ");
 											return (
 												<button
 													key={a.id}
 													type="button"
-													className={`pointer-events-auto absolute overflow-hidden rounded border-l-4 px-1 py-0.5 text-left text-xs shadow-sm transition hover:brightness-95 ${colors}`}
+													className={`pointer-events-auto absolute overflow-hidden border-l-4 px-1 py-0.5 text-left text-xs shadow-sm transition hover:brightness-95 ${colors} ${edgeRound}`}
 													style={{
 														top,
-														height: Math.max(height - 2, 18),
-														left: `calc(${leftPct}% + 2px)`,
-														width: `calc(${wPct}% - 4px)`,
+														height: Math.max(height - 2, 36),
+														left: `${leftPct}%`,
+														width: `${widthPct}%`,
 													}}
 													onClick={(ev) => {
 														ev.stopPropagation();
 														onAppointmentClick(a);
 													}}
 												>
-													<div className="font-semibold truncate leading-tight">
-														{a.patientFullName}
-													</div>
-													<div className="truncate opacity-90 tabular-nums">
-														{formatTimeLabel(
-															a.startTime,
-															settings.timeDisplay,
-														)}{" "}
-														–{" "}
-														{formatTimeLabel(
-															a.endTime,
-															settings.timeDisplay,
-														)}
+													<div className="flex min-h-0 flex-col gap-0.5 leading-tight">
+														<div className="font-semibold truncate">
+															{a.patientFullName}
+														</div>
+														<div className="truncate tabular-nums opacity-90">
+															{formatTimeLabel(
+																a.startTime,
+																settings.timeDisplay,
+															)}{" "}
+															–{" "}
+															{formatTimeLabel(
+																a.endTime,
+																settings.timeDisplay,
+															)}
+														</div>
+														<div className="truncate text-[0.65rem] font-medium opacity-80">
+															{serviceLabel}
+														</div>
 													</div>
 												</button>
 											);
