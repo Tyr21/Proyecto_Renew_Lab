@@ -21,6 +21,21 @@ La numeración sigue el plan acordado: cada fase es un bloque de producto; el **
 - **Capacidad por tipo de servicio:** configurable; el calendario no calcula inventario ni cifras económicas.
 - **Eventos de dominio:** payload estandarizado para integración futura (ver [ARQUITECTURA.md](./ARQUITECTURA.md)).
 
+## Fase 2 — Criterios de aceptación (validados)
+
+Comportamientos que deben mantenerse al evolucionar el código:
+
+1. **Crear cita:** clic en hueco → modal → datos válidos → guardar; la cita aparece en el rango cargado.
+2. **Capacidad concurrente:** para un mismo `service_type`, fecha y solape temporal, no se puede superar la capacidad configurada; el modal muestra ocupación (p. ej. `2 / 2`) y bloquea antes de enviar si el cupo está lleno.
+3. **Validación en cliente:** documento (alfanumérico) y teléfono nacional (solo dígitos) se validan en la UI alineados con el backend, sin depender solo del error de `invoke`.
+4. **Edición según tiempo:** citas **futuras** — todos los campos editables salvo reglas de negocio; citas **pasadas** — solo **asistencia** (asistió / no asistió); no eliminar ni reescribir agenda en pasado.
+
+## Pruebas y calidad
+
+- **Frontend (Vitest):** en la raíz, `npm run test` — reglas de solape y validación de formulario (`src/core/*.test.ts`).
+- **Backend (Rust):** `cd src-tauri` y `cargo test` — reglas de tiempo y solapes en `time_rules`.
+- **Manual:** `npm run tauri dev` — recorrer los flujos de la lista anterior tras cambios en calendario o citas.
+
 ## Documentos relacionados
 
 - [ARQUITECTURA.md](./ARQUITECTURA.md) — stack, base de datos, eventos.

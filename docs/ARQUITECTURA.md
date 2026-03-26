@@ -71,6 +71,16 @@ Los eventos como `cita_creada`, `cita_completada` o `cita_cancelada` deben lleva
 - **`tipo_servicio`:** identificador estable (alineado con inventario futuro).
 - **`timestamp`:** momento en que se registró la acción en el cliente/servidor local.
 
+## Validación duplicada (Fase 2)
+
+- **Servidor (Rust):** comandos de creación/actualización de citas aplican `validate_against_settings`, ventana horaria (30 min, `07:00`–`20:00`), y conteo de solapes por `service_type` frente a `concurrent_capacity`.
+- **Cliente (TypeScript):** `validateAppointmentFormFields` y `countOverlappingSameService` repiten las mismas reglas de negocio para feedback inmediato y vista previa de cupos; el backend sigue siendo la fuente de verdad.
+
+## Vista semanal: solapes y franja clicable
+
+- El algoritmo de **columnas** para citas solapadas el mismo día está en el frontend (`layoutDayAppointments`); cada bloque muestra nombre, horario y etiqueta de **procedimiento** (resuelta desde `service_types` en configuración).
+- La constante **`APPOINTMENT_BLOCK_WIDTH_FRACTION`** (p. ej. `0.85` en `src/core/constants.ts`) define qué fracción del ancho de columna ocupa **en conjunto** la banda de citas solapadas; el resto queda como franja vertical clicable para crear otra cita a la misma hora. Los bloques adyacentes dentro de esa banda se reparten el ancho sin huecos intermedios.
+
 ## Documentos relacionados
 
 - [PROJECT.md](./PROJECT.md) — visión y fases.

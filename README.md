@@ -28,8 +28,18 @@ Otros comandos útiles:
 ```bash
 npm run dev          # Solo frontend (Vite)
 npm run build        # Compilar frontend (tsc + vite build)
+npm run test         # Pruebas Vitest (validación y solapes en TS)
 npm run tauri build  # Empaquetado de la app de escritorio
 ```
+
+Pruebas Rust (reglas de tiempo en el backend):
+
+```bash
+cd src-tauri
+cargo test
+```
+
+Los criterios de producto de la Fase 2 y la lista de comandos de prueba están resumidos en [docs/PROJECT.md](docs/PROJECT.md).
 
 ## IDE recomendado
 
