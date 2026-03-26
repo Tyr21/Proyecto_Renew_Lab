@@ -155,6 +155,7 @@ function App() {
 			<AppointmentModal
 				open={modalOpen}
 				settings={settings}
+				weekAppointments={appointments}
 				mode={modalMode}
 				initial={editing}
 				preset={presetSlot}

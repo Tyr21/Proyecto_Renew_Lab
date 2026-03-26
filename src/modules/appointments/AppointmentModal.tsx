@@ -3,11 +3,14 @@ import {
 	COUNTRY_DIAL_OPTIONS,
 	DEFAULT_COUNTRY_DIAL,
 } from "../../core/countries";
+import { validateAppointmentFormFields } from "../../core/appointmentFormValidation";
+import { countOverlappingSameService } from "../../core/appointmentOverlap";
 import {
 	createAppointment,
 	deleteAppointment,
 	updateAppointment,
 } from "../../core/api";
+import { formatInvokeError } from "../../core/errors";
 import { publishDomainEvent } from "../../core/domainEvents";
 import {
 	addMinutesToHHMM,
@@ -32,6 +35,8 @@ interface PresetSlot {
 interface AppointmentModalProps {
 	open: boolean;
 	settings: AppSettings;
+	/** Citas cargadas en el rango actual (p. ej. semana); sirve para vista previa de cupos */
+	weekAppointments: Appointment[];
 	mode: "create" | "edit";
 	initial: Appointment | null;
 	preset: PresetSlot | null;
@@ -57,6 +62,7 @@ function endOptionsForStart(start: string): string[] {
 export function AppointmentModal({
 	open,
 	settings,
+	weekAppointments,
 	mode,
 	initial,
 	preset,
@@ -82,6 +88,31 @@ export function AppointmentModal({
 	const [busy, setBusy] = useState(false);
 
 	const ends = useMemo(() => endOptionsForStart(startTime), [startTime]);
+
+	const capacityPreview = useMemo(() => {
+		const st = settings.serviceTypes.find((s) => s.id === serviceType);
+		if (!st || !appointmentDate) {
+			return { cap: null as number | null, used: 0, label: "" };
+		}
+		const used = countOverlappingSameService(
+			weekAppointments,
+			appointmentDate,
+			serviceType,
+			startTime,
+			endTime,
+			mode === "edit" && initial ? initial.id : undefined,
+		);
+		return { cap: st.concurrentCapacity, used, label: st.label };
+	}, [
+		settings.serviceTypes,
+		weekAppointments,
+		appointmentDate,
+		serviceType,
+		startTime,
+		endTime,
+		mode,
+		initial,
+	]);
 
 	const isPast = useMemo(() => {
 		if (!appointmentDate || !endTime) return false;
@@ -179,9 +210,20 @@ export function AppointmentModal({
 				return;
 			}
 		} else {
+			const fieldErr = validateAppointmentFormFields(input, settings);
+			if (fieldErr) {
+				setError(fieldErr);
+				return;
+			}
 			if (!isValidAppointmentWindow(startTime, endTime)) {
 				setError(
 					"Horario inválido: use franjas de 30 min entre 07:00 y 20:00 (fin máx. 20:00).",
+				);
+				return;
+			}
+			if (capacityPreview.cap != null && capacityPreview.used >= capacityPreview.cap) {
+				setError(
+					`Capacidad superada para este servicio (máx. ${capacityPreview.cap} concurrentes). Cambie horario, servicio o amplíe la capacidad en configuración.`,
 				);
 				return;
 			}
@@ -209,8 +251,7 @@ export function AppointmentModal({
 				onClose();
 			}
 		} catch (err) {
-			const msg = err instanceof Error ? err.message : String(err);
-			setError(msg || "No se pudo guardar");
+			setError(formatInvokeError(err) || "No se pudo guardar");
 		} finally {
 			setBusy(false);
 		}
@@ -227,8 +268,7 @@ export function AppointmentModal({
 			onSaved();
 			onClose();
 		} catch (err) {
-			const msg = err instanceof Error ? err.message : String(err);
-			setError(msg || "No se pudo eliminar");
+			setError(formatInvokeError(err) || "No se pudo eliminar");
 		} finally {
 			setBusy(false);
 		}
@@ -419,6 +459,23 @@ export function AppointmentModal({
 									))}
 								</select>
 							</label>
+
+							{appointmentDate && capacityPreview.cap != null && (
+								<p
+									className={`text-xs ${
+										capacityPreview.used >= capacityPreview.cap
+											? "font-medium text-amber-800"
+											: "text-slate-600"
+									}`}
+								>
+									Ocupación en este horario ({capacityPreview.label}):{" "}
+									{capacityPreview.used} / {capacityPreview.cap} citas solapadas
+									(mismo servicio).{" "}
+									{capacityPreview.used >= capacityPreview.cap
+										? "No hay cupo adicional en esta franja."
+										: null}
+								</p>
+							)}
 
 							{mode === "edit" && initial && !isPast && (
 								<label className="block text-sm font-medium text-slate-700">

@@ -53,3 +53,32 @@ pub fn is_appointment_past(
 	let end_dt = NaiveDateTime::new(date, end);
 	Ok(now_local_naive() >= end_dt)
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn overlaps_intervals_partial() {
+		assert!(overlaps_intervals(420, 480, 450, 510));
+	}
+
+	#[test]
+	fn overlaps_touching_no_overlap() {
+		assert!(!overlaps_intervals(420, 450, 450, 480));
+	}
+
+	#[test]
+	fn within_business_window_ok() {
+		let s = parse_hh_mm("09:00").unwrap();
+		let e = parse_hh_mm("10:00").unwrap();
+		assert!(within_business_window(s, e));
+	}
+
+	#[test]
+	fn within_business_window_rejects_end_after_close() {
+		let s = parse_hh_mm("19:30").unwrap();
+		let e = parse_hh_mm("20:30").unwrap();
+		assert!(!within_business_window(s, e));
+	}
+}
