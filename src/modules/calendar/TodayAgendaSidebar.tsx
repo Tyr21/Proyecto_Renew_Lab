@@ -30,7 +30,7 @@ export function TodayAgendaSidebar({
 
 	return (
 		<aside
-			className="flex w-72 shrink-0 flex-col border-r border-slate-200 bg-white"
+			className="flex w-[14.4rem] shrink-0 flex-col border-r border-slate-200 bg-white"
 			aria-label="Citas del día de hoy"
 		>
 			<div className="border-b border-slate-200 px-3 py-3">
