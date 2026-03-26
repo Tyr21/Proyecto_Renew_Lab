@@ -74,3 +74,14 @@ fn seed_settings_if_empty(conn: &Connection) -> Result<(), String> {
 	}
 	Ok(())
 }
+
+#[cfg(test)]
+pub fn open_in_memory_test_database() -> Result<Connection, String> {
+	let conn = Connection::open_in_memory().map_err(|e| e.to_string())?;
+	conn
+		.execute_batch("PRAGMA foreign_keys = ON;")
+		.map_err(|e| e.to_string())?;
+	run_migrations(&conn)?;
+	seed_settings_if_empty(&conn)?;
+	Ok(conn)
+}

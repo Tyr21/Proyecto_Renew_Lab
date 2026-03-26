@@ -1,7 +1,5 @@
 import {
 	APPOINTMENT_BLOCK_WIDTH_FRACTION,
-	CALENDAR_DAY_END_HOUR,
-	CALENDAR_DAY_START_HOUR,
 	SLOT_HEIGHT_PX,
 	dayStartMinutes,
 	slotCountForDay,
@@ -29,6 +27,10 @@ interface WeekCalendarViewProps {
 	weekStartMonday: Date;
 	settings: AppSettings;
 	appointments: Appointment[];
+	/** Si devuelve false, el hueco no abre el modal de nueva cita (p. ej. antelación mínima). */
+	isSlotCreatable?: (dateIso: string, startTime: string) => boolean;
+	/** Mientras se recargan citas, indicador suave sin vaciar la grilla. */
+	isRefreshing?: boolean;
 	onSlotClick: (dateIso: string, startTime: string) => void;
 	onAppointmentClick: (a: Appointment) => void;
 	onWeekShift: (deltaWeeks: number) => void;
@@ -42,6 +44,8 @@ export function WeekCalendarView({
 	weekStartMonday,
 	settings,
 	appointments,
+	isSlotCreatable,
+	isRefreshing,
 	onSlotClick,
 	onAppointmentClick,
 	onWeekShift,
@@ -57,7 +61,10 @@ export function WeekCalendarView({
 	}
 
 	return (
-		<div className="flex flex-col h-full min-h-0 bg-slate-50 text-slate-900">
+		<div
+			className="flex min-h-0 flex-1 min-w-0 flex-col bg-slate-50 text-slate-900"
+			aria-label="Calendario semanal de citas"
+		>
 			<header className="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 shadow-sm shrink-0">
 				<div className="flex items-center gap-2">
 					<button
@@ -78,10 +85,11 @@ export function WeekCalendarView({
 				<h1 className="text-lg font-semibold text-slate-800">
 					{rangeLabelSpanish(days)}
 				</h1>
-				<p className="text-sm text-slate-500">
-					Vista semanal · {CALENDAR_DAY_START_HOUR}:00 – {CALENDAR_DAY_END_HOUR}:00
-					(slots de 30 min)
-				</p>
+				{isRefreshing ? (
+					<span className="text-xs text-sky-600" aria-live="polite">
+						Actualizando citas…
+					</span>
+				) : null}
 			</header>
 
 			<div className="flex flex-1 min-h-0 overflow-auto">
@@ -120,10 +128,10 @@ export function WeekCalendarView({
 						return (
 							<div
 								key={iso}
-								className="border-l border-slate-200 bg-white min-w-[110px] flex flex-col"
+								className="flex min-w-[110px] flex-col border-l border-slate-200 bg-white"
 							>
 								<div
-									className="sticky top-0 z-10 flex h-10 shrink-0 flex-col items-center justify-center border-b border-slate-200 bg-slate-100/95 backdrop-blur-sm px-1"
+									className="sticky top-0 z-10 flex h-10 shrink-0 flex-col items-center justify-center border-b border-slate-200 bg-slate-100/95 px-1 backdrop-blur-sm"
 									style={{ height: HEADER_TOP_H }}
 								>
 									<span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
@@ -144,15 +152,30 @@ export function WeekCalendarView({
 											gridTemplateRows: `repeat(${NUM_SLOTS}, ${SLOT_HEIGHT_PX}px)`,
 										}}
 									>
-										{SLOT_LABELS.map((slot) => (
-											<button
-												key={`${iso}-${slot}`}
-												type="button"
-												className="w-full border-b border-slate-100 hover:bg-sky-50/50 transition-colors cursor-pointer"
-												onClick={() => onSlotClick(iso, slot)}
-												aria-label={`Nueva cita ${iso} ${slot}`}
-											/>
-										))}
+										{SLOT_LABELS.map((slot) => {
+											const slotCreatable =
+												isSlotCreatable?.(iso, slot) ?? true;
+											return (
+												<button
+													key={`${iso}-${slot}`}
+													type="button"
+													disabled={!slotCreatable}
+													className={
+														slotCreatable
+															? "w-full cursor-pointer border-b border-slate-100 bg-white transition-colors hover:bg-sky-50/50"
+															: "w-full cursor-not-allowed border-b border-slate-100 bg-slate-50/90 text-slate-500"
+													}
+													onClick={() => {
+														if (slotCreatable) onSlotClick(iso, slot);
+													}}
+													aria-label={
+														slotCreatable
+															? `Nueva cita el ${iso} a las ${slot}`
+															: `Horario no disponible para nueva cita el ${iso} a las ${slot} (antelación mínima 30 minutos u otra regla)`
+													}
+												/>
+											);
+										})}
 									</div>
 
 									<div className="absolute inset-0 pointer-events-none">

@@ -1,8 +1,46 @@
-use chrono::{Local, NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::{DateTime, Duration, Local, NaiveDate, NaiveDateTime, NaiveTime, TimeZone};
 use chrono::Timelike;
 
 pub const DAY_START_HOUR: u32 = 7;
 pub const DAY_END_HOUR: u32 = 20;
+
+/// Antelación mínima para **nuevas** citas o al reprogramar fecha/hora (misma regla en cliente; alineado al slot de 30 min).
+pub const MIN_LEAD_MINUTES_FOR_NEW_APPOINTMENT: i64 = 30;
+
+/// Inicio de cita debe ser ≥ `now` + antelación mínima (hora local).
+pub fn validate_minimum_lead_time_for_new_booking(
+	appointment_date: &str,
+	start_time_str: &str,
+) -> Result<(), String> {
+	validate_minimum_lead_time_for_new_booking_at(
+		appointment_date,
+		start_time_str,
+		Local::now(),
+	)
+}
+
+pub(crate) fn validate_minimum_lead_time_for_new_booking_at(
+	appointment_date: &str,
+	start_time_str: &str,
+	now: DateTime<Local>,
+) -> Result<(), String> {
+	let date = NaiveDate::parse_from_str(appointment_date, "%Y-%m-%d")
+		.map_err(|_| "Fecha de cita inválida".to_string())?;
+	let start = parse_hh_mm(start_time_str)?;
+	let naive_start = NaiveDateTime::new(date, start);
+	let start_local = Local
+		.from_local_datetime(&naive_start)
+		.single()
+		.ok_or_else(|| "Fecha y hora local inválidas".to_string())?;
+	let limit = now + Duration::minutes(MIN_LEAD_MINUTES_FOR_NEW_APPOINTMENT);
+	if start_local < limit {
+		return Err(
+			"La cita debe programarse con al menos 30 minutos de antelación respecto a la hora actual."
+				.into(),
+		);
+	}
+	Ok(())
+}
 
 pub fn parse_hh_mm(s: &str) -> Result<NaiveTime, String> {
 	NaiveTime::parse_from_str(s, "%H:%M").map_err(|_| "Hora inválida (use HH:MM)".into())
@@ -80,5 +118,35 @@ mod tests {
 		let s = parse_hh_mm("19:30").unwrap();
 		let e = parse_hh_mm("20:30").unwrap();
 		assert!(!within_business_window(s, e));
+	}
+
+	#[test]
+	fn lead_time_rejects_when_start_before_limit() {
+		let d = NaiveDate::parse_from_str("2025-06-15", "%Y-%m-%d").unwrap();
+		let now = Local
+			.from_local_datetime(&NaiveDateTime::new(
+				d,
+				NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+			))
+			.single()
+			.unwrap();
+		assert!(
+			validate_minimum_lead_time_for_new_booking_at("2025-06-15", "10:15", now).is_err()
+		);
+	}
+
+	#[test]
+	fn lead_time_accepts_when_start_after_limit() {
+		let d = NaiveDate::parse_from_str("2025-06-15", "%Y-%m-%d").unwrap();
+		let now = Local
+			.from_local_datetime(&NaiveDateTime::new(
+				d,
+				NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+			))
+			.single()
+			.unwrap();
+		assert!(
+			validate_minimum_lead_time_for_new_booking_at("2025-06-15", "10:30", now).is_ok()
+		);
 	}
 }

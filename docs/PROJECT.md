@@ -29,11 +29,13 @@ Comportamientos que deben mantenerse al evolucionar el código:
 2. **Capacidad concurrente:** para un mismo `service_type`, fecha y solape temporal, no se puede superar la capacidad configurada; el modal muestra ocupación (p. ej. `2 / 2`) y bloquea antes de enviar si el cupo está lleno.
 3. **Validación en cliente:** documento (alfanumérico) y teléfono nacional (solo dígitos) se validan en la UI alineados con el backend, sin depender solo del error de `invoke`.
 4. **Edición según tiempo:** citas **futuras** — todos los campos editables salvo reglas de negocio; citas **pasadas** — solo **asistencia** (asistió / no asistió); no eliminar ni reescribir agenda en pasado.
+5. **Antelación mínima:** no crear citas ni reprogramar fecha/hora a un inicio anterior a **30 minutos** respecto al momento actual (hora local); huecos demasiado próximos quedan deshabilitados en el grid y el modal valida antes de enviar.
+6. **Panel “Hoy”:** barra lateral con resumen del **día actual** (paciente, procedimiento, horario); la carga de datos incluye siempre la fecha de hoy aunque la semana visible no la contenga.
 
 ## Pruebas y calidad
 
-- **Frontend (Vitest):** en la raíz, `npm run test` — reglas de solape y validación de formulario (`src/core/*.test.ts`).
-- **Backend (Rust):** `cd src-tauri` y `cargo test` — reglas de tiempo y solapes en `time_rules`.
+- **Frontend (Vitest):** en la raíz, `npm run test` — solapes, validación de formulario y antelación mínima (`src/core/*.test.ts`).
+- **Backend (Rust):** `cd src-tauri` y `cargo test` — `time_rules` (ventana, solapes, antelación) e integración mínima en `commands` (capacidad concurrente con BD en memoria).
 - **Manual:** `npm run tauri dev` — recorrer los flujos de la lista anterior tras cambios en calendario o citas.
 
 ## Documentos relacionados

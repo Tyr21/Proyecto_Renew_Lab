@@ -8,7 +8,8 @@ use crate::appointment_model::{AppointmentInput, AppointmentRow};
 use crate::settings_model::AppSettings;
 use crate::time_rules::{
 	is_duration_multiple_30, is_half_hour_aligned, is_appointment_past, minutes_since_midnight,
-	overlaps_intervals, parse_hh_mm, within_business_window,
+	overlaps_intervals, parse_hh_mm, validate_minimum_lead_time_for_new_booking,
+	within_business_window,
 };
 
 pub type DbConn = Mutex<rusqlite::Connection>;
@@ -210,22 +211,22 @@ fn count_overlapping_same_service(
 	Ok(count)
 }
 
-#[tauri::command]
-pub fn create_appointment(
-	db: tauri::State<'_, DbConn>,
+/// Lógica de creación reutilizable (comandos Tauri y pruebas con BD en memoria).
+pub(crate) fn create_appointment_core(
+	conn: &rusqlite::Connection,
 	input: AppointmentInput,
 ) -> Result<AppointmentRow, String> {
-	let conn = db.lock().map_err(|e| e.to_string())?;
-	let settings = load_settings_json(&conn)?;
+	let settings = load_settings_json(conn)?;
 	validate_against_settings(&settings, &input)?;
 	let (start_t, end_t) = validate_input_times(&input)?;
+	validate_minimum_lead_time_for_new_booking(&input.appointment_date, &input.start_time)?;
 	let start_min = minutes_since_midnight(start_t);
 	let end_min = minutes_since_midnight(end_t);
 	let cap = settings
 		.capacity_for_service(&input.service_type)
 		.ok_or_else(|| "Tipo de servicio no configurado".to_string())?;
 	let overlaps = count_overlapping_same_service(
-		&conn,
+		conn,
 		&input.appointment_date,
 		&input.service_type,
 		start_min,
@@ -272,7 +273,16 @@ pub fn create_appointment(
 	)
 	.map_err(|e| e.to_string())?;
 
-	load_appointment_by_id(&conn, &id)
+	load_appointment_by_id(conn, &id)
+}
+
+#[tauri::command]
+pub fn create_appointment(
+	db: tauri::State<'_, DbConn>,
+	input: AppointmentInput,
+) -> Result<AppointmentRow, String> {
+	let conn = db.lock().map_err(|e| e.to_string())?;
+	create_appointment_core(&conn, input)
 }
 
 fn load_appointment_by_id(conn: &rusqlite::Connection, id: &str) -> Result<AppointmentRow, String> {
@@ -333,6 +343,12 @@ pub fn update_appointment(
 
 	validate_against_settings(&settings, &input)?;
 	let (start_t, end_t) = validate_input_times(&input)?;
+	let schedule_changed = input.appointment_date != existing.appointment_date
+		|| input.start_time != existing.start_time
+		|| input.end_time != existing.end_time;
+	if schedule_changed {
+		validate_minimum_lead_time_for_new_booking(&input.appointment_date, &input.start_time)?;
+	}
 	let start_min = minutes_since_midnight(start_t);
 	let end_min = minutes_since_midnight(end_t);
 	let cap = settings
@@ -437,4 +453,57 @@ pub fn log_domain_event(input: LogDomainEventInput) -> Result<(), String> {
 pub fn get_appointment(db: tauri::State<'_, DbConn>, id: String) -> Result<AppointmentRow, String> {
 	let conn = db.lock().map_err(|e| e.to_string())?;
 	load_appointment_by_id(&conn, &id)
+}
+
+#[cfg(test)]
+mod integration_tests {
+	use super::*;
+	use crate::appointment_model::AppointmentInput;
+	use crate::db::open_in_memory_test_database;
+
+	fn sample_input(
+		date: &str,
+		start: &str,
+		end: &str,
+		service: &str,
+		patient: &str,
+	) -> AppointmentInput {
+		AppointmentInput {
+			patient_full_name: patient.into(),
+			document_type: "CC".into(),
+			document_number: "1".into(),
+			phone_dial_code: "57".into(),
+			phone_national_number: "300".into(),
+			birthday_month: None,
+			appointment_date: date.into(),
+			start_time: start.into(),
+			end_time: end.into(),
+			service_type: service.into(),
+			status: None,
+		}
+	}
+
+	#[test]
+	fn create_rejects_third_concurrent_same_service() {
+		let conn = open_in_memory_test_database().unwrap();
+		let inp = sample_input(
+			"2099-01-01",
+			"10:00",
+			"11:00",
+			"camara_hiperbarica",
+			"A",
+		);
+		create_appointment_core(&conn, inp.clone()).unwrap();
+		create_appointment_core(
+			&conn,
+			sample_input("2099-01-01", "10:00", "11:00", "camara_hiperbarica", "B"),
+		)
+		.unwrap();
+		let err = create_appointment_core(
+			&conn,
+			sample_input("2099-01-01", "10:00", "11:00", "camara_hiperbarica", "C"),
+		)
+		.unwrap_err();
+		assert!(err.contains("Capacidad"));
+	}
 }

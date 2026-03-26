@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	COUNTRY_DIAL_OPTIONS,
 	DEFAULT_COUNTRY_DIAL,
@@ -11,6 +11,7 @@ import {
 	updateAppointment,
 } from "../../core/api";
 import { formatInvokeError } from "../../core/errors";
+import { leadTimeErrorMessage } from "../../core/leadTime";
 import { serviceLabelFromSettings } from "../../core/serviceLabels";
 import { publishDomainEvent } from "../../core/domainEvents";
 import {
@@ -87,8 +88,18 @@ export function AppointmentModal({
 	const [status, setStatus] = useState<AppointmentStatus>("pendiente");
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
+	const panelRef = useRef<HTMLDivElement>(null);
 
 	const ends = useMemo(() => endOptionsForStart(startTime), [startTime]);
+
+	const scheduleChanged = useMemo(() => {
+		if (mode !== "edit" || !initial) return false;
+		return (
+			appointmentDate !== initial.appointmentDate ||
+			startTime !== initial.startTime ||
+			endTime !== initial.endTime
+		);
+	}, [mode, initial, appointmentDate, startTime, endTime]);
 
 	const currentServiceLabel = useMemo(
 		() => serviceLabelFromSettings(settings, serviceType),
@@ -180,6 +191,12 @@ export function AppointmentModal({
 		}
 	}, [ends, endTime]);
 
+	useEffect(() => {
+		if (!open) return;
+		const id = window.setTimeout(() => panelRef.current?.focus(), 0);
+		return () => clearTimeout(id);
+	}, [open]);
+
 	if (!open) return null;
 
 	function buildInput(): AppointmentInput {
@@ -233,6 +250,13 @@ export function AppointmentModal({
 				);
 				return;
 			}
+			if (mode === "create" || scheduleChanged) {
+				const leadErr = leadTimeErrorMessage(appointmentDate, startTime);
+				if (leadErr) {
+					setError(leadErr);
+					return;
+				}
+			}
 		}
 
 		setBusy(true);
@@ -285,10 +309,18 @@ export function AppointmentModal({
 			className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
 			role="dialog"
 			aria-modal="true"
+			aria-labelledby="appointment-modal-title"
 		>
-			<div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white shadow-xl">
+			<div
+				ref={panelRef}
+				tabIndex={-1}
+				className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white shadow-xl outline-none ring-0"
+			>
 				<div className="border-b border-slate-200 px-5 py-4">
-					<h2 className="text-lg font-semibold text-slate-800">
+					<h2
+						id="appointment-modal-title"
+						className="text-lg font-semibold text-slate-800"
+					>
 						{readOnlyPast
 							? "Asistencia (cita pasada)"
 							: mode === "create"
@@ -303,9 +335,18 @@ export function AppointmentModal({
 					</p>
 				</div>
 
-				<form onSubmit={handleSubmit} className="space-y-3 px-5 py-4">
+				<form
+					onSubmit={handleSubmit}
+					className="space-y-3 px-5 py-4"
+					aria-describedby={error ? "appointment-modal-error" : undefined}
+				>
 					{error && (
-						<div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
+						<div
+							id="appointment-modal-error"
+							role="alert"
+							aria-live="assertive"
+							className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800"
+						>
 							{error}
 						</div>
 					)}

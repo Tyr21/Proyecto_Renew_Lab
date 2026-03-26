@@ -73,13 +73,23 @@ Los eventos como `cita_creada`, `cita_completada` o `cita_cancelada` deben lleva
 
 ## Validación duplicada (Fase 2)
 
-- **Servidor (Rust):** comandos de creación/actualización de citas aplican `validate_against_settings`, ventana horaria (30 min, `07:00`–`20:00`), y conteo de solapes por `service_type` frente a `concurrent_capacity`.
-- **Cliente (TypeScript):** `validateAppointmentFormFields` y `countOverlappingSameService` repiten las mismas reglas de negocio para feedback inmediato y vista previa de cupos; el backend sigue siendo la fuente de verdad.
+- **Servidor (Rust):** comandos de creación/actualización de citas aplican `validate_against_settings`, ventana horaria (30 min, `07:00`–`20:00`), conteo de solapes por `service_type` frente a `concurrent_capacity`, y **antelación mínima** (`MIN_LEAD_MINUTES_FOR_NEW_APPOINTMENT`, 30 min, alineada al slot) en **creación** y al **reprogramar** fecha u hora de inicio/fin.
+- **Cliente (TypeScript):** `validateAppointmentFormFields`, `countOverlappingSameService` e `isSlotBookableWithLeadTime` / `leadTimeErrorMessage` repiten las mismas reglas para feedback inmediato, cupos y huecos; el backend sigue siendo la fuente de verdad.
 
 ## Vista semanal: solapes y franja clicable
 
 - El algoritmo de **columnas** para citas solapadas el mismo día está en el frontend (`layoutDayAppointments`); cada bloque muestra nombre, horario y etiqueta de **procedimiento** (resuelta desde `service_types` en configuración).
 - La constante **`APPOINTMENT_BLOCK_WIDTH_FRACTION`** (p. ej. `0.85` en `src/core/constants.ts`) define qué fracción del ancho de columna ocupa **en conjunto** la banda de citas solapadas; el resto queda como franja vertical clicable para crear otra cita a la misma hora. Los bloques adyacentes dentro de esa banda se reparten el ancho sin huecos intermedios.
+
+## Panel lateral y carga de datos
+
+- **Resumen de hoy:** lista las citas cuya fecha es el día actual (nombre, procedimiento, rango horario).
+- **Rango de consulta:** la petición `list_appointments_range` usa el intervalo que **cubre** tanto la semana visible como la fecha de hoy, para que el panel “Hoy” siga teniendo datos al cambiar de semana.
+- **Actualización:** al recargar citas se muestra un indicador discreto (“Actualizando…”) sin vaciar la grilla (menos parpadeo).
+
+## Accesibilidad (modal de cita)
+
+- Contenedor con `role="dialog"`, `aria-modal` y `aria-labelledby` apuntando al título; mensajes de error con `role="alert"` y `aria-live`; foco inicial en el panel al abrir para lectores de pantalla y teclado.
 
 ## Documentos relacionados
 

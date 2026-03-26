@@ -2,6 +2,8 @@
 export const CALENDAR_DAY_START_HOUR = 7;
 export const CALENDAR_DAY_END_HOUR = 20;
 export const SLOT_MINUTES = 30;
+/** Antelación mínima para nuevas citas o reprogramación (alineado con backend; mismo paso que SLOT_MINUTES). */
+export const MIN_LEAD_MINUTES_FOR_NEW_APPOINTMENT = 30;
 /** Altura de cada franja de 30 min (legibilidad en pantalla) */
 export const SLOT_HEIGHT_PX = 44;
 /**

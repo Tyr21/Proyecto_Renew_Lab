@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getSettings, listAppointmentsRange } from "./core/api";
+import { isSlotBookableWithLeadTime } from "./core/leadTime";
 import type { AppSettings, Appointment } from "./core/types";
 import { addDays, getWeekDates, startOfWeekMonday, toISODateLocal } from "./core/weekUtils";
 import { AppointmentModal } from "./modules/appointments/AppointmentModal";
+import { TodayAgendaSidebar } from "./modules/calendar/TodayAgendaSidebar";
 import { WeekCalendarView } from "./modules/calendar/WeekCalendarView";
 import { SettingsPanel } from "./modules/settings/SettingsPanel";
 
@@ -16,6 +18,7 @@ function App() {
 		startOfWeekMonday(new Date()),
 	);
 	const [appointments, setAppointments] = useState<Appointment[]>([]);
+	const [calendarRefreshing, setCalendarRefreshing] = useState(false);
 	const [modalOpen, setModalOpen] = useState(false);
 	const [modalMode, setModalMode] = useState<"create" | "edit">("create");
 	const [editing, setEditing] = useState<Appointment | null>(null);
@@ -33,15 +36,33 @@ function App() {
 		};
 	}, [weekStartMonday, settings]);
 
+	/** Incluye el día de hoy aunque la semana visible no lo muestre (sidebar “Hoy”). */
+	const fetchRange = useMemo(() => {
+		if (!weekRange.start) return { start: "", end: "" };
+		const today = toISODateLocal(new Date());
+		let start = weekRange.start;
+		let end = weekRange.end;
+		if (today < start) {
+			start = today;
+		}
+		if (today > end) {
+			end = today;
+		}
+		return { start, end };
+	}, [weekRange]);
+
 	const refreshAppointments = useCallback(async () => {
-		if (!settings || !weekRange.start) return;
+		if (!settings || !fetchRange.start) return;
+		setCalendarRefreshing(true);
 		try {
-			const list = await listAppointmentsRange(weekRange.start, weekRange.end);
+			const list = await listAppointmentsRange(fetchRange.start, fetchRange.end);
 			setAppointments(list);
 		} catch (e) {
 			console.error(e);
+		} finally {
+			setCalendarRefreshing(false);
 		}
-	}, [settings, weekRange.start, weekRange.end]);
+	}, [settings, fetchRange.start, fetchRange.end]);
 
 	useEffect(() => {
 		(async () => {
@@ -131,14 +152,24 @@ function App() {
 
 			<main className="flex-1 min-h-0 overflow-hidden">
 				{tab === "calendario" ? (
-					<WeekCalendarView
-						weekStartMonday={weekStartMonday}
-						settings={settings}
-						appointments={appointments}
-						onSlotClick={openCreate}
-						onAppointmentClick={openEdit}
-						onWeekShift={onWeekShift}
-					/>
+					<div className="flex h-full min-h-0">
+						<TodayAgendaSidebar
+							settings={settings}
+							appointments={appointments}
+						/>
+						<WeekCalendarView
+							weekStartMonday={weekStartMonday}
+							settings={settings}
+							appointments={appointments}
+							isSlotCreatable={(dateIso, startTime) =>
+								isSlotBookableWithLeadTime(dateIso, startTime)
+							}
+							isRefreshing={calendarRefreshing}
+							onSlotClick={openCreate}
+							onAppointmentClick={openEdit}
+							onWeekShift={onWeekShift}
+						/>
+					</div>
 				) : (
 					<div className="h-full overflow-y-auto bg-slate-50">
 						<SettingsPanel
