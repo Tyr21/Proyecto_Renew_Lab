@@ -55,6 +55,8 @@ export function WeekCalendarView({
 	const labels = weekDayLabels();
 
 	const gridBodyHeight = NUM_SLOTS * SLOT_HEIGHT_PX;
+	/** Altura total del cuerpo del calendario (cabecera alineada + slots); la columna de horas debe cubrirla siempre en blanco. */
+	const scrollBodyMinHeight = HEADER_TOP_H + gridBodyHeight;
 
 	function layoutsForDate(iso: string): LayoutBlock[] {
 		const dayAppts = appointments.filter((a) => a.appointmentDate === iso);
@@ -94,16 +96,19 @@ export function WeekCalendarView({
 			</header>
 
 			<div className="flex flex-1 min-h-0 overflow-auto">
-				{/* Columna de horas: misma altura por fila que los slots (sin absolute) */}
+				{/* Columna de horas: independiente del estado de los slots (siempre fondo base uniforme) */}
 				<div
-					className="sticky left-0 z-20 flex shrink-0 flex-col border-r border-slate-300 bg-white"
-					style={{ paddingTop: HEADER_TOP_H }}
+					className="sticky left-0 z-20 flex w-[4.5rem] min-w-[4.5rem] shrink-0 flex-col border-r border-slate-300 bg-white"
+					style={{
+						minHeight: scrollBodyMinHeight,
+						paddingTop: HEADER_TOP_H,
+					}}
 				>
-					<div className="flex w-[4.5rem] flex-col">
+					<div className="flex w-full flex-col bg-white">
 						{SLOT_LABELS.map((slot) => (
 							<div
 								key={slot}
-								className="flex shrink-0 items-start justify-end pr-1 pt-0.5 text-xs text-slate-500 tabular-nums leading-none"
+								className="flex shrink-0 items-start justify-end bg-white pr-1 pt-0.5 text-xs text-slate-500 tabular-nums leading-none"
 								style={{ height: SLOT_HEIGHT_PX }}
 							>
 								{formatTimeLabel(slot, settings.timeDisplay)}
