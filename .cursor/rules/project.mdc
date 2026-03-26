@@ -15,3 +15,15 @@ alwaysApply: true
 - **Cambios estructurales y documentación canónica:** Antes de nuevas tablas en BD o cambios de arquitectura de módulos, **revisar** `docs/PROJECT.md` (visión, fases, **criterios de aceptación Fase 2**, pruebas) y `docs/ARQUITECTURA.md` (stack, esquema, eventos, **validación duplicada**, **vista semanal / solapes**). Tras un cambio relevante, **actualizar** esos documentos.
 
 - **Validación de citas:** Reglas de negocio compartidas entre **Rust** (comandos) y **TypeScript** (formulario, cupos). Si se alteran, actualizar ambos lados y, si aplica, la sección de validación en `docs/ARQUITECTURA.md`.
+
+## 5. Principios de UI y CSS (KISS)
+
+Antes de escribir o refactorizar componentes visuales, aplicar estas restricciones:
+
+- **Cero sobre-ingeniería en el DOM:** Aplicar siempre **KISS** (Keep It Simple, Stupid). Preferir el flujo natural del HTML (**Flexbox**, **CSS Grid** nativo, márgenes y bordes) en lugar de forzar diseños con posiciones `absolute` salvo los casos permitidos más abajo.
+
+- **Prohibido el uso de “capas estructurales”:** Para cuadrículas, tablas o separadores, **nunca** usar `div` vacíos con `position: absolute`, `z-index` ni franjas flotantes de 1px. Los separadores deben ser **bordes nativos** (`border-r`, `border-b`, etc.) aplicados directamente a celdas o columnas.
+
+- **Uso restringido de `z-index`:** Posiciones absolutas y `z-index` están reservados **únicamente** a elementos que genuinamente flotan sobre la interfaz (modales, tooltips, notificaciones, **tarjetas de citas** sobre el calendario). **Nunca** para fondos, rejillas base ni estructura de layout.
+
+- **Estados visuales directos:** Cambios de estado (p. ej. horario deshabilitado, fuera de servicio) deben reflejarse con **`background-color` (u otras propiedades) directamente en el elemento afectado** (p. ej. la celda del grid). **No** mediante overlays ni capas semitransparentes superpuestas para simular el estado.
