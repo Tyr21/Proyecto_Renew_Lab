@@ -5,6 +5,7 @@ mod settings_model;
 mod time_rules;
 
 use std::sync::Mutex;
+
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -25,7 +26,6 @@ pub fn run() {
 			commands::create_appointment,
 			commands::update_appointment,
 			commands::delete_appointment,
-			commands::log_domain_event,
 			commands::get_appointment,
 		])
 		.run(tauri::generate_context!())

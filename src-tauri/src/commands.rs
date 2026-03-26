@@ -1,7 +1,8 @@
 use std::sync::Mutex;
 
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Utc};
 use rusqlite::params;
+use tauri::{AppHandle, Emitter};
 use uuid::Uuid;
 
 use crate::appointment_model::{AppointmentInput, AppointmentRow};
@@ -13,6 +14,34 @@ use crate::time_rules::{
 };
 
 pub type DbConn = Mutex<rusqlite::Connection>;
+
+/// Payload JSON con snake_case para consumidores del bus local (ver docs/ARQUITECTURA.md).
+fn cita_event_payload(row: &AppointmentRow) -> serde_json::Value {
+	serde_json::json!({
+		"cita_id": row.id,
+		"paciente_documento": row.document_number,
+		"tipo_servicio": row.service_type,
+		"estado": row.status,
+		"timestamp": Utc::now().to_rfc3339(),
+	})
+}
+
+fn emit_cita_event(app: &AppHandle, event: &str, row: &AppointmentRow) {
+	let payload = cita_event_payload(row);
+	if let Err(e) = app.emit(event, payload) {
+		eprintln!("[cita_event] emit {event} failed: {e}");
+	}
+}
+
+fn emit_after_update(app: &AppHandle, previous: &AppointmentRow, current: &AppointmentRow) {
+	let attendance_change = previous.status != current.status
+		&& (current.status == "asistio" || current.status == "no_asistio");
+	if attendance_change {
+		emit_cita_event(app, "cita_completada", current);
+	} else {
+		emit_cita_event(app, "cita_actualizada", current);
+	}
+}
 
 fn load_settings_json(conn: &rusqlite::Connection) -> Result<AppSettings, String> {
 	let json: String = conn
@@ -278,11 +307,14 @@ pub(crate) fn create_appointment_core(
 
 #[tauri::command]
 pub fn create_appointment(
+	app: AppHandle,
 	db: tauri::State<'_, DbConn>,
 	input: AppointmentInput,
 ) -> Result<AppointmentRow, String> {
 	let conn = db.lock().map_err(|e| e.to_string())?;
-	create_appointment_core(&conn, input)
+	let row = create_appointment_core(&conn, input)?;
+	emit_cita_event(&app, "cita_creada", &row);
+	Ok(row)
 }
 
 fn load_appointment_by_id(conn: &rusqlite::Connection, id: &str) -> Result<AppointmentRow, String> {
@@ -305,6 +337,7 @@ fn load_appointment_by_id(conn: &rusqlite::Connection, id: &str) -> Result<Appoi
 
 #[tauri::command]
 pub fn update_appointment(
+	app: AppHandle,
 	db: tauri::State<'_, DbConn>,
 	id: String,
 	input: AppointmentInput,
@@ -338,7 +371,9 @@ pub fn update_appointment(
 			params![status, now_s, id],
 		)
 		.map_err(|e| e.to_string())?;
-		return load_appointment_by_id(&conn, &id);
+		let updated = load_appointment_by_id(&conn, &id)?;
+		emit_after_update(&app, &existing, &updated);
+		return Ok(updated);
 	}
 
 	validate_against_settings(&settings, &input)?;
@@ -413,11 +448,17 @@ pub fn update_appointment(
 	)
 	.map_err(|e| e.to_string())?;
 
-	load_appointment_by_id(&conn, &id)
+	let updated = load_appointment_by_id(&conn, &id)?;
+	emit_after_update(&app, &existing, &updated);
+	Ok(updated)
 }
 
 #[tauri::command]
-pub fn delete_appointment(db: tauri::State<'_, DbConn>, id: String) -> Result<(), String> {
+pub fn delete_appointment(
+	app: AppHandle,
+	db: tauri::State<'_, DbConn>,
+	id: String,
+) -> Result<(), String> {
 	let conn = db.lock().map_err(|e| e.to_string())?;
 	let existing = load_appointment_by_id(&conn, &id)?;
 	if is_appointment_past(&existing.appointment_date, &existing.end_time)? {
@@ -426,25 +467,7 @@ pub fn delete_appointment(db: tauri::State<'_, DbConn>, id: String) -> Result<()
 	conn
 		.execute("DELETE FROM appointments WHERE id = ?1", params![id])
 		.map_err(|e| e.to_string())?;
-	Ok(())
-}
-
-#[derive(Debug, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct LogDomainEventInput {
-	pub event_name: String,
-	pub payload: serde_json::Value,
-}
-
-#[tauri::command]
-pub fn log_domain_event(input: LogDomainEventInput) -> Result<(), String> {
-	let ts = Local::now().to_rfc3339();
-	println!(
-		"[domain_event] {} | ts_log={} | payload={}",
-		input.event_name,
-		ts,
-		input.payload
-	);
+	emit_cita_event(&app, "cita_cancelada", &existing);
 	Ok(())
 }
 

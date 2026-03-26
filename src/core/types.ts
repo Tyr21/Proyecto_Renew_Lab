@@ -56,7 +56,10 @@ export interface DomainEventPayload {
 	timestamp: string;
 }
 
-export type DomainEventName =
+/** Eventos de dominio emitidos por el backend (Tauri `emit`) tras persistir en SQLite. */
+export type CitaEventName =
 	| "cita_creada"
-	| "cita_completada"
-	| "cita_cancelada";
+	| "cita_actualizada"
+	| "cita_cancelada"
+	| "cita_completada";
+

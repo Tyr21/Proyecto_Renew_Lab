@@ -22,7 +22,6 @@ export const TAURI_COMMANDS = {
 	createAppointment: "create_appointment",
 	updateAppointment: "update_appointment",
 	deleteAppointment: "delete_appointment",
-	logDomainEvent: "log_domain_event",
 	getAppointment: "get_appointment",
 } as const;
 

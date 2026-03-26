@@ -43,20 +43,20 @@ Una fila (`id = 1`) con `settings_json`: configuración global (domingos, format
 
 ## Patrón: arquitectura orientada a eventos local
 
-- Los **módulos de presentación** (calendario, formularios) invocan comandos para **persistir** y, en paralelo, **publican eventos de dominio** en el frontend.
-- Un comando Rust opcional **registra en consola** el payload para depuración.
-- **No** se acoplan inventario ni facturación al módulo de calendario: solo se preparan **contratos de eventos** para futuros consumidores.
+- La UI **solo invoca** comandos Tauri (`invoke`), sin publicar eventos de dominio duplicados en el cliente.
+- Tras una transacción SQLite exitosa en `commands.rs`, Rust emite eventos con **`AppHandle::emit`** (Tauri 2), visibles para todos los webviews (`listen` en el frontend).
+- **No** se acoplan inventario ni facturación al módulo de calendario: los consumidores futuros se suscriben al mismo **contrato de payload** (snake_case).
 
 Flujo conceptual:
 
 ```text
 UI (React) → comandos Tauri → SQLite
-     └→ bus de eventos local + log de dominio (Rust)
+                    └→ emit (Rust) → listen (React / otros consumidores)
 ```
 
 ## Definición del payload de eventos
 
-Los eventos como `cita_creada`, `cita_completada` o `cita_cancelada` deben llevar un **payload estandarizado** (campos en snake_case para interoperabilidad):
+Los eventos como `cita_creada`, `cita_actualizada`, `cita_completada` o `cita_cancelada` se emiten desde **Rust** (`Emitter::emit`) y deben llevar un **payload estandarizado** (campos en snake_case para interoperabilidad):
 
 ```json
 {

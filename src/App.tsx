@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { CitaEventNotifier } from "./components/CitaEventNotifier";
 import { getSettings, listAppointmentsRange } from "./core/api";
 import { isSlotBookableWithGracePeriod } from "./core/leadTime";
 import type { AppSettings, Appointment } from "./core/types";
@@ -193,6 +194,7 @@ function App() {
 				onClose={() => setModalOpen(false)}
 				onSaved={() => void refreshAppointments()}
 			/>
+			<CitaEventNotifier />
 		</div>
 	);
 }

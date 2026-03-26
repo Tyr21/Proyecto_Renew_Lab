@@ -13,7 +13,6 @@ import {
 import { formatInvokeError } from "../../core/errors";
 import { gracePeriodBookingErrorMessage } from "../../core/leadTime";
 import { serviceLabelFromSettings } from "../../core/serviceLabels";
-import { publishDomainEvent } from "../../core/domainEvents";
 import {
 	addMinutesToHHMM,
 	formatTimeLabel,
@@ -265,21 +264,13 @@ export function AppointmentModal({
 		setBusy(true);
 		try {
 			if (mode === "create") {
-				const row = await createAppointment({ ...input, status: undefined });
-				await publishDomainEvent("cita_creada", row);
+				await createAppointment({ ...input, status: undefined });
 				onSaved();
 				onClose();
 				return;
 			}
 			if (initial) {
-				const prevStatus = initial.status;
-				const row = await updateAppointment(initial.id, input);
-				if (
-					(row.status === "asistio" || row.status === "no_asistio") &&
-					prevStatus !== row.status
-				) {
-					await publishDomainEvent("cita_completada", row);
-				}
+				await updateAppointment(initial.id, input);
 				onSaved();
 				onClose();
 			}
@@ -297,7 +288,6 @@ export function AppointmentModal({
 		setError(null);
 		try {
 			await deleteAppointment(initial.id);
-			await publishDomainEvent("cita_cancelada", initial);
 			onSaved();
 			onClose();
 		} catch (err) {

@@ -12,7 +12,7 @@ La numeración sigue el plan acordado: cada fase es un bloque de producto; el **
 |------|--------|-----------|
 | **Fase 1** | Completada | Setup de **Tauri**, **React (Vite)**, **Tailwind**, **SQLite** y construcción visual del calendario con **CSS Grid** (celdas de **30 min**, citas por defecto de **1 h**), navegación semanal y ajustes de vista (domingos, formato de hora). |
 | **Fase 2** | Completada (refinamiento continuo) | **Conexión calendario ↔ base de datos**: CRUD de citas, configuración (tipos de documento/servicio, capacidades concurrentes), validaciones de **choques de horarios** y reglas de negocio ya persistidas. Lo que sigue aquí es pulir UX, pruebas y reglas adicionales según el consultorio. |
-| **Fase 3** | En curso | **Bus de eventos local**: emisión desde la UI, registro en terminal vía Rust; pendiente **extender consumidores** (otros módulos que reaccionen al mismo contrato de eventos). |
+| **Fase 3** | Completada | **Bus de eventos local**: emisión **solo desde Rust** tras persistir (`tauri::Emitter::emit` + payload JSON en `commands.rs`); el frontend se suscribe con `@tauri-apps/api/event` (`listen`). Consumidor de prueba: `CitaEventNotifier` (consola + toast). **Extender consumidores** (Inventario/Finanzas) en fases posteriores sin acoplar al calendario. |
 | **Fase 4** | Futuro | Módulos de **Inventario** y **Facturación**, **desacoplados** del calendario (solo reaccionan a eventos de dominio). |
 
 ## Decisiones clave
@@ -36,7 +36,7 @@ Comportamientos que deben mantenerse al evolucionar el código:
 
 - **Frontend (Vitest):** en la raíz, `npm run test` — solapes, validación de formulario y periodo de gracia (`src/core/*.test.ts`).
 - **Backend (Rust):** `cd src-tauri` y `cargo test` — `time_rules` (ventana, solapes, periodo de gracia) e integración mínima en `commands` (capacidad concurrente con BD en memoria).
-- **Manual:** `npm run tauri dev` — recorrer los flujos de la lista anterior tras cambios en calendario o citas.
+- **Manual:** `npm run tauri dev` — recorrer los flujos de la lista anterior tras cambios en calendario o citas; al crear/editar/eliminar citas, comprobar consola del WebView y toast inferior por eventos de dominio (`cita_*`).
 
 ## Documentos relacionados
 
