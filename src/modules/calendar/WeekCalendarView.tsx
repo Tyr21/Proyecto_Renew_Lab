@@ -101,9 +101,14 @@ export function WeekCalendarView({
 					className="sticky left-0 z-20 flex w-[4.5rem] min-w-[4.5rem] shrink-0 flex-col border-r border-slate-300 bg-white"
 					style={{
 						minHeight: scrollBodyMinHeight,
-						paddingTop: HEADER_TOP_H,
 					}}
 				>
+					{/* Esquina fija: por encima de cabeceras de día y de citas al hacer scroll */}
+					<div
+						className="sticky top-0 z-40 shrink-0 border-b border-r border-slate-300 bg-white"
+						style={{ height: HEADER_TOP_H }}
+						aria-hidden
+					/>
 					<div className="flex w-full flex-col bg-white">
 						{SLOT_LABELS.map((slot) => (
 							<div
@@ -135,7 +140,7 @@ export function WeekCalendarView({
 								className="flex min-w-[110px] flex-col border-r border-slate-200 bg-white"
 							>
 								<div
-									className="sticky top-0 z-10 flex shrink-0 flex-col items-center justify-center border-b border-slate-200 bg-slate-100 px-1"
+									className="sticky top-0 z-30 flex shrink-0 flex-col items-center justify-center border-b border-slate-200 bg-slate-100 px-1"
 									style={{ height: HEADER_TOP_H }}
 								>
 									<span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
@@ -177,7 +182,7 @@ export function WeekCalendarView({
 										);
 									})}
 
-									<div className="pointer-events-none absolute inset-0 z-10">
+									<div className="pointer-events-none absolute inset-0 z-0">
 										{layouts.map(({ appointment: a, column, columnCount }) => {
 											const sm =
 												minutesFromHHMM(a.startTime) ?? dayStartMinutes();
