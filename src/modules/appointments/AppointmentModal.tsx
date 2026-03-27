@@ -135,7 +135,9 @@ export function AppointmentModal({
 		return isAppointmentPastEnd(appointmentDate, endTime);
 	}, [appointmentDate, endTime]);
 
-	const readOnlyPast = mode === "edit" && initial && isPast;
+	const readOnlyPast =
+		mode === "edit" && initial != null && isPast;
+	const isPaidLocked = mode === "edit" && initial?.isPaid === true;
 
 	useEffect(() => {
 		if (!open) return;
@@ -227,6 +229,12 @@ export function AppointmentModal({
 		const input = buildInput();
 
 		if (readOnlyPast) {
+			if (isPaidLocked) {
+				setError(
+					"No se puede modificar una cita que ya tiene un pago registrado.",
+				);
+				return;
+			}
 			if (status !== "asistio" && status !== "no_asistio") {
 				setError("Seleccione asistió o no asistió.");
 				return;
@@ -344,6 +352,14 @@ export function AppointmentModal({
 						</div>
 					)}
 
+					{isPaidLocked ? (
+						<div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+							{readOnlyPast
+								? "Esta cita tiene un pago registrado. No puede cambiar el estado de asistencia."
+								: "Esta cita tiene un pago registrado. Estado, fecha, hora y servicio están bloqueados; puede actualizar datos de contacto del paciente."}
+						</div>
+					) : null}
+
 					{readOnlyPast ? (
 						<div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700 space-y-1">
 							<p>
@@ -366,8 +382,9 @@ export function AppointmentModal({
 							<label className="block pt-2 font-medium text-slate-800">
 								Asistencia
 								<select
-									className="mt-1 w-full rounded border border-slate-300 px-2 py-2"
+									className="mt-1 w-full rounded border border-slate-300 px-2 py-2 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-600"
 									value={status}
+									disabled={isPaidLocked}
 									onChange={(ev) =>
 										setStatus(ev.target.value as AppointmentStatus)
 									}
@@ -457,9 +474,10 @@ export function AppointmentModal({
 								Día de la cita
 								<input
 									type="date"
-									className="mt-1 w-full rounded border border-slate-300 px-2 py-2"
+									className="mt-1 w-full rounded border border-slate-300 px-2 py-2 disabled:cursor-not-allowed disabled:bg-slate-100"
 									value={appointmentDate}
 									onChange={(e) => setAppointmentDate(e.target.value)}
+									disabled={isPaidLocked}
 									required
 								/>
 							</label>
@@ -468,9 +486,10 @@ export function AppointmentModal({
 								<label className="block text-sm font-medium text-slate-700">
 									Inicio
 									<select
-										className="mt-1 w-full rounded border border-slate-300 px-2 py-2"
+										className="mt-1 w-full rounded border border-slate-300 px-2 py-2 disabled:cursor-not-allowed disabled:bg-slate-100"
 										value={startTime}
 										onChange={(e) => setStartTime(e.target.value)}
+										disabled={isPaidLocked}
 									>
 										{SLOT_OPTIONS.map((s) => (
 											<option key={s} value={s}>
@@ -482,9 +501,10 @@ export function AppointmentModal({
 								<label className="block text-sm font-medium text-slate-700">
 									Fin
 									<select
-										className="mt-1 w-full rounded border border-slate-300 px-2 py-2"
+										className="mt-1 w-full rounded border border-slate-300 px-2 py-2 disabled:cursor-not-allowed disabled:bg-slate-100"
 										value={endTime}
 										onChange={(e) => setEndTime(e.target.value)}
+										disabled={isPaidLocked}
 									>
 										{ends.map((s) => (
 											<option key={s} value={s}>
@@ -498,9 +518,10 @@ export function AppointmentModal({
 							<label className="block text-sm font-medium text-slate-700">
 								Tipo de servicio (procedimiento)
 								<select
-									className="mt-1 w-full rounded border border-slate-300 px-2 py-2"
+									className="mt-1 w-full rounded border border-slate-300 px-2 py-2 disabled:cursor-not-allowed disabled:bg-slate-100"
 									value={serviceType}
 									onChange={(e) => setServiceType(e.target.value)}
+									disabled={isPaidLocked}
 								>
 									{settings.serviceTypes.map((s) => (
 										<option key={s.id} value={s.id}>
@@ -531,11 +552,12 @@ export function AppointmentModal({
 								<label className="block text-sm font-medium text-slate-700">
 									Estado
 									<select
-										className="mt-1 w-full rounded border border-slate-300 px-2 py-2"
+										className="mt-1 w-full rounded border border-slate-300 px-2 py-2 disabled:cursor-not-allowed disabled:bg-slate-100"
 										value={status}
 										onChange={(e) =>
 											setStatus(e.target.value as AppointmentStatus)
 										}
+										disabled={isPaidLocked}
 									>
 										<option value="pendiente">Pendiente</option>
 										<option value="asistio">Asistió</option>
@@ -549,7 +571,7 @@ export function AppointmentModal({
 					<div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
 						<button
 							type="submit"
-							disabled={busy}
+							disabled={busy || (readOnlyPast && isPaidLocked)}
 							className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
 						>
 							Guardar

@@ -36,6 +36,7 @@ function apt(
 		status: "pendiente",
 		createdAt: "",
 		updatedAt: "",
+		isPaid: false,
 	};
 }
 

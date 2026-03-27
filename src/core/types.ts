@@ -32,6 +32,8 @@ export interface Appointment {
 	status: AppointmentStatus;
 	createdAt: string;
 	updatedAt: string;
+	/** Indica si existe un ingreso vinculado a esta cita (`ingresos.cita_id`). */
+	isPaid: boolean;
 }
 
 export interface AppointmentInput {

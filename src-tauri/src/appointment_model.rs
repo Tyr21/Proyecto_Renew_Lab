@@ -17,6 +17,9 @@ pub struct AppointmentRow {
 	pub status: String,
 	pub created_at: String,
 	pub updated_at: String,
+	/// `true` si existe al menos un registro en `ingresos` con este `cita_id`.
+	#[serde(default)]
+	pub is_paid: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

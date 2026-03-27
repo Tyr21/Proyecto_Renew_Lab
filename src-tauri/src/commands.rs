@@ -104,6 +104,7 @@ pub fn save_settings(db: tauri::State<'_, DbConn>, settings: AppSettings) -> Res
 }
 
 fn row_to_appointment(row: &rusqlite::Row<'_>) -> rusqlite::Result<AppointmentRow> {
+	let paid_int: i64 = row.get(14)?;
 	Ok(AppointmentRow {
 		id: row.get(0)?,
 		patient_full_name: row.get(1)?,
@@ -119,7 +120,19 @@ fn row_to_appointment(row: &rusqlite::Row<'_>) -> rusqlite::Result<AppointmentRo
 		status: row.get(11)?,
 		created_at: row.get(12)?,
 		updated_at: row.get(13)?,
+		is_paid: paid_int != 0,
 	})
+}
+
+fn has_ingreso_for_cita(conn: &rusqlite::Connection, cita_id: &str) -> Result<bool, String> {
+	let n: i64 = conn
+		.query_row(
+			"SELECT EXISTS(SELECT 1 FROM ingresos WHERE cita_id = ?1)",
+			params![cita_id],
+			|row| row.get(0),
+		)
+		.map_err(|e| e.to_string())?;
+	Ok(n != 0)
 }
 
 #[tauri::command]
@@ -132,13 +145,14 @@ pub fn list_appointments_range(
 	let mut stmt = conn
 		.prepare(
 			r#"
-			SELECT id, patient_full_name, document_type, document_number,
-				phone_dial_code, phone_national_number, birthday_month,
-				appointment_date, start_time, end_time, service_type, status,
-				created_at, updated_at
-			FROM appointments
-			WHERE appointment_date >= ?1 AND appointment_date <= ?2
-			ORDER BY appointment_date, start_time
+			SELECT a.id, a.patient_full_name, a.document_type, a.document_number,
+				a.phone_dial_code, a.phone_national_number, a.birthday_month,
+				a.appointment_date, a.start_time, a.end_time, a.service_type, a.status,
+				a.created_at, a.updated_at,
+				EXISTS(SELECT 1 FROM ingresos i WHERE i.cita_id = a.id) AS is_paid
+			FROM appointments a
+			WHERE a.appointment_date >= ?1 AND a.appointment_date <= ?2
+			ORDER BY a.appointment_date, a.start_time
 		"#,
 		)
 		.map_err(|e| e.to_string())?;
@@ -322,11 +336,12 @@ fn load_appointment_by_id(conn: &rusqlite::Connection, id: &str) -> Result<Appoi
 	let mut stmt = conn
 		.prepare(
 			r#"
-			SELECT id, patient_full_name, document_type, document_number,
-				phone_dial_code, phone_national_number, birthday_month,
-				appointment_date, start_time, end_time, service_type, status,
-				created_at, updated_at
-			FROM appointments WHERE id = ?1
+			SELECT a.id, a.patient_full_name, a.document_type, a.document_number,
+				a.phone_dial_code, a.phone_national_number, a.birthday_month,
+				a.appointment_date, a.start_time, a.end_time, a.service_type, a.status,
+				a.created_at, a.updated_at,
+				EXISTS(SELECT 1 FROM ingresos i WHERE i.cita_id = a.id) AS is_paid
+			FROM appointments a WHERE a.id = ?1
 		"#,
 		)
 		.map_err(|e| e.to_string())?;
@@ -347,6 +362,19 @@ pub fn update_appointment(
 	let existing = load_appointment_by_id(&conn, &id)?;
 	let settings = load_settings_json(&conn)?;
 	let past = is_appointment_past(&existing.appointment_date, &existing.end_time)?;
+
+	if has_ingreso_for_cita(&conn, &id)? {
+		let new_status = input.status.as_deref().unwrap_or(existing.status.as_str());
+		let status_changed = new_status != existing.status.as_str();
+		let schedule_changed = input.appointment_date != existing.appointment_date
+			|| input.start_time != existing.start_time
+			|| input.end_time != existing.end_time;
+		if status_changed || schedule_changed {
+			return Err(
+				"No se puede modificar una cita que ya tiene un pago registrado.".into(),
+			);
+		}
+	}
 
 	if past {
 		let status = input.status.as_deref().unwrap_or(&existing.status);
