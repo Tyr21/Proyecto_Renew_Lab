@@ -1,17 +1,25 @@
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { suggestedPriceForServiceType } from "../core/serviceLabels";
+import type { AppSettings } from "../core/types";
 import {
 	PaymentModal,
 	type PaymentPrefill,
 } from "../modules/finances/PaymentModal";
 
+interface FinanceEventListenerProps {
+	settings: AppSettings;
+}
+
 /**
  * Suscriptor al bus local: solo `cita_completada` (desacoplado del calendario).
  * Abre el modal de pago solo si `estado === "asistio"`; con `no_asistio` no hay cobro.
  */
-export function FinanceEventListener() {
+export function FinanceEventListener({ settings }: FinanceEventListenerProps) {
 	const [open, setOpen] = useState(false);
 	const [prefill, setPrefill] = useState<PaymentPrefill | null>(null);
+	const settingsRef = useRef(settings);
+	settingsRef.current = settings;
 
 	useEffect(() => {
 		let cancelled = false;
@@ -29,6 +37,14 @@ export function FinanceEventListener() {
 						if (estado !== "asistio") {
 							return;
 						}
+						const tipoServicio =
+							typeof p?.tipo_servicio === "string"
+								? p.tipo_servicio
+								: "";
+						const suggestedPrice = suggestedPriceForServiceType(
+							settingsRef.current,
+							tipoServicio,
+						);
 						setPrefill({
 							citaId:
 								typeof p?.cita_id === "string" ? p.cita_id : "",
@@ -40,10 +56,9 @@ export function FinanceEventListener() {
 								typeof p?.paciente_documento === "string"
 									? p.paciente_documento
 									: "",
-							concepto:
-								typeof p?.tipo_servicio === "string"
-									? p.tipo_servicio
-									: "",
+							concepto: tipoServicio,
+							suggestedPrice:
+								suggestedPrice > 0 ? suggestedPrice : undefined,
 						});
 						setOpen(true);
 					},

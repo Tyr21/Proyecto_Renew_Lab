@@ -15,6 +15,12 @@ export const SLOT_HEIGHT_PX = 44;
  */
 export const APPOINTMENT_BLOCK_WIDTH_FRACTION = 0.95;
 
+/** Valor inicial al añadir un tipo de servicio nuevo (COP). */
+export const DEFAULT_SUGGESTED_PRICE_COP = 150_000;
+
+/** Evento nativo en `window` tras persistir un ingreso (refresco de citas / `isPaid`). */
+export const INGRESO_REGISTRADO_EVENT = "ingreso_registrado";
+
 export const TAURI_COMMANDS = {
 	getSettings: "get_settings",
 	saveSettings: "save_settings",

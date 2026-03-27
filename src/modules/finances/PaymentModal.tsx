@@ -1,5 +1,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { crearIngreso } from "../../core/api";
+import { INGRESO_REGISTRADO_EVENT } from "../../core/constants";
+import { formatCurrency, parseCurrencyDigits } from "../../core/currencyFormat";
 import { formatInvokeError } from "../../core/errors";
 import type { CrearIngresoInput } from "../../core/types";
 
@@ -10,6 +12,8 @@ export interface PaymentPrefill {
 	pacienteNombre: string;
 	pacienteDocumento: string;
 	concepto: string;
+	/** Precio sugerido según configuración del tipo de servicio (0 = no pre-llenar / sin referencia). */
+	suggestedPrice?: number;
 }
 
 interface PaymentModalProps {
@@ -19,7 +23,7 @@ interface PaymentModalProps {
 }
 
 export function PaymentModal({ open, prefill, onClose }: PaymentModalProps) {
-	const [monto, setMonto] = useState("");
+	const [monto, setMonto] = useState(0);
 	const [metodoPago, setMetodoPago] = useState<string>(PAYMENT_METHODS[0]!);
 	const [concepto, setConcepto] = useState("");
 	const [pacienteDocumento, setPacienteDocumento] = useState("");
@@ -30,7 +34,8 @@ export function PaymentModal({ open, prefill, onClose }: PaymentModalProps) {
 		if (!open || !prefill) return;
 		setConcepto(prefill.concepto);
 		setPacienteDocumento(prefill.pacienteDocumento);
-		setMonto("");
+		const sp = prefill.suggestedPrice ?? 0;
+		setMonto(sp > 0 ? Math.round(sp) : 0);
 		setMetodoPago(PAYMENT_METHODS[0]!);
 		setError(null);
 	}, [open, prefill]);
@@ -39,13 +44,18 @@ export function PaymentModal({ open, prefill, onClose }: PaymentModalProps) {
 		return null;
 	}
 
+	const suggestedRef = prefill.suggestedPrice ?? 0;
+	const showPriceMismatch =
+		suggestedRef > 0 &&
+		monto > 0 &&
+		Math.abs(monto - suggestedRef) > 0.009;
+
 	async function handleSubmit(e: FormEvent) {
 		e.preventDefault();
 		if (!prefill) {
 			return;
 		}
-		const parsed = Number.parseFloat(monto.replace(",", "."));
-		if (Number.isNaN(parsed) || parsed <= 0) {
+		if (monto <= 0) {
 			setError("Indique un monto válido mayor que cero.");
 			return;
 		}
@@ -55,11 +65,12 @@ export function PaymentModal({ open, prefill, onClose }: PaymentModalProps) {
 			citaId: prefill.citaId || null,
 			pacienteDocumento: pacienteDocumento.trim(),
 			concepto: concepto.trim(),
-			monto: parsed,
+			monto,
 			metodoPago,
 		};
 		try {
 			await crearIngreso(input);
+			window.dispatchEvent(new CustomEvent(INGRESO_REGISTRADO_EVENT));
 			onClose();
 		} catch (err) {
 			setError(formatInvokeError(err) || "No se pudo registrar el pago");
@@ -123,13 +134,30 @@ export function PaymentModal({ open, prefill, onClose }: PaymentModalProps) {
 						</label>
 						<input
 							type="text"
-							inputMode="decimal"
+							inputMode="numeric"
+							autoComplete="off"
 							className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm tabular-nums"
-							value={monto}
-							onChange={(e) => setMonto(e.target.value)}
-							placeholder="0.00"
+							value={monto === 0 ? "" : formatCurrency(monto)}
+							onChange={(e) =>
+								setMonto(parseCurrencyDigits(e.target.value))
+							}
+							placeholder="$ 0"
 							required
+							aria-describedby={
+								showPriceMismatch ? "payment-monto-advertencia" : undefined
+							}
 						/>
+						{showPriceMismatch ? (
+							<p
+								id="payment-monto-advertencia"
+								className="mt-1.5 text-sm text-amber-800"
+								role="status"
+								aria-live="polite"
+							>
+								⚠️ El valor ingresado difiere del precio sugerido de{" "}
+								{formatCurrency(suggestedRef)}. ¿Confirmas que es correcto?
+							</p>
+						) : null}
 					</div>
 					<div>
 						<label className="block text-xs font-medium text-slate-600">

@@ -10,3 +10,16 @@ export function serviceLabelFromSettings(
 		serviceTypeId
 	);
 }
+
+/** Precio sugerido configurado para el id de servicio (≥ 0). */
+export function suggestedPriceForServiceType(
+	settings: AppSettings,
+	serviceTypeId: string,
+): number {
+	const v = settings.serviceTypes.find((s) => s.id === serviceTypeId)
+		?.suggestedPrice;
+	if (typeof v !== "number" || !Number.isFinite(v) || v < 0) {
+		return 0;
+	}
+	return v;
+}

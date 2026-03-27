@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { saveSettings } from "../../core/api";
+import { DEFAULT_SUGGESTED_PRICE_COP } from "../../core/constants";
+import { formatCurrency, parseCurrencyDigits } from "../../core/currencyFormat";
 import type { AppSettings, ServiceTypeSetting, TimeDisplay } from "../../core/types";
 
 interface SettingsPanelProps {
@@ -49,6 +51,7 @@ export function SettingsPanel({
 			id,
 			label: "Nuevo servicio",
 			concurrentCapacity: DEFAULT_NEW_SERVICE_CAPACITY,
+			suggestedPrice: DEFAULT_SUGGESTED_PRICE_COP,
 		};
 		setDraft((d) => ({ ...d, serviceTypes: [...d.serviceTypes, next] }));
 	}
@@ -181,60 +184,86 @@ export function SettingsPanel({
 					</div>
 					<p className="text-xs text-slate-500">
 						<code className="text-xs">id</code> interno estable (inventario
-						futuro); capacidad = citas concurrentes del mismo tipo.
+						futuro); capacidad = citas concurrentes del mismo tipo. El precio
+						sugerido se usa al registrar pagos tras completar una cita.
 					</p>
 					<ul className="space-y-3">
 						{draft.serviceTypes.map((s, i) => (
 							<li
 								key={s.id}
-								className="grid grid-cols-1 gap-2 rounded-lg border border-slate-100 bg-slate-50/80 p-3 md:grid-cols-12"
+								className="space-y-2 rounded-lg border border-slate-100 bg-slate-50/80 p-3"
 							>
-								<label className="md:col-span-3 text-sm">
-									<span className="text-slate-600">Id</span>
+								<div className="grid grid-cols-1 gap-2 md:grid-cols-12">
+									<label className="md:col-span-3 text-sm">
+										<span className="text-slate-600">Id</span>
+										<input
+											className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+											value={s.id}
+											onChange={(e) =>
+												updateService(i, { id: e.target.value.trim() })
+											}
+										/>
+									</label>
+									<label className="md:col-span-5 text-sm">
+										<span className="text-slate-600">Etiqueta</span>
+										<input
+											className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+											value={s.label}
+											onChange={(e) =>
+												updateService(i, { label: e.target.value })
+											}
+										/>
+									</label>
+									<label className="md:col-span-2 text-sm">
+										<span className="text-slate-600">Capacidad</span>
+										<input
+											type="number"
+											min={1}
+											className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+											value={s.concurrentCapacity}
+											onChange={(e) =>
+												updateService(i, {
+													concurrentCapacity: Math.max(
+														1,
+														Number.parseInt(e.target.value, 10) || 1,
+													),
+												})
+											}
+										/>
+									</label>
+									<div className="md:col-span-2 flex items-end">
+										<button
+											type="button"
+											onClick={() => removeService(i)}
+											className="w-full rounded border border-red-200 py-1.5 text-sm text-red-700 hover:bg-red-50"
+										>
+											Quitar
+										</button>
+									</div>
+								</div>
+								<label className="block text-sm md:max-w-xs">
+									<span className="text-slate-600">
+										Precio sugerido (COP, 0 = sin sugerencia)
+									</span>
 									<input
-										className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
-										value={s.id}
-										onChange={(e) =>
-											updateService(i, { id: e.target.value.trim() })
+										type="text"
+										inputMode="numeric"
+										autoComplete="off"
+										className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm tabular-nums"
+										value={
+											s.suggestedPrice === 0
+												? ""
+												: formatCurrency(s.suggestedPrice)
 										}
-									/>
-								</label>
-								<label className="md:col-span-5 text-sm">
-									<span className="text-slate-600">Etiqueta</span>
-									<input
-										className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
-										value={s.label}
-										onChange={(e) =>
-											updateService(i, { label: e.target.value })
-										}
-									/>
-								</label>
-								<label className="md:col-span-2 text-sm">
-									<span className="text-slate-600">Capacidad</span>
-									<input
-										type="number"
-										min={1}
-										className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
-										value={s.concurrentCapacity}
 										onChange={(e) =>
 											updateService(i, {
-												concurrentCapacity: Math.max(
-													1,
-													Number.parseInt(e.target.value, 10) || 1,
+												suggestedPrice: parseCurrencyDigits(
+													e.target.value,
 												),
 											})
 										}
 									/>
 								</label>
-								<div className="md:col-span-2 flex items-end">
-									<button
-										type="button"
-										onClick={() => removeService(i)}
-										className="w-full rounded border border-red-200 py-1.5 text-sm text-red-700 hover:bg-red-50"
-									>
-										Quitar
-									</button>
-								</div>
 							</li>
 						))}
 					</ul>

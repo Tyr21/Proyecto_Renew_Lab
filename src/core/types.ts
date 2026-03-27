@@ -6,6 +6,8 @@ export interface ServiceTypeSetting {
 	id: string;
 	label: string;
 	concurrentCapacity: number;
+	/** Precio sugerido para cobros (misma moneda que ingresos). 0 = sin sugerencia en UI. */
+	suggestedPrice: number;
 }
 
 export interface AppSettings {

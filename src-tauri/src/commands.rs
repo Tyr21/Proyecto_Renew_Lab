@@ -97,6 +97,9 @@ pub fn save_settings(db: tauri::State<'_, DbConn>, settings: AppSettings) -> Res
 		if st.concurrent_capacity < 1 {
 			return Err("La capacidad concurrente debe ser al menos 1".into());
 		}
+		if st.suggested_price < 0.0 || !st.suggested_price.is_finite() {
+			return Err("El precio sugerido de cada servicio debe ser un número válido ≥ 0".into());
+		}
 	}
 	let conn = db.lock().map_err(|e| e.to_string())?;
 	save_settings_json(&conn, &settings)?;
@@ -369,7 +372,8 @@ pub fn update_appointment(
 		let schedule_changed = input.appointment_date != existing.appointment_date
 			|| input.start_time != existing.start_time
 			|| input.end_time != existing.end_time;
-		if status_changed || schedule_changed {
+		let service_changed = input.service_type != existing.service_type;
+		if status_changed || schedule_changed || service_changed {
 			return Err(
 				"No se puede modificar una cita que ya tiene un pago registrado.".into(),
 			);

@@ -39,7 +39,11 @@ Representa una cita agendada. Los nombres de columna coinciden con el modelo per
 
 ### Tabla `app_config`
 
-Una fila (`id = 1`) con `settings_json`: configuración global (domingos, formato de hora, duración por defecto, listas de tipos de documento/servicio y capacidades concurrentes).
+Una fila (`id = 1`) con `settings_json`: configuración global (domingos, formato de hora, duración por defecto, listas de tipos de documento/servicio, capacidades concurrentes y **precio sugerido por tipo de servicio** en moneda local, p. ej. COP). JSON antiguo sin `suggestedPrice` se completa al deserializar en Rust con valor por defecto.
+
+### Auditoría: cita con ingreso vinculado
+
+Si existe fila en `ingresos` con el `cita_id` de la cita, `update_appointment` rechaza cambios de **estado**, **fecha/hora** o **tipo de servicio** (`service_type`), con mensaje explícito; el cliente deshabilita los mismos campos cuando `isPaid` es verdadero en la lectura de la cita.
 
 ### Tabla `ingresos` (Fase 4 — finanzas)
 
@@ -59,7 +63,8 @@ Registro de pagos/ingresos locales. `cita_id` opcional (texto UUID) para enlazar
 
 - La UI **solo invoca** comandos Tauri (`invoke`), sin publicar eventos de dominio duplicados en el cliente.
 - Tras una transacción SQLite exitosa en `commands.rs`, Rust emite eventos con **`AppHandle::emit`** (Tauri 2), visibles para todos los webviews (`listen` en el frontend).
-- **No** se acoplan inventario ni facturación al módulo de calendario: los consumidores se suscriben al mismo **contrato de payload** (snake_case). Ejemplo: `FinanceEventListener` escucha solo `cita_completada` y abre el modal de pago; el calendario no importa ese componente.
+- **No** se acoplan inventario ni facturación al módulo de calendario: los consumidores se suscriben al mismo **contrato de payload** (snake_case). Ejemplo: `FinanceEventListener` escucha solo `cita_completada` y abre el modal de pago con el monto pre-llenado según el **precio sugerido** del `tipo_servicio` en configuración; el calendario no importa ese componente.
+- Tras persistir un ingreso desde el modal de pago, la UI dispara en el `window` el evento nativo **`ingreso_registrado`** para que la vista principal vuelva a cargar citas y refleje `isPaid` sin estado obsoleto.
 
 Flujo conceptual:
 

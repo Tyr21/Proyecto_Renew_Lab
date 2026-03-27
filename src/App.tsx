@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CitaEventNotifier } from "./components/CitaEventNotifier";
 import { FinanceEventListener } from "./components/FinanceEventListener";
 import { getSettings, listAppointmentsRange } from "./core/api";
+import { INGRESO_REGISTRADO_EVENT } from "./core/constants";
 import { isSlotBookableWithGracePeriod } from "./core/leadTime";
 import type { AppSettings, Appointment } from "./core/types";
 import { addDays, getWeekDates, startOfWeekMonday, toISODateLocal } from "./core/weekUtils";
@@ -82,6 +83,15 @@ function App() {
 
 	useEffect(() => {
 		void refreshAppointments();
+	}, [refreshAppointments]);
+
+	useEffect(() => {
+		const onIngreso = () => {
+			void refreshAppointments();
+		};
+		window.addEventListener(INGRESO_REGISTRADO_EVENT, onIngreso);
+		return () =>
+			window.removeEventListener(INGRESO_REGISTRADO_EVENT, onIngreso);
 	}, [refreshAppointments]);
 
 	function onWeekShift(delta: number) {
@@ -196,7 +206,7 @@ function App() {
 				onSaved={() => void refreshAppointments()}
 			/>
 			<CitaEventNotifier />
-			<FinanceEventListener />
+			<FinanceEventListener settings={settings} />
 		</div>
 	);
 }

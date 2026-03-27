@@ -1,11 +1,18 @@
 use serde::{Deserialize, Serialize};
 
+fn default_suggested_price() -> f64 {
+	150_000.0
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ServiceTypeSetting {
 	pub id: String,
 	pub label: String,
 	pub concurrent_capacity: u32,
+	/// Precio sugerido (misma moneda local que `ingresos.monto`). Ausente en JSON antiguo → default.
+	#[serde(default = "default_suggested_price")]
+	pub suggested_price: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,11 +47,13 @@ impl Default for AppSettings {
 					id: "camara_hiperbarica".into(),
 					label: "Cámara Hiperbárica".into(),
 					concurrent_capacity: 2,
+					suggested_price: 180_000.0,
 				},
 				ServiceTypeSetting {
 					id: "sueroterapia".into(),
 					label: "Sueroterapia".into(),
 					concurrent_capacity: 2,
+					suggested_price: 120_000.0,
 				},
 			],
 		}

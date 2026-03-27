@@ -9,7 +9,12 @@ const baseSettings: AppSettings = {
 	documentTypes: ["CC", "NIT"],
 	defaultDocumentType: "CC",
 	serviceTypes: [
-		{ id: "camara_hiperbarica", label: "Cámara", concurrentCapacity: 2 },
+		{
+			id: "camara_hiperbarica",
+			label: "Cámara",
+			concurrentCapacity: 2,
+			suggestedPrice: 150_000,
+		},
 	],
 };
 
