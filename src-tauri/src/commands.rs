@@ -494,7 +494,8 @@ pub fn delete_appointment(
 ) -> Result<(), String> {
 	let conn = db.lock().map_err(|e| e.to_string())?;
 	let existing = load_appointment_by_id(&conn, &id)?;
-	if is_appointment_past(&existing.appointment_date, &existing.end_time)? {
+	let settings = load_settings_json(&conn)?;
+	if !settings.admin_mode && is_appointment_past(&existing.appointment_date, &existing.end_time)? {
 		return Err("No se pueden eliminar citas pasadas".into());
 	}
 	conn

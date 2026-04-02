@@ -17,6 +17,8 @@ export interface AppSettings {
 	documentTypes: string[];
 	defaultDocumentType: string;
 	serviceTypes: ServiceTypeSetting[];
+	/** Permite al administrador eliminar citas pasadas. Desactivado por defecto. */
+	adminMode: boolean;
 }
 
 export interface Appointment {
