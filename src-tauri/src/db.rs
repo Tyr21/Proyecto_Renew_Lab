@@ -69,6 +69,54 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
 		[],
 	);
 
+	backfill_ingresos_paciente_nombre(conn)?;
+
+	Ok(())
+}
+
+/// Completa `paciente_nombre` en filas antiguas donde quedó vacío tras la migración de columna.
+/// 1) Por cita vinculada (`appointments.id`).
+/// 2) Por documento coincidente con la última cita del paciente (`updated_at`).
+fn backfill_ingresos_paciente_nombre(conn: &Connection) -> Result<(), String> {
+	conn
+		.execute(
+			r#"
+			UPDATE ingresos
+			SET paciente_nombre = (
+				SELECT a.patient_full_name
+				FROM appointments a
+				WHERE a.id = ingresos.cita_id
+			)
+			WHERE TRIM(COALESCE(paciente_nombre, '')) = ''
+				AND cita_id IS NOT NULL
+				AND TRIM(cita_id) != ''
+				AND EXISTS (SELECT 1 FROM appointments a WHERE a.id = ingresos.cita_id)
+			"#,
+			[],
+		)
+		.map_err(|e| e.to_string())?;
+
+	conn
+		.execute(
+			r#"
+			UPDATE ingresos
+			SET paciente_nombre = (
+				SELECT a.patient_full_name
+				FROM appointments a
+				WHERE TRIM(a.document_number) = TRIM(ingresos.paciente_documento)
+				ORDER BY a.updated_at DESC
+				LIMIT 1
+			)
+			WHERE TRIM(COALESCE(paciente_nombre, '')) = ''
+				AND EXISTS (
+					SELECT 1 FROM appointments a
+					WHERE TRIM(a.document_number) = TRIM(ingresos.paciente_documento)
+				)
+			"#,
+			[],
+		)
+		.map_err(|e| e.to_string())?;
+
 	Ok(())
 }
 
@@ -103,4 +151,99 @@ pub fn open_in_memory_test_database() -> Result<Connection, String> {
 	run_migrations(&conn)?;
 	seed_settings_if_empty(&conn)?;
 	Ok(conn)
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	fn insert_appointment(
+		conn: &Connection,
+		id: &str,
+		name: &str,
+		document_number: &str,
+		updated_at: &str,
+	) {
+		conn
+			.execute(
+				r#"
+				INSERT INTO appointments (
+					id, patient_full_name, document_type, document_number,
+					phone_dial_code, phone_national_number, birthday_month,
+					appointment_date, start_time, end_time, service_type, status,
+					created_at, updated_at
+				) VALUES (?1, ?2, 'CC', ?3, '+57', '3000000000', NULL,
+					'2026-01-01', '09:00', '09:30', 'consulta', 'confirmada',
+					'2026-01-01T10:00:00Z', ?4)
+				"#,
+				params![id, name, document_number, updated_at],
+			)
+			.unwrap();
+	}
+
+	#[test]
+	fn backfill_paciente_nombre_desde_cita_id() {
+		let conn = open_in_memory_test_database().unwrap();
+		insert_appointment(
+			&conn,
+			"cita-1",
+			"Ana López",
+			"1090",
+			"2026-01-02T10:00:00Z",
+		);
+		conn
+			.execute(
+				r#"
+				INSERT INTO ingresos (
+					id, cita_id, paciente_nombre, paciente_documento, concepto, monto, metodo_pago, fecha_pago
+				) VALUES ('ing-1', 'cita-1', '', '1090', 'Servicio', 50.0, 'Efectivo', '2026-01-03T12:00:00Z')
+				"#,
+				[],
+			)
+			.unwrap();
+
+		backfill_ingresos_paciente_nombre(&conn).unwrap();
+
+		let nombre: String = conn
+			.query_row(
+				"SELECT paciente_nombre FROM ingresos WHERE id = 'ing-1'",
+				[],
+				|row| row.get(0),
+			)
+			.unwrap();
+		assert_eq!(nombre, "Ana López");
+	}
+
+	#[test]
+	fn backfill_paciente_nombre_por_documento_sin_cita() {
+		let conn = open_in_memory_test_database().unwrap();
+		insert_appointment(
+			&conn,
+			"cita-x",
+			"Carlos Ruiz",
+			"7711",
+			"2026-02-01T10:00:00Z",
+		);
+		conn
+			.execute(
+				r#"
+				INSERT INTO ingresos (
+					id, cita_id, paciente_nombre, paciente_documento, concepto, monto, metodo_pago, fecha_pago
+				) VALUES ('ing-2', NULL, '', '7711', 'Otro', 20.0, 'Transferencia', '2026-02-02T12:00:00Z')
+				"#,
+				[],
+			)
+			.unwrap();
+
+		backfill_ingresos_paciente_nombre(&conn).unwrap();
+
+		let nombre: String = conn
+			.query_row(
+				"SELECT paciente_nombre FROM ingresos WHERE id = 'ing-2'",
+				[],
+				|row| row.get(0),
+			)
+			.unwrap();
+		assert_eq!(nombre, "Carlos Ruiz");
+	}
 }
