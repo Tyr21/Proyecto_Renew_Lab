@@ -195,7 +195,7 @@ function App() {
 						/>
 					</div>
 				) : tab === "finanzas" ? (
-					<FinanceDashboard />
+					<FinanceDashboard adminMode={settings.adminMode ?? false} />
 				) : (
 					<div className="h-full overflow-y-auto bg-slate-50">
 						<SettingsPanel

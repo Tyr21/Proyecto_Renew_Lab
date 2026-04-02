@@ -73,6 +73,7 @@ export type CitaEventName =
 export interface Ingreso {
 	id: string;
 	citaId: string | null;
+	pacienteNombre: string;
 	pacienteDocumento: string;
 	concepto: string;
 	monto: number;
@@ -82,6 +83,7 @@ export interface Ingreso {
 
 export interface CrearIngresoInput {
 	citaId?: string | null;
+	pacienteNombre: string;
 	pacienteDocumento: string;
 	concepto: string;
 	monto: number;

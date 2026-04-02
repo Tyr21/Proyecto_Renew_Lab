@@ -31,6 +31,7 @@ export const TAURI_COMMANDS = {
 	getAppointment: "get_appointment",
 	crearIngreso: "crear_ingreso",
 	obtenerIngresos: "obtener_ingresos",
+	eliminarIngreso: "eliminar_ingreso",
 } as const;
 
 export function slotCountForDay(): number {

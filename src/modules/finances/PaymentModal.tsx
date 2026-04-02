@@ -63,6 +63,7 @@ export function PaymentModal({ open, prefill, onClose }: PaymentModalProps) {
 		setError(null);
 		const input: CrearIngresoInput = {
 			citaId: prefill.citaId || null,
+			pacienteNombre: prefill.pacienteNombre.trim(),
 			pacienteDocumento: pacienteDocumento.trim(),
 			concepto: concepto.trim(),
 			monto,

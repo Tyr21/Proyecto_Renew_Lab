@@ -13,6 +13,7 @@ const METODOS_VALIDOS: &[&str] = &["Efectivo", "Tarjeta", "Transferencia"];
 pub struct IngresoRow {
 	pub id: String,
 	pub cita_id: Option<String>,
+	pub paciente_nombre: String,
 	pub paciente_documento: String,
 	pub concepto: String,
 	pub monto: f64,
@@ -24,6 +25,7 @@ pub struct IngresoRow {
 #[serde(rename_all = "camelCase")]
 pub struct CrearIngresoInput {
 	pub cita_id: Option<String>,
+	pub paciente_nombre: String,
 	pub paciente_documento: String,
 	pub concepto: String,
 	pub monto: f64,
@@ -34,11 +36,12 @@ fn row_to_ingreso(row: &rusqlite::Row<'_>) -> rusqlite::Result<IngresoRow> {
 	Ok(IngresoRow {
 		id: row.get(0)?,
 		cita_id: row.get(1)?,
-		paciente_documento: row.get(2)?,
-		concepto: row.get(3)?,
-		monto: row.get(4)?,
-		metodo_pago: row.get(5)?,
-		fecha_pago: row.get(6)?,
+		paciente_nombre: row.get(2)?,
+		paciente_documento: row.get(3)?,
+		concepto: row.get(4)?,
+		monto: row.get(5)?,
+		metodo_pago: row.get(6)?,
+		fecha_pago: row.get(7)?,
 	})
 }
 
@@ -46,7 +49,7 @@ fn load_ingreso_by_id(conn: &Connection, id: &str) -> Result<IngresoRow, String>
 	let mut stmt = conn
 		.prepare(
 			r#"
-			SELECT id, cita_id, paciente_documento, concepto, monto, metodo_pago, fecha_pago
+			SELECT id, cita_id, paciente_nombre, paciente_documento, concepto, monto, metodo_pago, fecha_pago
 			FROM ingresos WHERE id = ?1
 		"#,
 		)
@@ -67,6 +70,9 @@ pub fn crear_ingreso(
 	input: CrearIngresoInput,
 ) -> Result<IngresoRow, String> {
 	let conn = db.lock().map_err(|e| e.to_string())?;
+	if input.paciente_nombre.trim().is_empty() {
+		return Err("El nombre del paciente es obligatorio".into());
+	}
 	if input.paciente_documento.trim().is_empty() {
 		return Err("El documento del paciente es obligatorio".into());
 	}
@@ -91,12 +97,13 @@ pub fn crear_ingreso(
 
 	conn.execute(
 		r#"
-		INSERT INTO ingresos (id, cita_id, paciente_documento, concepto, monto, metodo_pago, fecha_pago)
-		VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+		INSERT INTO ingresos (id, cita_id, paciente_nombre, paciente_documento, concepto, monto, metodo_pago, fecha_pago)
+		VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
 	"#,
 		params![
 			id,
 			cita_id,
+			input.paciente_nombre.trim(),
 			input.paciente_documento.trim(),
 			input.concepto.trim(),
 			input.monto,
@@ -115,7 +122,7 @@ pub fn obtener_ingresos(db: State<'_, DbConn>) -> Result<Vec<IngresoRow>, String
 	let mut stmt = conn
 		.prepare(
 			r#"
-			SELECT id, cita_id, paciente_documento, concepto, monto, metodo_pago, fecha_pago
+			SELECT id, cita_id, paciente_nombre, paciente_documento, concepto, monto, metodo_pago, fecha_pago
 			FROM ingresos
 			ORDER BY fecha_pago DESC
 		"#,
@@ -127,4 +134,26 @@ pub fn obtener_ingresos(db: State<'_, DbConn>) -> Result<Vec<IngresoRow>, String
 		.collect::<Result<Vec<_>, _>>()
 		.map_err(|e| e.to_string())?;
 	Ok(rows)
+}
+
+#[tauri::command]
+pub fn eliminar_ingreso(db: State<'_, DbConn>, id: String) -> Result<(), String> {
+	let id = id.trim().to_string();
+	if id.is_empty() {
+		return Err("El id del ingreso es obligatorio".into());
+	}
+	let conn = db.lock().map_err(|e| e.to_string())?;
+	let exists: i64 = conn
+		.query_row(
+			"SELECT COUNT(*) FROM ingresos WHERE id = ?1",
+			params![id],
+			|row| row.get(0),
+		)
+		.map_err(|e| e.to_string())?;
+	if exists == 0 {
+		return Err("Ingreso no encontrado".into());
+	}
+	conn.execute("DELETE FROM ingresos WHERE id = ?1", params![id])
+		.map_err(|e| e.to_string())?;
+	Ok(())
 }

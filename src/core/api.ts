@@ -61,3 +61,7 @@ export async function crearIngreso(
 export async function obtenerIngresos(): Promise<Ingreso[]> {
 	return invoke<Ingreso[]>(TAURI_COMMANDS.obtenerIngresos);
 }
+
+export async function eliminarIngreso(id: string): Promise<void> {
+	return invoke(TAURI_COMMANDS.eliminarIngreso, { id });
+}

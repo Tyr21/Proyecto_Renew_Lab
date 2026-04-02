@@ -62,6 +62,13 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
 		"#,
 		)
 		.map_err(|e| e.to_string())?;
+
+	// Migración incremental: agrega paciente_nombre si aún no existe
+	let _ = conn.execute(
+		"ALTER TABLE ingresos ADD COLUMN paciente_nombre TEXT NOT NULL DEFAULT ''",
+		[],
+	);
+
 	Ok(())
 }
 

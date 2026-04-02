@@ -30,6 +30,7 @@ pub fn run() {
 			commands::get_appointment,
 			finance::crear_ingreso,
 			finance::obtener_ingresos,
+			finance::eliminar_ingreso,
 		])
 		.run(tauri::generate_context!())
 		.expect("error while running tauri application");
