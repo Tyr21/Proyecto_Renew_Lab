@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "Bash(dir \"C:\\\\Users\\\\lpelaez\\\\proyectos\\\\Proyecto_Renew_Lab\\\\src\\\\modules\\\\finances\")",
+      "Bash(dir \"C:\\\\Users\\\\lpelaez\\\\proyectos\\\\Proyecto_Renew_Lab\\\\src\\\\core\")"
+    ]
+  }
+}
