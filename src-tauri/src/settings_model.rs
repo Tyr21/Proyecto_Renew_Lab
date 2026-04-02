@@ -25,6 +25,9 @@ pub struct AppSettings {
 	pub document_types: Vec<String>,
 	pub default_document_type: String,
 	pub service_types: Vec<ServiceTypeSetting>,
+	/// Permite al administrador eliminar citas pasadas. Desactivado por defecto.
+	#[serde(default)]
+	pub admin_mode: bool,
 }
 
 impl Default for AppSettings {
@@ -56,6 +59,7 @@ impl Default for AppSettings {
 					suggested_price: 120_000.0,
 				},
 			],
+			admin_mode: false,
 		}
 	}
 }

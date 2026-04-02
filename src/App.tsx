@@ -9,9 +9,10 @@ import { addDays, getWeekDates, startOfWeekMonday, toISODateLocal } from "./core
 import { AppointmentModal } from "./modules/appointments/AppointmentModal";
 import { TodayAgendaSidebar } from "./modules/calendar/TodayAgendaSidebar";
 import { WeekCalendarView } from "./modules/calendar/WeekCalendarView";
+import { FinanceDashboard } from "./modules/finances/FinanceDashboard";
 import { SettingsPanel } from "./modules/settings/SettingsPanel";
 
-type Tab = "calendario" | "configuracion";
+type Tab = "calendario" | "finanzas" | "configuracion";
 
 function App() {
 	const [tab, setTab] = useState<Tab>("calendario");
@@ -152,6 +153,17 @@ function App() {
 				<button
 					type="button"
 					className={`rounded-lg px-4 py-2 text-sm font-medium ${
+						tab === "finanzas"
+							? "bg-sky-600 text-white"
+							: "text-slate-700 hover:bg-slate-100"
+					}`}
+					onClick={() => setTab("finanzas")}
+				>
+					💰 Cierre de caja
+				</button>
+				<button
+					type="button"
+					className={`rounded-lg px-4 py-2 text-sm font-medium ${
 						tab === "configuracion"
 							? "bg-sky-600 text-white"
 							: "text-slate-700 hover:bg-slate-100"
@@ -182,6 +194,8 @@ function App() {
 							onWeekShift={onWeekShift}
 						/>
 					</div>
+				) : tab === "finanzas" ? (
+					<FinanceDashboard />
 				) : (
 					<div className="h-full overflow-y-auto bg-slate-50">
 						<SettingsPanel
@@ -204,6 +218,7 @@ function App() {
 				preset={presetSlot}
 				onClose={() => setModalOpen(false)}
 				onSaved={() => void refreshAppointments()}
+				adminMode={settings.adminMode ?? false}
 			/>
 			<CitaEventNotifier />
 			<FinanceEventListener settings={settings} />

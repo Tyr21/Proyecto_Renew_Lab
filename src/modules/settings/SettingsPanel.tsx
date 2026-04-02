@@ -269,6 +269,23 @@ export function SettingsPanel({
 					</ul>
 				</section>
 
+				<section className="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm space-y-3">
+					<h2 className="font-medium text-amber-800">Administración</h2>
+					<label className="flex items-center gap-2 text-sm">
+						<input
+							type="checkbox"
+							checked={draft.adminMode ?? false}
+							onChange={(e) =>
+								setDraft((d) => ({ ...d, adminMode: e.target.checked }))
+							}
+						/>
+						<span>
+							<span className="font-medium text-amber-900">Modo Administrador</span>
+							<span className="ml-1 text-amber-700">— permite eliminar citas pasadas</span>
+						</span>
+					</label>
+				</section>
+
 				<button
 					type="submit"
 					disabled={busy}

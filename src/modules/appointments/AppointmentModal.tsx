@@ -43,6 +43,8 @@ interface AppointmentModalProps {
 	preset: PresetSlot | null;
 	onClose: () => void;
 	onSaved: () => void;
+	/** Cuando está activo, permite eliminar citas pasadas (modo administrador). */
+	adminMode?: boolean;
 }
 
 const SLOT_OPTIONS = generateSlotStarts();
@@ -69,6 +71,7 @@ export function AppointmentModal({
 	preset,
 	onClose,
 	onSaved,
+	adminMode = false,
 }: AppointmentModalProps) {
 	const [patientFullName, setPatientFullName] = useState("");
 	const [documentType, setDocumentType] = useState(
@@ -136,7 +139,7 @@ export function AppointmentModal({
 	}, [appointmentDate, endTime]);
 
 	const readOnlyPast =
-		mode === "edit" && initial != null && isPast;
+		mode === "edit" && initial != null && isPast && !adminMode;
 	const isPaidLocked = mode === "edit" && initial?.isPaid === true;
 
 	useEffect(() => {
