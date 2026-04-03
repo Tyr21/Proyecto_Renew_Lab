@@ -6,6 +6,9 @@ import {
 import { validateAppointmentFormFields } from "../../core/appointmentFormValidation";
 import { countOverlappingSameService } from "../../core/appointmentOverlap";
 import {
+	actualizarCliente,
+	buscarClientes,
+	crearCliente,
 	createAppointment,
 	deleteAppointment,
 	updateAppointment,
@@ -25,6 +28,7 @@ import type {
 	Appointment,
 	AppointmentInput,
 	AppointmentStatus,
+	Cliente,
 } from "../../core/types";
 import { isAppointmentPastEnd } from "../../core/weekUtils";
 
@@ -92,6 +96,15 @@ export function AppointmentModal({
 	const [busy, setBusy] = useState(false);
 	const panelRef = useRef<HTMLDivElement>(null);
 
+	// Autocomplete de clientes
+	const [sugerencias, setSugerencias] = useState<Cliente[]>([]);
+	const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
+	const [clienteYaExistia, setClienteYaExistia] = useState(false);
+	const [clienteOriginal, setClienteOriginal] = useState<Cliente | null>(null);
+	const [mostrarConfirmacionCliente, setMostrarConfirmacionCliente] = useState(false);
+	const [guardandoCliente, setGuardandoCliente] = useState(false);
+	const debounceNombreRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
 	const ends = useMemo(() => endOptionsForStart(startTime), [startTime]);
 
 	const scheduleChanged = useMemo(() => {
@@ -141,6 +154,15 @@ export function AppointmentModal({
 	const readOnlyPast =
 		mode === "edit" && initial != null && isPast && !adminMode;
 	const isPaidLocked = mode === "edit" && initial?.isPaid === true;
+
+	useEffect(() => {
+		if (!open) return;
+		setSugerencias([]);
+		setMostrarSugerencias(false);
+		setClienteYaExistia(false);
+		setClienteOriginal(null);
+		setMostrarConfirmacionCliente(false);
+	}, [open]);
 
 	useEffect(() => {
 		if (!open) return;
@@ -200,6 +222,34 @@ export function AppointmentModal({
 		const id = window.setTimeout(() => panelRef.current?.focus(), 0);
 		return () => clearTimeout(id);
 	}, [open]);
+
+	async function handleActualizarCliente() {
+		if (!clienteOriginal) { onSaved(); onClose(); return; }
+		setGuardandoCliente(true);
+		try {
+			const partes = patientFullName.trim().split(/\s+/);
+			const apellidos = partes.length > 1 ? partes[partes.length - 1]! : clienteOriginal.apellidos;
+			const nombres = partes.length > 1 ? partes.slice(0, -1).join(" ") : partes[0] ?? patientFullName;
+			const bm = birthdayMonth.trim() === "" ? null : Number.parseInt(birthdayMonth, 10);
+			await actualizarCliente(clienteOriginal.id, {
+				nombres,
+				apellidos,
+				documentType,
+				documentNumber: documentNumber.trim(),
+				phoneDialCode: phoneDial,
+				phoneNationalNumber: phoneNational.trim(),
+				email: clienteOriginal.email,
+				birthdayMonth: bm != null && !Number.isNaN(bm) ? bm : null,
+				notas: clienteOriginal.notas,
+			});
+		} catch {
+			// Ignorar — la cita ya fue guardada
+		} finally {
+			setGuardandoCliente(false);
+			onSaved();
+			onClose();
+		}
+	}
 
 	if (!open) return null;
 
@@ -276,6 +326,50 @@ export function AppointmentModal({
 		try {
 			if (mode === "create") {
 				await createAppointment({ ...input, status: undefined });
+
+				if (clienteYaExistia && clienteOriginal) {
+					// Cliente seleccionado del dropdown — verificar si hubo cambios
+					const nombreCompleto = `${clienteOriginal.nombres} ${clienteOriginal.apellidos}`.trim();
+					const hayDiferencias =
+						nombreCompleto !== input.patientFullName.trim() ||
+						clienteOriginal.documentType !== input.documentType ||
+						clienteOriginal.documentNumber !== input.documentNumber ||
+						clienteOriginal.phoneDialCode !== input.phoneDialCode ||
+						clienteOriginal.phoneNationalNumber !== input.phoneNationalNumber ||
+						(clienteOriginal.birthdayMonth ?? null) !== input.birthdayMonth;
+
+					if (hayDiferencias) {
+						// Mantener el modal abierto y mostrar confirmación
+						setBusy(false);
+						setMostrarConfirmacionCliente(true);
+						return;
+					}
+				} else if (!clienteYaExistia) {
+					// Nuevo paciente — auto-crear en clientes si no existe
+					try {
+						const found = await buscarClientes(input.documentNumber);
+						const exacto = found.find((c) => c.documentNumber === input.documentNumber);
+						if (!exacto) {
+							const partes = input.patientFullName.trim().split(/\s+/);
+							const apellidos = partes.length > 1 ? partes[partes.length - 1]! : "";
+							const nombres = partes.length > 1 ? partes.slice(0, -1).join(" ") : partes[0] ?? input.patientFullName;
+							await crearCliente({
+								nombres,
+								apellidos,
+								documentType: input.documentType,
+								documentNumber: input.documentNumber,
+								phoneDialCode: input.phoneDialCode,
+								phoneNationalNumber: input.phoneNationalNumber,
+								email: "",
+								birthdayMonth: input.birthdayMonth,
+								notas: "",
+							});
+						}
+					} catch {
+						// La cita ya fue creada — ignorar error de cliente
+					}
+				}
+
 				onSaved();
 				onClose();
 				return;
@@ -399,15 +493,61 @@ export function AppointmentModal({
 						</div>
 					) : (
 						<>
-							<label className="block text-sm font-medium text-slate-700">
+							<div className="block text-sm font-medium text-slate-700">
 								Nombre completo
-								<input
-									className="mt-1 w-full rounded border border-slate-300 px-2 py-2"
-									value={patientFullName}
-									onChange={(e) => setPatientFullName(e.target.value)}
-									required
-								/>
-							</label>
+								<div className="relative mt-1">
+									<input
+										className="w-full rounded border border-slate-300 px-2 py-2"
+										value={patientFullName}
+										onChange={(e) => {
+											const val = e.target.value;
+											setPatientFullName(val);
+											setClienteYaExistia(false);
+											if (debounceNombreRef.current) clearTimeout(debounceNombreRef.current);
+											if (!val.trim()) { setSugerencias([]); setMostrarSugerencias(false); return; }
+											debounceNombreRef.current = setTimeout(() => {
+												buscarClientes(val.trim()).then((found) => {
+													setSugerencias(found);
+													setMostrarSugerencias(found.length > 0);
+												}).catch(() => {});
+											}, 200);
+										}}
+										onBlur={() => setTimeout(() => setMostrarSugerencias(false), 150)}
+										required
+										autoComplete="off"
+									/>
+									{mostrarSugerencias && sugerencias.length > 0 && (
+										<div className="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+											{sugerencias.map((c) => (
+												<button
+													key={c.id}
+													type="button"
+													className="w-full px-3 py-2 text-left text-sm hover:bg-sky-50 border-b border-slate-100 last:border-0"
+													onMouseDown={() => {
+														setPatientFullName(`${c.nombres} ${c.apellidos}`);
+														setDocumentType(c.documentType);
+														setDocumentNumber(c.documentNumber);
+														setPhoneDial(c.phoneDialCode || DEFAULT_COUNTRY_DIAL.dial);
+														setPhoneNational(c.phoneNationalNumber);
+														setBirthdayMonth(c.birthdayMonth != null ? String(c.birthdayMonth) : "");
+														setClienteYaExistia(true);
+														setClienteOriginal(c);
+														setSugerencias([]);
+														setMostrarSugerencias(false);
+													}}
+												>
+													<span className="font-medium text-slate-800">
+														{c.apellidos}, {c.nombres}
+													</span>
+													<span className="ml-2 text-xs text-slate-500">
+														{c.documentType} {c.documentNumber}
+													</span>
+												</button>
+											))}
+										</div>
+									)}
+								</div>
+							</div>
 
 							<div className="grid grid-cols-2 gap-2">
 								<label className="block text-sm font-medium text-slate-700">
@@ -571,7 +711,36 @@ export function AppointmentModal({
 						</>
 					)}
 
-					<div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+					{mostrarConfirmacionCliente && (
+						<div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
+							<p className="text-sm font-medium text-amber-900">
+								✅ Cita guardada. Los datos del paciente fueron modificados.
+							</p>
+							<p className="text-sm text-amber-800">
+								¿Desea actualizar también los datos del cliente en la base de datos?
+							</p>
+							<div className="flex gap-2">
+								<button
+									type="button"
+									disabled={guardandoCliente}
+									onClick={() => void handleActualizarCliente()}
+									className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+								>
+									{guardandoCliente ? "Actualizando…" : "Sí, actualizar cliente"}
+								</button>
+								<button
+									type="button"
+									disabled={guardandoCliente}
+									onClick={() => { onSaved(); onClose(); }}
+									className="rounded-lg border border-amber-300 px-4 py-2 text-sm font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+								>
+									No, solo la cita
+								</button>
+							</div>
+						</div>
+					)}
+
+				<div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
 						<button
 							type="submit"
 							disabled={busy || (readOnlyPast && isPaidLocked)}

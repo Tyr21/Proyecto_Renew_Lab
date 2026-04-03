@@ -32,6 +32,15 @@ export const TAURI_COMMANDS = {
 	crearIngreso: "crear_ingreso",
 	obtenerIngresos: "obtener_ingresos",
 	eliminarIngreso: "eliminar_ingreso",
+	estadisticasCitasPorMes: "estadisticas_citas_por_mes",
+	estadisticasIngresosPorMes: "estadisticas_ingresos_por_mes",
+	estadisticasServicios: "estadisticas_servicios",
+	estadisticasMetodosPago: "estadisticas_metodos_pago",
+	crearCliente: "crear_cliente",
+	actualizarCliente: "actualizar_cliente",
+	buscarClientes: "buscar_clientes",
+	obtenerCliente: "obtener_cliente",
+	eliminarCliente: "eliminar_cliente",
 } as const;
 
 export function slotCountForDay(): number {

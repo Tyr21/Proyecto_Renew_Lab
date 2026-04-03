@@ -89,3 +89,59 @@ export interface CrearIngresoInput {
 	monto: number;
 	metodoPago: string;
 }
+
+export interface CitasPorMes {
+	mes: string;
+	totalCitas: number;
+	asistieron: number;
+	noAsistieron: number;
+	porcentajeAsistencia: number;
+}
+
+export interface IngresosPorMes {
+	mes: string;
+	montoTotal: number;
+	cantidadTransacciones: number;
+	montoPromedio: number;
+}
+
+export interface ServicioStats {
+	serviceType: string;
+	totalCitas: number;
+	asistieron: number;
+	porcentajeAsistencia: number;
+}
+
+export interface MetodoPagoStats {
+	metodoPago: string;
+	montoTotal: number;
+	cantidadTransacciones: number;
+	porcentajeDelTotal: number;
+}
+
+export interface Cliente {
+	id: string;
+	nombres: string;
+	apellidos: string;
+	documentType: string;
+	documentNumber: string;
+	phoneDialCode: string;
+	phoneNationalNumber: string;
+	email: string;
+	birthdayMonth: number | null;
+	notas: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface ClienteInput {
+	nombres: string;
+	apellidos: string;
+	documentType: string;
+	documentNumber: string;
+	phoneDialCode: string;
+	phoneNationalNumber: string;
+	email: string;
+	birthdayMonth: number | null;
+	notas: string;
+}

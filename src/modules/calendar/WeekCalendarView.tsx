@@ -35,6 +35,7 @@ interface WeekCalendarViewProps {
 	onSlotClick: (dateIso: string, startTime: string) => void;
 	onAppointmentClick: (a: Appointment) => void;
 	onWeekShift: (deltaWeeks: number) => void;
+	onGoToToday: () => void;
 }
 
 const SLOT_LABELS = generateSlotStarts();
@@ -50,8 +51,11 @@ export function WeekCalendarView({
 	onSlotClick,
 	onAppointmentClick,
 	onWeekShift,
+	onGoToToday,
 }: WeekCalendarViewProps) {
 	const days = getWeekDates(weekStartMonday, settings.showSundays);
+	const todayIso = toISODateLocal(new Date());
+	const isCurrentWeek = days.some((d) => toISODateLocal(d) === todayIso);
 	const labels = weekDayLabels();
 
 	const gridBodyHeight = NUM_SLOTS * SLOT_HEIGHT_PX;
@@ -83,6 +87,14 @@ export function WeekCalendarView({
 						onClick={() => onWeekShift(1)}
 					>
 						Semana siguiente →
+					</button>
+					<button
+						type="button"
+						disabled={isCurrentWeek}
+						className="rounded-lg border border-sky-300 bg-sky-50 px-3 py-1.5 text-sm font-medium text-sky-700 hover:bg-sky-100 disabled:cursor-default disabled:opacity-40"
+						onClick={onGoToToday}
+					>
+						Hoy
 					</button>
 				</div>
 				<h1 className="text-lg font-semibold text-slate-800">

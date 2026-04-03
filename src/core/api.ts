@@ -4,8 +4,14 @@ import type {
 	AppSettings,
 	Appointment,
 	AppointmentInput,
+	CitasPorMes,
+	Cliente,
+	ClienteInput,
 	CrearIngresoInput,
+	IngresosPorMes,
 	Ingreso,
+	MetodoPagoStats,
+	ServicioStats,
 } from "./types";
 
 export async function getSettings(): Promise<AppSettings> {
@@ -58,10 +64,76 @@ export async function crearIngreso(
 	return invoke<Ingreso>(TAURI_COMMANDS.crearIngreso, { input });
 }
 
-export async function obtenerIngresos(): Promise<Ingreso[]> {
-	return invoke<Ingreso[]>(TAURI_COMMANDS.obtenerIngresos);
+export async function obtenerIngresos(
+	startDate: string,
+	endDate: string,
+): Promise<Ingreso[]> {
+	return invoke<Ingreso[]>(TAURI_COMMANDS.obtenerIngresos, { startDate, endDate });
 }
 
 export async function eliminarIngreso(id: string): Promise<void> {
 	return invoke(TAURI_COMMANDS.eliminarIngreso, { id });
+}
+
+export async function estadisticasCitasPorMes(
+	startDate: string,
+	endDate: string,
+): Promise<CitasPorMes[]> {
+	return invoke<CitasPorMes[]>(TAURI_COMMANDS.estadisticasCitasPorMes, {
+		startDate,
+		endDate,
+	});
+}
+
+export async function estadisticasIngresosPorMes(
+	startDate: string,
+	endDate: string,
+): Promise<IngresosPorMes[]> {
+	return invoke<IngresosPorMes[]>(TAURI_COMMANDS.estadisticasIngresosPorMes, {
+		startDate,
+		endDate,
+	});
+}
+
+export async function estadisticasServicios(
+	startDate: string,
+	endDate: string,
+): Promise<ServicioStats[]> {
+	return invoke<ServicioStats[]>(TAURI_COMMANDS.estadisticasServicios, {
+		startDate,
+		endDate,
+	});
+}
+
+export async function estadisticasMetodosPago(
+	startDate: string,
+	endDate: string,
+): Promise<MetodoPagoStats[]> {
+	return invoke<MetodoPagoStats[]>(TAURI_COMMANDS.estadisticasMetodosPago, {
+		startDate,
+		endDate,
+	});
+}
+
+export async function crearCliente(input: ClienteInput): Promise<Cliente> {
+	return invoke<Cliente>(TAURI_COMMANDS.crearCliente, { input });
+}
+
+export async function actualizarCliente(
+	id: string,
+	input: ClienteInput,
+): Promise<Cliente> {
+	return invoke<Cliente>(TAURI_COMMANDS.actualizarCliente, { id, input });
+}
+
+export async function buscarClientes(query: string): Promise<Cliente[]> {
+	return invoke<Cliente[]>(TAURI_COMMANDS.buscarClientes, { query });
+}
+
+export async function obtenerCliente(id: string): Promise<Cliente> {
+	return invoke<Cliente>(TAURI_COMMANDS.obtenerCliente, { id });
+}
+
+export async function eliminarCliente(id: string): Promise<void> {
+	return invoke(TAURI_COMMANDS.eliminarCliente, { id });
 }

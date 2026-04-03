@@ -9,10 +9,12 @@ import { addDays, getWeekDates, startOfWeekMonday, toISODateLocal } from "./core
 import { AppointmentModal } from "./modules/appointments/AppointmentModal";
 import { TodayAgendaSidebar } from "./modules/calendar/TodayAgendaSidebar";
 import { WeekCalendarView } from "./modules/calendar/WeekCalendarView";
+import { ClientesDashboard } from "./modules/clientes/ClientesDashboard";
 import { FinanceDashboard } from "./modules/finances/FinanceDashboard";
+import { ReportsDashboard } from "./modules/reports/ReportsDashboard";
 import { SettingsPanel } from "./modules/settings/SettingsPanel";
 
-type Tab = "calendario" | "finanzas" | "configuracion";
+type Tab = "calendario" | "finanzas" | "reportes" | "clientes" | "configuracion";
 
 function App() {
 	const [tab, setTab] = useState<Tab>("calendario");
@@ -99,6 +101,10 @@ function App() {
 		setWeekStartMonday((w) => addDays(w, delta * 7));
 	}
 
+	function onGoToToday() {
+		setWeekStartMonday(startOfWeekMonday(new Date()));
+	}
+
 	function openCreate(date: string, startTime: string) {
 		setModalMode("create");
 		setEditing(null);
@@ -164,6 +170,28 @@ function App() {
 				<button
 					type="button"
 					className={`rounded-lg px-4 py-2 text-sm font-medium ${
+						tab === "reportes"
+							? "bg-sky-600 text-white"
+							: "text-slate-700 hover:bg-slate-100"
+					}`}
+					onClick={() => setTab("reportes")}
+				>
+					📊 Reportes
+				</button>
+				<button
+					type="button"
+					className={`rounded-lg px-4 py-2 text-sm font-medium ${
+						tab === "clientes"
+							? "bg-sky-600 text-white"
+							: "text-slate-700 hover:bg-slate-100"
+					}`}
+					onClick={() => setTab("clientes")}
+				>
+					👥 Clientes
+				</button>
+				<button
+					type="button"
+					className={`rounded-lg px-4 py-2 text-sm font-medium ${
 						tab === "configuracion"
 							? "bg-sky-600 text-white"
 							: "text-slate-700 hover:bg-slate-100"
@@ -192,10 +220,15 @@ function App() {
 							onSlotClick={openCreate}
 							onAppointmentClick={openEdit}
 							onWeekShift={onWeekShift}
+							onGoToToday={onGoToToday}
 						/>
 					</div>
 				) : tab === "finanzas" ? (
 					<FinanceDashboard adminMode={settings.adminMode ?? false} />
+				) : tab === "reportes" ? (
+					<ReportsDashboard settings={settings} />
+				) : tab === "clientes" ? (
+					<ClientesDashboard settings={settings} />
 				) : (
 					<div className="h-full overflow-y-auto bg-slate-50">
 						<SettingsPanel

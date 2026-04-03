@@ -1,7 +1,9 @@
 mod appointment_model;
+mod clientes;
 mod commands;
 mod db;
 mod finance;
+mod reports;
 mod settings_model;
 mod time_rules;
 
@@ -31,6 +33,15 @@ pub fn run() {
 			finance::crear_ingreso,
 			finance::obtener_ingresos,
 			finance::eliminar_ingreso,
+			reports::estadisticas_citas_por_mes,
+			reports::estadisticas_ingresos_por_mes,
+			reports::estadisticas_servicios,
+			reports::estadisticas_metodos_pago,
+			clientes::crear_cliente,
+			clientes::actualizar_cliente,
+			clientes::buscar_clientes,
+			clientes::obtener_cliente,
+			clientes::eliminar_cliente,
 		])
 		.run(tauri::generate_context!())
 		.expect("error while running tauri application");

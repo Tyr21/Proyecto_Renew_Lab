@@ -54,7 +54,7 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 	const today = toISODateLocal(new Date());
 	const [dateFrom, setDateFrom] = useState(today);
 	const [dateTo, setDateTo] = useState(today);
-	const [allIngresos, setAllIngresos] = useState<Ingreso[]>([]);
+	const [ingresos, setIngresos] = useState<Ingreso[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -63,14 +63,14 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 		setError(null);
 		setLoading(true);
 		try {
-			const list = await obtenerIngresos();
-			setAllIngresos(list);
+			const list = await obtenerIngresos(dateFrom, dateTo);
+			setIngresos(list);
 		} catch (e) {
 			setError(formatInvokeError(e) || "No se pudieron cargar los ingresos");
 		} finally {
 			setLoading(false);
 		}
-	}, []);
+	}, [dateFrom, dateTo]);
 
 	useEffect(() => {
 		void loadIngresos();
@@ -79,20 +79,11 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 		return () => window.removeEventListener(INGRESO_REGISTRADO_EVENT, onIngreso);
 	}, [loadIngresos]);
 
-	const rowsEnRango = useMemo(() => {
-		return allIngresos
-			.filter((i) => {
-				const d = fechaIngresoLocalISODate(i.fechaPago);
-				return d >= dateFrom && d <= dateTo;
-			})
-			.sort((a, b) => b.fechaPago.localeCompare(a.fechaPago));
-	}, [allIngresos, dateFrom, dateTo]);
-
-	const totals = useMemo(() => sumByMethod(rowsEnRango), [rowsEnRango]);
+	const totals = useMemo(() => sumByMethod(ingresos), [ingresos]);
 
 	const reportePorServicio = useMemo(() => {
 		const mapa = new Map<string, { total: number; cantidad: number }>();
-		for (const r of rowsEnRango) {
+		for (const r of ingresos) {
 			const clave = r.concepto.trim() || "(sin concepto)";
 			const prev = mapa.get(clave) ?? { total: 0, cantidad: 0 };
 			mapa.set(clave, { total: prev.total + r.monto, cantidad: prev.cantidad + 1 });
@@ -100,7 +91,7 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 		return Array.from(mapa.entries())
 			.map(([concepto, datos]) => ({ concepto, ...datos }))
 			.sort((a, b) => b.total - a.total);
-	}, [rowsEnRango]);
+	}, [ingresos]);
 
 	const handleDelete = useCallback(async (id: string) => {
 		if (!window.confirm("¿Confirmar eliminación del ingreso?")) return;
@@ -116,8 +107,8 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 	}, [loadIngresos]);
 
 	const handleExportCSV = useCallback(() => {
-		if (rowsEnRango.length === 0) return;
-		const csv = generarCSV(rowsEnRango);
+		if (ingresos.length === 0) return;
+		const csv = generarCSV(ingresos);
 		const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement("a");
@@ -128,7 +119,7 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 		a.click();
 		document.body.removeChild(a);
 		URL.revokeObjectURL(url);
-	}, [rowsEnRango, dateFrom, dateTo]);
+	}, [ingresos, dateFrom, dateTo]);
 
 	function setHoy() {
 		const t = toISODateLocal(new Date());
@@ -146,6 +137,14 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 		const now = new Date();
 		const first = new Date(now.getFullYear(), now.getMonth(), 1);
 		const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+		setDateFrom(toISODateLocal(first));
+		setDateTo(toISODateLocal(last));
+	}
+
+	function setMesPasado() {
+		const now = new Date();
+		const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+		const last = new Date(now.getFullYear(), now.getMonth(), 0);
 		setDateFrom(toISODateLocal(first));
 		setDateTo(toISODateLocal(last));
 	}
@@ -192,8 +191,15 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 							</button>
 							<button
 								type="button"
+								onClick={setMesPasado}
+								className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 shadow-sm"
+							>
+								Mes pasado
+							</button>
+							<button
+								type="button"
 								onClick={handleExportCSV}
-								disabled={rowsEnRango.length === 0 || loading}
+								disabled={ingresos.length === 0 || loading}
 								className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 shadow-sm disabled:opacity-40"
 							>
 								Exportar CSV
@@ -300,8 +306,8 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 							Detalle del período
 						</h2>
 						<p className="text-xs text-slate-500">
-							{rowsEnRango.length} movimiento
-							{rowsEnRango.length === 1 ? "" : "s"}
+							{ingresos.length} movimiento
+							{ingresos.length === 1 ? "" : "s"}
 						</p>
 					</div>
 					<div className="overflow-x-auto">
@@ -327,7 +333,7 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 											Cargando…
 										</td>
 									</tr>
-								) : rowsEnRango.length === 0 ? (
+								) : ingresos.length === 0 ? (
 									<tr>
 										<td
 											colSpan={colSpan}
@@ -337,7 +343,7 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 										</td>
 									</tr>
 								) : (
-									rowsEnRango.map((row) => (
+									ingresos.map((row) => (
 										<tr
 											key={row.id}
 											className="border-b border-slate-100 last:border-0 hover:bg-slate-50/80"

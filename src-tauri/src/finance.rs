@@ -117,19 +117,25 @@ pub fn crear_ingreso(
 }
 
 #[tauri::command]
-pub fn obtener_ingresos(db: State<'_, DbConn>) -> Result<Vec<IngresoRow>, String> {
+pub fn obtener_ingresos(
+	db: State<'_, DbConn>,
+	start_date: String,
+	end_date: String,
+) -> Result<Vec<IngresoRow>, String> {
 	let conn = db.lock().map_err(|e| e.to_string())?;
 	let mut stmt = conn
 		.prepare(
 			r#"
 			SELECT id, cita_id, paciente_nombre, paciente_documento, concepto, monto, metodo_pago, fecha_pago
 			FROM ingresos
+			WHERE date(fecha_pago, 'localtime') >= ?1
+			  AND date(fecha_pago, 'localtime') <= ?2
 			ORDER BY fecha_pago DESC
 		"#,
 		)
 		.map_err(|e| e.to_string())?;
 	let rows = stmt
-		.query_map([], row_to_ingreso)
+		.query_map(params![&start_date, &end_date], row_to_ingreso)
 		.map_err(|e| e.to_string())?
 		.collect::<Result<Vec<_>, _>>()
 		.map_err(|e| e.to_string())?;

@@ -59,6 +59,27 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
 			);
 
 			CREATE INDEX IF NOT EXISTS idx_ingresos_fecha ON ingresos(fecha_pago);
+
+			CREATE TABLE IF NOT EXISTS clientes (
+				id TEXT PRIMARY KEY,
+				nombres TEXT NOT NULL,
+				apellidos TEXT NOT NULL,
+				document_type TEXT NOT NULL,
+				document_number TEXT NOT NULL,
+				phone_dial_code TEXT NOT NULL DEFAULT '',
+				phone_national_number TEXT NOT NULL DEFAULT '',
+				email TEXT NOT NULL DEFAULT '',
+				birthday_month INTEGER,
+				notas TEXT NOT NULL DEFAULT '',
+				created_at TEXT NOT NULL,
+				updated_at TEXT NOT NULL
+			);
+
+			CREATE UNIQUE INDEX IF NOT EXISTS idx_clientes_document
+				ON clientes(document_number);
+
+			CREATE INDEX IF NOT EXISTS idx_clientes_nombres
+				ON clientes(nombres, apellidos);
 		"#,
 		)
 		.map_err(|e| e.to_string())?;
