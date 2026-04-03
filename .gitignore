@@ -8,6 +8,10 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+
+# Cargo (directorio de compilación de tests en la raíz; no versionar)
+target-test-db/
+
 dist
 dist-ssr
 *.local
