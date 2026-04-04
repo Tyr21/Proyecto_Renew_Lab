@@ -10,6 +10,15 @@ export interface ServiceTypeSetting {
 	suggestedPrice: number;
 }
 
+export interface BillingSettings {
+	razonSocial: string;
+	nit: string;
+	direccion: string;
+	telefono: string;
+	serieDefault: string;
+	ivaDefaultPct: number;
+}
+
 export interface AppSettings {
 	showSundays: boolean;
 	timeDisplay: TimeDisplay;
@@ -19,6 +28,7 @@ export interface AppSettings {
 	serviceTypes: ServiceTypeSetting[];
 	/** Permite al administrador eliminar citas pasadas. Desactivado por defecto. */
 	adminMode: boolean;
+	billing: BillingSettings;
 }
 
 export interface Appointment {
@@ -144,4 +154,63 @@ export interface ClienteInput {
 	email: string;
 	birthdayMonth: number | null;
 	notas: string;
+}
+
+export type FacturaEstado = "borrador" | "emitida" | "anulada";
+
+export interface FacturaLinea {
+	id: string;
+	facturaId: string;
+	orden: number;
+	descripcion: string;
+	cantidad: number;
+	precioUnitario: number;
+	tasaImpuestoPct: number;
+	baseImponible: number;
+	impuesto: number;
+	totalLinea: number;
+}
+
+export interface FacturaLineaInput {
+	descripcion: string;
+	cantidad: number;
+	precioUnitario: number;
+	tasaImpuestoPct: number;
+}
+
+export interface Factura {
+	id: string;
+	estado: FacturaEstado;
+	serie: string;
+	numero: number | null;
+	clienteNombre: string;
+	clienteDocumentoTipo: string;
+	clienteDocumentoNumero: string;
+	subtotal: number;
+	impuestoTotal: number;
+	total: number;
+	notas: string;
+	citaId: string | null;
+	fechaEmision: string | null;
+	anulacionMotivo: string | null;
+	anuladaAt: string | null;
+	createdAt: string;
+	updatedAt: string;
+	lineas: FacturaLinea[];
+}
+
+export interface GuardarBorradorInput {
+	id?: string;
+	clienteNombre: string;
+	clienteDocumentoTipo: string;
+	clienteDocumentoNumero: string;
+	notas: string;
+	citaId?: string | null;
+	lineas: FacturaLineaInput[];
+}
+
+export interface EmitirFacturaInput {
+	facturaId: string;
+	metodoPago: string;
+	crearIngreso: boolean;
 }

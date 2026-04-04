@@ -8,6 +8,9 @@ import type {
 	Cliente,
 	ClienteInput,
 	CrearIngresoInput,
+	EmitirFacturaInput,
+	Factura,
+	GuardarBorradorInput,
 	IngresosPorMes,
 	Ingreso,
 	MetodoPagoStats,
@@ -136,4 +139,28 @@ export async function obtenerCliente(id: string): Promise<Cliente> {
 
 export async function eliminarCliente(id: string): Promise<void> {
 	return invoke(TAURI_COMMANDS.eliminarCliente, { id });
+}
+
+export async function listarFacturas(
+	startDate: string,
+	endDate: string,
+	estado?: string,
+): Promise<Factura[]> {
+	return invoke<Factura[]>(TAURI_COMMANDS.listarFacturas, { startDate, endDate, estado: estado ?? null });
+}
+
+export async function obtenerFactura(id: string): Promise<Factura> {
+	return invoke<Factura>(TAURI_COMMANDS.obtenerFactura, { id });
+}
+
+export async function guardarBorradorFactura(input: GuardarBorradorInput): Promise<Factura> {
+	return invoke<Factura>(TAURI_COMMANDS.guardarBorradorFactura, { input });
+}
+
+export async function emitirFactura(input: EmitirFacturaInput): Promise<Factura> {
+	return invoke<Factura>(TAURI_COMMANDS.emitirFactura, { input });
+}
+
+export async function anularFactura(id: string, motivo: string): Promise<Factura> {
+	return invoke<Factura>(TAURI_COMMANDS.anularFactura, { id, motivo });
 }

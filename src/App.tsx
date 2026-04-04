@@ -10,7 +10,7 @@ import { AppointmentModal } from "./modules/appointments/AppointmentModal";
 import { TodayAgendaSidebar } from "./modules/calendar/TodayAgendaSidebar";
 import { WeekCalendarView } from "./modules/calendar/WeekCalendarView";
 import { ClientesDashboard } from "./modules/clientes/ClientesDashboard";
-import { FinanceDashboard } from "./modules/finances/FinanceDashboard";
+import { FinanzasView } from "./modules/finances/FinanzasView";
 import { ReportsDashboard } from "./modules/reports/ReportsDashboard";
 import { SettingsPanel } from "./modules/settings/SettingsPanel";
 
@@ -224,7 +224,7 @@ function App() {
 						/>
 					</div>
 				) : tab === "finanzas" ? (
-					<FinanceDashboard adminMode={settings.adminMode ?? false} />
+					<FinanzasView settings={settings} />
 				) : tab === "reportes" ? (
 					<ReportsDashboard settings={settings} />
 				) : tab === "clientes" ? (

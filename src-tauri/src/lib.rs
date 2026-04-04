@@ -2,6 +2,7 @@ mod appointment_model;
 mod clientes;
 mod commands;
 mod db;
+mod facturacion;
 mod finance;
 mod reports;
 mod settings_model;
@@ -42,6 +43,11 @@ pub fn run() {
 			clientes::buscar_clientes,
 			clientes::obtener_cliente,
 			clientes::eliminar_cliente,
+			facturacion::listar_facturas,
+			facturacion::obtener_factura,
+			facturacion::guardar_borrador_factura,
+			facturacion::emitir_factura,
+			facturacion::anular_factura,
 		])
 		.run(tauri::generate_context!())
 		.expect("error while running tauri application");

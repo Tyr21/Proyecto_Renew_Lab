@@ -41,7 +41,14 @@ export const TAURI_COMMANDS = {
 	buscarClientes: "buscar_clientes",
 	obtenerCliente: "obtener_cliente",
 	eliminarCliente: "eliminar_cliente",
+	listarFacturas: "listar_facturas",
+	obtenerFactura: "obtener_factura",
+	guardarBorradorFactura: "guardar_borrador_factura",
+	emitirFactura: "emitir_factura",
+	anularFactura: "anular_factura",
 } as const;
+
+export const FACTURA_CHANGED_EVENT = "factura_changed";
 
 export function slotCountForDay(): number {
 	const minutes =

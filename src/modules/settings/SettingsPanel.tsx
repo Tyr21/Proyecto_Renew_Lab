@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { saveSettings } from "../../core/api";
 import { DEFAULT_SUGGESTED_PRICE_COP } from "../../core/constants";
 import { formatCurrency, parseCurrencyDigits } from "../../core/currencyFormat";
-import type { AppSettings, ServiceTypeSetting, TimeDisplay } from "../../core/types";
+import type { AppSettings, BillingSettings, ServiceTypeSetting, TimeDisplay } from "../../core/types";
 
 interface SettingsPanelProps {
 	settings: AppSettings;
@@ -69,6 +69,10 @@ export function SettingsPanel({
 			...d,
 			serviceTypes: d.serviceTypes.filter((_, i) => i !== index),
 		}));
+	}
+
+	function updateBilling(patch: Partial<BillingSettings>) {
+		setDraft((d) => ({ ...d, billing: { ...d.billing, ...patch } }));
 	}
 
 	return (
@@ -267,6 +271,72 @@ export function SettingsPanel({
 							</li>
 						))}
 					</ul>
+				</section>
+
+				<section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+					<h2 className="font-medium text-slate-800">Facturación</h2>
+					<p className="text-xs text-slate-500">
+						Datos del consultorio para documentos de venta. La serie y el IVA
+						por defecto se usan al crear nuevas facturas.
+					</p>
+					<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+						<label className="block text-sm">
+							<span className="font-medium text-slate-700">Razón social</span>
+							<input
+								className="mt-1 w-full rounded border border-slate-300 px-2 py-2 text-sm"
+								value={draft.billing?.razonSocial ?? ""}
+								onChange={(e) => updateBilling({ razonSocial: e.target.value })}
+							/>
+						</label>
+						<label className="block text-sm">
+							<span className="font-medium text-slate-700">NIT</span>
+							<input
+								className="mt-1 w-full rounded border border-slate-300 px-2 py-2 text-sm"
+								value={draft.billing?.nit ?? ""}
+								onChange={(e) => updateBilling({ nit: e.target.value })}
+							/>
+						</label>
+						<label className="block text-sm">
+							<span className="font-medium text-slate-700">Dirección</span>
+							<input
+								className="mt-1 w-full rounded border border-slate-300 px-2 py-2 text-sm"
+								value={draft.billing?.direccion ?? ""}
+								onChange={(e) => updateBilling({ direccion: e.target.value })}
+							/>
+						</label>
+						<label className="block text-sm">
+							<span className="font-medium text-slate-700">Teléfono</span>
+							<input
+								className="mt-1 w-full rounded border border-slate-300 px-2 py-2 text-sm"
+								value={draft.billing?.telefono ?? ""}
+								onChange={(e) => updateBilling({ telefono: e.target.value })}
+							/>
+						</label>
+						<label className="block text-sm">
+							<span className="font-medium text-slate-700">Serie / prefijo</span>
+							<input
+								className="mt-1 w-full max-w-[120px] rounded border border-slate-300 px-2 py-2 text-sm font-mono"
+								value={draft.billing?.serieDefault ?? "FV"}
+								onChange={(e) =>
+									updateBilling({ serieDefault: e.target.value.toUpperCase().trim() })
+								}
+							/>
+						</label>
+						<label className="block text-sm">
+							<span className="font-medium text-slate-700">IVA por defecto (%)</span>
+							<input
+								type="number"
+								min={0}
+								max={100}
+								step="0.01"
+								className="mt-1 w-full max-w-[120px] rounded border border-slate-300 px-2 py-2 text-sm tabular-nums"
+								value={draft.billing?.ivaDefaultPct ?? 19}
+								onChange={(e) =>
+									updateBilling({ ivaDefaultPct: Math.max(0, Number(e.target.value) || 0) })
+								}
+							/>
+						</label>
+					</div>
 				</section>
 
 				<section className="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm space-y-3">

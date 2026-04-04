@@ -92,6 +92,8 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
 
 	backfill_ingresos_paciente_nombre(conn)?;
 
+	run_facturacion_migrations(conn)?;
+
 	Ok(())
 }
 
@@ -137,6 +139,73 @@ fn backfill_ingresos_paciente_nombre(conn: &Connection) -> Result<(), String> {
 			[],
 		)
 		.map_err(|e| e.to_string())?;
+
+	Ok(())
+}
+
+fn run_facturacion_migrations(conn: &Connection) -> Result<(), String> {
+	conn
+		.execute_batch(
+			r#"
+			CREATE TABLE IF NOT EXISTS facturas (
+				id TEXT PRIMARY KEY,
+				estado TEXT NOT NULL DEFAULT 'borrador',
+				serie TEXT NOT NULL DEFAULT 'FV',
+				numero INTEGER,
+				cliente_nombre TEXT NOT NULL DEFAULT '',
+				cliente_documento_tipo TEXT NOT NULL DEFAULT '',
+				cliente_documento_numero TEXT NOT NULL DEFAULT '',
+				subtotal REAL NOT NULL DEFAULT 0,
+				impuesto_total REAL NOT NULL DEFAULT 0,
+				total REAL NOT NULL DEFAULT 0,
+				notas TEXT NOT NULL DEFAULT '',
+				cita_id TEXT,
+				fecha_emision TEXT,
+				anulacion_motivo TEXT,
+				anulada_at TEXT,
+				dian_metadata_json TEXT,
+				created_at TEXT NOT NULL,
+				updated_at TEXT NOT NULL
+			);
+
+			CREATE UNIQUE INDEX IF NOT EXISTS idx_facturas_serie_numero
+				ON facturas(serie, numero) WHERE numero IS NOT NULL;
+
+			CREATE INDEX IF NOT EXISTS idx_facturas_estado ON facturas(estado);
+			CREATE INDEX IF NOT EXISTS idx_facturas_fecha ON facturas(fecha_emision);
+
+			CREATE TABLE IF NOT EXISTS factura_lineas (
+				id TEXT PRIMARY KEY,
+				factura_id TEXT NOT NULL REFERENCES facturas(id) ON DELETE CASCADE,
+				orden INTEGER NOT NULL DEFAULT 0,
+				descripcion TEXT NOT NULL DEFAULT '',
+				cantidad REAL NOT NULL DEFAULT 1,
+				precio_unitario REAL NOT NULL DEFAULT 0,
+				tasa_impuesto_pct REAL NOT NULL DEFAULT 0,
+				base_imponible REAL NOT NULL DEFAULT 0,
+				impuesto REAL NOT NULL DEFAULT 0,
+				total_linea REAL NOT NULL DEFAULT 0
+			);
+
+			CREATE INDEX IF NOT EXISTS idx_factura_lineas_factura
+				ON factura_lineas(factura_id);
+
+			CREATE TABLE IF NOT EXISTS facturacion_contadores (
+				serie TEXT PRIMARY KEY,
+				ultimo_numero INTEGER NOT NULL DEFAULT 0
+			);
+		"#,
+		)
+		.map_err(|e| e.to_string())?;
+
+	let _ = conn.execute(
+		"ALTER TABLE ingresos ADD COLUMN factura_id TEXT DEFAULT NULL",
+		[],
+	);
+
+	let _ = conn.execute_batch(
+		"CREATE INDEX IF NOT EXISTS idx_ingresos_factura ON ingresos(factura_id);",
+	);
 
 	Ok(())
 }

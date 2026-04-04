@@ -4,6 +4,14 @@ fn default_suggested_price() -> f64 {
 	150_000.0
 }
 
+fn default_serie() -> String {
+	"FV".into()
+}
+
+fn default_iva_pct() -> f64 {
+	19.0
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ServiceTypeSetting {
@@ -13,6 +21,36 @@ pub struct ServiceTypeSetting {
 	/// Precio sugerido (misma moneda local que `ingresos.monto`). Ausente en JSON antiguo → default.
 	#[serde(default = "default_suggested_price")]
 	pub suggested_price: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BillingSettings {
+	#[serde(default)]
+	pub razon_social: String,
+	#[serde(default)]
+	pub nit: String,
+	#[serde(default)]
+	pub direccion: String,
+	#[serde(default)]
+	pub telefono: String,
+	#[serde(default = "default_serie")]
+	pub serie_default: String,
+	#[serde(default = "default_iva_pct")]
+	pub iva_default_pct: f64,
+}
+
+impl Default for BillingSettings {
+	fn default() -> Self {
+		Self {
+			razon_social: String::new(),
+			nit: String::new(),
+			direccion: String::new(),
+			telefono: String::new(),
+			serie_default: default_serie(),
+			iva_default_pct: default_iva_pct(),
+		}
+	}
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,6 +66,8 @@ pub struct AppSettings {
 	/// Permite al administrador eliminar citas pasadas. Desactivado por defecto.
 	#[serde(default)]
 	pub admin_mode: bool,
+	#[serde(default)]
+	pub billing: BillingSettings,
 }
 
 impl Default for AppSettings {
@@ -60,6 +100,7 @@ impl Default for AppSettings {
 				},
 			],
 			admin_mode: false,
+			billing: BillingSettings::default(),
 		}
 	}
 }

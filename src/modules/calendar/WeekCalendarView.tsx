@@ -239,8 +239,15 @@ export function WeekCalendarView({
 													}}
 												>
 													<div className="flex min-h-0 flex-col gap-0.5 leading-tight">
-														<div className="font-semibold truncate">
-															{a.patientFullName}
+														<div className="flex items-center gap-1 font-semibold truncate">
+															<span className="truncate">{a.patientFullName}</span>
+															{a.isPaid ? (
+																<span
+																	className="inline-block h-2 w-2 shrink-0 rounded-full bg-emerald-500"
+																	title="Pagada"
+																	aria-label="Cita pagada"
+																/>
+															) : null}
 														</div>
 														<div className="truncate tabular-nums opacity-90">
 															{formatTimeLabel(

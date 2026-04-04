@@ -51,8 +51,15 @@ export function TodayAgendaSidebar({
 								key={a.id}
 								className="rounded-lg border border-slate-100 bg-slate-50/80 px-2 py-2 text-sm"
 							>
-								<div className="font-medium text-slate-900 line-clamp-2">
-									{a.patientFullName}
+								<div className="flex items-center gap-1.5 font-medium text-slate-900">
+									<span className="line-clamp-2">{a.patientFullName}</span>
+									{a.isPaid ? (
+										<span
+											className="inline-block h-2 w-2 shrink-0 rounded-full bg-emerald-500"
+											title="Pagada"
+											aria-label="Cita pagada"
+										/>
+									) : null}
 								</div>
 								<div className="mt-0.5 text-xs text-slate-600">
 									{serviceLabelFromSettings(settings, a.serviceType)}

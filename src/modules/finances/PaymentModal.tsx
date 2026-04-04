@@ -1,9 +1,9 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { crearIngreso } from "../../core/api";
-import { INGRESO_REGISTRADO_EVENT } from "../../core/constants";
+import { crearIngreso, emitirFactura, guardarBorradorFactura } from "../../core/api";
+import { FACTURA_CHANGED_EVENT, INGRESO_REGISTRADO_EVENT } from "../../core/constants";
 import { formatCurrency, parseCurrencyDigits } from "../../core/currencyFormat";
 import { formatInvokeError } from "../../core/errors";
-import type { CrearIngresoInput } from "../../core/types";
+import type { AppSettings, CrearIngresoInput } from "../../core/types";
 
 export const PAYMENT_METHODS = ["Efectivo", "Tarjeta", "Transferencia"] as const;
 
@@ -19,14 +19,16 @@ export interface PaymentPrefill {
 interface PaymentModalProps {
 	open: boolean;
 	prefill: PaymentPrefill | null;
+	settings?: AppSettings;
 	onClose: () => void;
 }
 
-export function PaymentModal({ open, prefill, onClose }: PaymentModalProps) {
+export function PaymentModal({ open, prefill, settings, onClose }: PaymentModalProps) {
 	const [monto, setMonto] = useState(0);
 	const [metodoPago, setMetodoPago] = useState<string>(PAYMENT_METHODS[0]!);
 	const [concepto, setConcepto] = useState("");
 	const [pacienteDocumento, setPacienteDocumento] = useState("");
+	const [generarFactura, setGenerarFactura] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -37,6 +39,7 @@ export function PaymentModal({ open, prefill, onClose }: PaymentModalProps) {
 		const sp = prefill.suggestedPrice ?? 0;
 		setMonto(sp > 0 ? Math.round(sp) : 0);
 		setMetodoPago(PAYMENT_METHODS[0]!);
+		setGenerarFactura(false);
 		setError(null);
 	}, [open, prefill]);
 
@@ -52,25 +55,48 @@ export function PaymentModal({ open, prefill, onClose }: PaymentModalProps) {
 
 	async function handleSubmit(e: FormEvent) {
 		e.preventDefault();
-		if (!prefill) {
-			return;
-		}
+		if (!prefill) return;
 		if (monto <= 0) {
 			setError("Indique un monto válido mayor que cero.");
 			return;
 		}
 		setBusy(true);
 		setError(null);
-		const input: CrearIngresoInput = {
-			citaId: prefill.citaId || null,
-			pacienteNombre: prefill.pacienteNombre.trim(),
-			pacienteDocumento: pacienteDocumento.trim(),
-			concepto: concepto.trim(),
-			monto,
-			metodoPago,
-		};
 		try {
-			await crearIngreso(input);
+			if (generarFactura) {
+				const ivaDefault = settings?.billing?.ivaDefaultPct ?? 19;
+				const borrador = await guardarBorradorFactura({
+					clienteNombre: prefill.pacienteNombre.trim(),
+					clienteDocumentoTipo: settings?.defaultDocumentType ?? "CC",
+					clienteDocumentoNumero: pacienteDocumento.trim(),
+					notas: "",
+					citaId: prefill.citaId || null,
+					lineas: [
+						{
+							descripcion: concepto.trim(),
+							cantidad: 1,
+							precioUnitario: monto,
+							tasaImpuestoPct: ivaDefault,
+						},
+					],
+				});
+				await emitirFactura({
+					facturaId: borrador.id,
+					metodoPago,
+					crearIngreso: true,
+				});
+				window.dispatchEvent(new CustomEvent(FACTURA_CHANGED_EVENT));
+			} else {
+				const input: CrearIngresoInput = {
+					citaId: prefill.citaId || null,
+					pacienteNombre: prefill.pacienteNombre.trim(),
+					pacienteDocumento: pacienteDocumento.trim(),
+					concepto: concepto.trim(),
+					monto,
+					metodoPago,
+				};
+				await crearIngreso(input);
+			}
 			window.dispatchEvent(new CustomEvent(INGRESO_REGISTRADO_EVENT));
 			onClose();
 		} catch (err) {
@@ -176,6 +202,16 @@ export function PaymentModal({ open, prefill, onClose }: PaymentModalProps) {
 							))}
 						</select>
 					</div>
+					<label className="flex items-center gap-2 text-sm">
+						<input
+							type="checkbox"
+							checked={generarFactura}
+							onChange={(e) => setGenerarFactura(e.target.checked)}
+						/>
+						<span className="text-slate-700">
+							Generar documento de venta (factura)
+						</span>
+					</label>
 					{error ? (
 						<p className="text-sm text-red-600" role="alert">
 							{error}
