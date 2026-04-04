@@ -1,10 +1,10 @@
-import { type FormEvent, useCallback, useEffect, useState } from "react";
-import { guardarBorradorFactura, emitirFactura } from "../../core/api";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { buscarClientes, guardarBorradorFactura, emitirFactura } from "../../core/api";
 import { FACTURA_CHANGED_EVENT, INGRESO_REGISTRADO_EVENT } from "../../core/constants";
 import { formatCurrency, parseCurrencyDigits } from "../../core/currencyFormat";
 import { formatInvokeError } from "../../core/errors";
 import { calcFacturaTotals } from "../../core/facturaTotals";
-import type { AppSettings, Factura, FacturaLineaInput } from "../../core/types";
+import type { AppSettings, Cliente, Factura, FacturaLineaInput } from "../../core/types";
 import { FacturaPrintView } from "./FacturaPrintView";
 
 const PAYMENT_METHODS = ["Efectivo", "Tarjeta", "Transferencia"] as const;
@@ -34,6 +34,35 @@ export function FacturaEditor({ settings, factura, onClose }: FacturaEditorProps
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [showPrint, setShowPrint] = useState(false);
+
+	const [sugerencias, setSugerencias] = useState<Cliente[]>([]);
+	const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
+	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	function buscarYMostrar(query: string) {
+		if (debounceRef.current) clearTimeout(debounceRef.current);
+		if (!query.trim()) {
+			setSugerencias([]);
+			setMostrarSugerencias(false);
+			return;
+		}
+		debounceRef.current = setTimeout(() => {
+			buscarClientes(query.trim())
+				.then((found) => {
+					setSugerencias(found);
+					setMostrarSugerencias(found.length > 0);
+				})
+				.catch(() => {});
+		}, 200);
+	}
+
+	function seleccionarCliente(c: Cliente) {
+		setClienteNombre(`${c.nombres} ${c.apellidos}`);
+		setClienteDocTipo(c.documentType);
+		setClienteDocNumero(c.documentNumber);
+		setSugerencias([]);
+		setMostrarSugerencias(false);
+	}
 
 	useEffect(() => {
 		if (!factura) return;
@@ -156,15 +185,42 @@ export function FacturaEditor({ settings, factura, onClose }: FacturaEditorProps
 				<form onSubmit={handleSaveDraft} className="mt-4 space-y-4">
 					{/* Datos cliente */}
 					<fieldset disabled={readonly} className="grid grid-cols-1 gap-3 md:grid-cols-3">
-						<label className="block text-sm">
+						<div className="block text-sm">
 							<span className="font-medium text-slate-600">Nombre cliente</span>
-							<input
-								className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-								value={clienteNombre}
-								onChange={(e) => setClienteNombre(e.target.value)}
-								required
-							/>
-						</label>
+							<div className="relative mt-1">
+								<input
+									className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+									value={clienteNombre}
+									onChange={(e) => {
+										setClienteNombre(e.target.value);
+										buscarYMostrar(e.target.value);
+									}}
+									onBlur={() => setTimeout(() => setMostrarSugerencias(false), 150)}
+									required
+									autoComplete="off"
+									placeholder="Buscar por nombre…"
+								/>
+								{mostrarSugerencias && sugerencias.length > 0 && (
+									<div className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+										{sugerencias.map((c) => (
+											<button
+												key={c.id}
+												type="button"
+												className="w-full px-3 py-2 text-left text-sm hover:bg-sky-50 border-b border-slate-100 last:border-0"
+												onMouseDown={() => seleccionarCliente(c)}
+											>
+												<span className="font-medium text-slate-800">
+													{c.apellidos}, {c.nombres}
+												</span>
+												<span className="ml-2 text-xs text-slate-500">
+													{c.documentType} {c.documentNumber}
+												</span>
+											</button>
+										))}
+									</div>
+								)}
+							</div>
+						</div>
 						<label className="block text-sm">
 							<span className="font-medium text-slate-600">Tipo doc.</span>
 							<select
@@ -177,15 +233,42 @@ export function FacturaEditor({ settings, factura, onClose }: FacturaEditorProps
 								))}
 							</select>
 						</label>
-						<label className="block text-sm">
+						<div className="block text-sm">
 							<span className="font-medium text-slate-600">Nro. documento</span>
-							<input
-								className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-								value={clienteDocNumero}
-								onChange={(e) => setClienteDocNumero(e.target.value)}
-								required
-							/>
-						</label>
+							<div className="relative mt-1">
+								<input
+									className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+									value={clienteDocNumero}
+									onChange={(e) => {
+										setClienteDocNumero(e.target.value);
+										buscarYMostrar(e.target.value);
+									}}
+									onBlur={() => setTimeout(() => setMostrarSugerencias(false), 150)}
+									required
+									autoComplete="off"
+									placeholder="Buscar por documento…"
+								/>
+								{mostrarSugerencias && sugerencias.length > 0 && (
+									<div className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+										{sugerencias.map((c) => (
+											<button
+												key={c.id}
+												type="button"
+												className="w-full px-3 py-2 text-left text-sm hover:bg-sky-50 border-b border-slate-100 last:border-0"
+												onMouseDown={() => seleccionarCliente(c)}
+											>
+												<span className="font-medium text-slate-800">
+													{c.documentType} {c.documentNumber}
+												</span>
+												<span className="ml-2 text-xs text-slate-500">
+													{c.nombres} {c.apellidos}
+												</span>
+											</button>
+										))}
+									</div>
+								)}
+							</div>
+						</div>
 					</fieldset>
 
 					{/* Líneas */}
@@ -209,14 +292,26 @@ export function FacturaEditor({ settings, factura, onClose }: FacturaEditorProps
 									className="grid grid-cols-12 gap-2 rounded-lg border border-slate-100 bg-slate-50/80 p-2 items-end"
 								>
 									<label className="col-span-4 text-xs">
-										<span className="text-slate-500">Descripción</span>
-										<input
+										<span className="text-slate-500">Servicio</span>
+										<select
 											className="mt-0.5 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
 											value={l.descripcion}
-											onChange={(e) => updateLinea(i, { descripcion: e.target.value })}
+											onChange={(e) => {
+												const serviceId = e.target.value;
+												const svc = settings.serviceTypes.find((s) => s.label === serviceId);
+												updateLinea(i, {
+													descripcion: serviceId,
+													precioUnitario: svc ? svc.suggestedPrice : l.precioUnitario,
+												});
+											}}
 											disabled={readonly}
 											required
-										/>
+										>
+											<option value="">— Seleccionar —</option>
+											{settings.serviceTypes.map((s) => (
+												<option key={s.id} value={s.label}>{s.label}</option>
+											))}
+										</select>
 									</label>
 									<label className="col-span-2 text-xs">
 										<span className="text-slate-500">Cantidad</span>
@@ -248,20 +343,13 @@ export function FacturaEditor({ settings, factura, onClose }: FacturaEditorProps
 										/>
 									</label>
 									<label className="col-span-2 text-xs">
-										<span className="text-slate-500">IVA %</span>
+										<span className="text-slate-500">IVA {defaultIva}%</span>
 										<input
-											type="number"
-											min={0}
-											max={100}
-											step="0.01"
-											className="mt-0.5 w-full rounded border border-slate-300 px-2 py-1.5 text-sm tabular-nums"
-											value={l.tasaImpuestoPct}
-											onChange={(e) =>
-												updateLinea(i, {
-													tasaImpuestoPct: Math.max(0, Math.min(100, Number(e.target.value) || 0)),
-												})
-											}
-											disabled={readonly}
+											type="text"
+											className="mt-0.5 w-full rounded border border-slate-200 bg-slate-100 px-2 py-1.5 text-sm tabular-nums text-slate-500"
+											value={`${defaultIva}%`}
+											disabled
+											title="El IVA se configura en Configuración → Facturación"
 										/>
 									</label>
 									<div className="col-span-2 flex items-end gap-1">
