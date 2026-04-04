@@ -109,7 +109,7 @@ export function serviceColorClasses(serviceId: string): string {
 		camara_hiperbarica:
 			"bg-sky-100 border-sky-400 text-sky-950",
 		sueroterapia:
-			"bg-emerald-100 border-emerald-500 text-emerald-950",
+			"bg-sky-100 border-sky-400 text-sky-950",
 	};
 	return (
 		palette[serviceId] ??
