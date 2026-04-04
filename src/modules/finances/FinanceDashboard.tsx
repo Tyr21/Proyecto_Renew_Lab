@@ -58,6 +58,7 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [deletingId, setDeletingId] = useState<string | null>(null);
+	const [csvToast, setCsvToast] = useState(false);
 
 	const loadIngresos = useCallback(async () => {
 		setError(null);
@@ -119,6 +120,8 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 		a.click();
 		document.body.removeChild(a);
 		URL.revokeObjectURL(url);
+		setCsvToast(true);
+		setTimeout(() => setCsvToast(false), 3000);
 	}, [ingresos, dateFrom, dateTo]);
 
 	function setHoy() {
@@ -386,6 +389,12 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 					</div>
 				</section>
 			</div>
+
+			{csvToast ? (
+				<div className="fixed bottom-6 right-6 z-50 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg animate-fade-in">
+					Reporte CSV exportado correctamente
+				</div>
+			) : null}
 		</div>
 	);
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CitaEventNotifier } from "./components/CitaEventNotifier";
 import { FinanceEventListener } from "./components/FinanceEventListener";
 import { getSettings, listAppointmentsRange, listarEventosRango } from "./core/api";
@@ -34,6 +34,7 @@ function App() {
 		date: string;
 		startTime: string;
 	} | null>(null);
+	const settingsDirtyRef = useRef(false);
 	const [eventoModalOpen, setEventoModalOpen] = useState(false);
 	const [editingEvento, setEditingEvento] = useState<Evento | null>(null);
 	const [eventoPresetDate, setEventoPresetDate] = useState<string | null>(null);
@@ -110,6 +111,15 @@ function App() {
 		};
 	}, [refreshAppointments]);
 
+	function switchTab(next: Tab) {
+		if (tab === "configuracion" && next !== "configuracion" && settingsDirtyRef.current) {
+			if (!window.confirm("Hay cambios sin guardar en la configuración. ¿Desea salir sin guardar?")) {
+				return;
+			}
+		}
+		setTab(next);
+	}
+
 	function onWeekShift(delta: number) {
 		setWeekStartMonday((w) => addDays(w, delta * 7));
 	}
@@ -179,7 +189,7 @@ function App() {
 							? "bg-sky-600 text-white"
 							: "text-slate-700 hover:bg-slate-100"
 					}`}
-					onClick={() => setTab("calendario")}
+					onClick={() => switchTab("calendario")}
 				>
 					Calendario
 				</button>
@@ -190,7 +200,7 @@ function App() {
 							? "bg-sky-600 text-white"
 							: "text-slate-700 hover:bg-slate-100"
 					}`}
-					onClick={() => setTab("finanzas")}
+					onClick={() => switchTab("finanzas")}
 				>
 					💰 Cierre de caja
 				</button>
@@ -201,7 +211,7 @@ function App() {
 							? "bg-sky-600 text-white"
 							: "text-slate-700 hover:bg-slate-100"
 					}`}
-					onClick={() => setTab("reportes")}
+					onClick={() => switchTab("reportes")}
 				>
 					📊 Reportes
 				</button>
@@ -212,7 +222,7 @@ function App() {
 							? "bg-sky-600 text-white"
 							: "text-slate-700 hover:bg-slate-100"
 					}`}
-					onClick={() => setTab("clientes")}
+					onClick={() => switchTab("clientes")}
 				>
 					👥 Clientes
 				</button>
@@ -223,7 +233,7 @@ function App() {
 							? "bg-sky-600 text-white"
 							: "text-slate-700 hover:bg-slate-100"
 					}`}
-					onClick={() => setTab("configuracion")}
+					onClick={() => switchTab("configuracion")}
 				>
 					Configuración
 				</button>
@@ -262,15 +272,17 @@ function App() {
 				) : tab === "clientes" ? (
 					<ClientesDashboard settings={settings} />
 				) : (
-					<div className="h-full overflow-y-auto bg-slate-50">
-						<SettingsPanel
-							settings={settings}
-							onSettingsSaved={(s) => {
-								setSettings(s);
-								void refreshAppointments();
-							}}
-						/>
-					</div>
+				<div className="h-full overflow-y-auto bg-slate-50">
+					<SettingsPanel
+						settings={settings}
+						onSettingsSaved={(s) => {
+							setSettings(s);
+							void refreshAppointments();
+						}}
+						onClose={() => setTab("calendario")}
+						dirtyRef={settingsDirtyRef}
+					/>
+				</div>
 				)}
 			</main>
 

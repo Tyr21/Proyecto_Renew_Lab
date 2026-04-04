@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { saveSettings } from "../../core/api";
 import { DEFAULT_SUGGESTED_PRICE_COP } from "../../core/constants";
 import { formatCurrency, parseCurrencyDigits } from "../../core/currencyFormat";
@@ -7,6 +7,9 @@ import type { AppSettings, BillingSettings, ServiceTypeSetting, TimeDisplay } fr
 interface SettingsPanelProps {
 	settings: AppSettings;
 	onSettingsSaved: (s: AppSettings) => void;
+	onClose: () => void;
+	/** Ref que App.tsx usa para preguntar si hay cambios sin guardar antes de cambiar de tab. */
+	dirtyRef?: React.MutableRefObject<boolean>;
 }
 
 const DEFAULT_NEW_SERVICE_CAPACITY = 1;
@@ -14,14 +17,29 @@ const DEFAULT_NEW_SERVICE_CAPACITY = 1;
 export function SettingsPanel({
 	settings,
 	onSettingsSaved,
+	onClose,
+	dirtyRef,
 }: SettingsPanelProps) {
 	const [draft, setDraft] = useState<AppSettings>(settings);
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
+	const [successToast, setSuccessToast] = useState(false);
+	const savedSettingsRef = useRef<string>(JSON.stringify(settings));
 
 	useEffect(() => {
 		setDraft(settings);
+		savedSettingsRef.current = JSON.stringify(settings);
 	}, [settings]);
+
+	const isDirty = useCallback(() => {
+		return JSON.stringify(draft) !== savedSettingsRef.current;
+	}, [draft]);
+
+	useEffect(() => {
+		if (dirtyRef) {
+			dirtyRef.current = isDirty();
+		}
+	}, [dirtyRef, isDirty]);
 
 	async function handleSave(e: React.FormEvent) {
 		e.preventDefault();
@@ -29,12 +47,28 @@ export function SettingsPanel({
 		setBusy(true);
 		try {
 			const saved = await saveSettings(draft);
+			savedSettingsRef.current = JSON.stringify(saved);
 			onSettingsSaved(saved);
+			setSuccessToast(true);
+			setTimeout(() => {
+				setSuccessToast(false);
+				onClose();
+			}, 1500);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : String(err));
 		} finally {
 			setBusy(false);
 		}
+	}
+
+	function handleCancel() {
+		if (isDirty()) {
+			if (!window.confirm("Hay cambios sin guardar en la configuración. ¿Desea salir sin guardar?")) {
+				return;
+			}
+		}
+		setDraft(settings);
+		onClose();
 	}
 
 	function updateDocumentTypes(text: string) {
@@ -356,14 +390,30 @@ export function SettingsPanel({
 					</label>
 				</section>
 
+			<div className="flex gap-3">
 				<button
 					type="submit"
 					disabled={busy}
 					className="rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
 				>
-					Guardar configuración
+					{busy ? "Guardando…" : "Guardar configuración"}
 				</button>
-			</form>
-		</div>
-	);
+				<button
+					type="button"
+					onClick={handleCancel}
+					disabled={busy}
+					className="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+				>
+					Cancelar
+				</button>
+			</div>
+		</form>
+
+		{successToast ? (
+			<div className="fixed bottom-6 right-6 z-50 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg">
+				Configuración guardada correctamente
+			</div>
+		) : null}
+	</div>
+);
 }
