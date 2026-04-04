@@ -93,6 +93,7 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
 	backfill_ingresos_paciente_nombre(conn)?;
 
 	run_facturacion_migrations(conn)?;
+	run_eventos_migrations(conn)?;
 
 	Ok(())
 }
@@ -207,6 +208,30 @@ fn run_facturacion_migrations(conn: &Connection) -> Result<(), String> {
 		"CREATE INDEX IF NOT EXISTS idx_ingresos_factura ON ingresos(factura_id);",
 	);
 
+	Ok(())
+}
+
+fn run_eventos_migrations(conn: &Connection) -> Result<(), String> {
+	conn
+		.execute_batch(
+			r#"
+			CREATE TABLE IF NOT EXISTS eventos (
+				id TEXT PRIMARY KEY,
+				titulo TEXT NOT NULL,
+				descripcion TEXT NOT NULL DEFAULT '',
+				fecha TEXT NOT NULL,
+				todo_el_dia INTEGER NOT NULL DEFAULT 1,
+				hora_inicio TEXT,
+				hora_fin TEXT,
+				color TEXT NOT NULL DEFAULT 'amber',
+				created_at TEXT NOT NULL,
+				updated_at TEXT NOT NULL
+			);
+
+			CREATE INDEX IF NOT EXISTS idx_eventos_fecha ON eventos(fecha);
+		"#,
+		)
+		.map_err(|e| e.to_string())?;
 	Ok(())
 }
 

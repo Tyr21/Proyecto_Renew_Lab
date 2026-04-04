@@ -123,7 +123,9 @@ src/
     │   └── AppointmentModal.tsx     # Modal crear/editar cita (con autocomplete clientes)
     ├── calendar/
     │   ├── WeekCalendarView.tsx     # Vista semanal CSS Grid (slots 30 min)
-    │   └── TodayAgendaSidebar.tsx   # Panel lateral con citas del día
+    │   ├── TodayAgendaSidebar.tsx   # Panel lateral con citas y eventos del día
+    │   ├── EventoModal.tsx          # Modal crear/editar evento/recordatorio
+    │   └── overlapLayout.ts         # Algoritmo de columnas + colores de servicios/eventos
     ├── clientes/
     │   ├── ClientesDashboard.tsx    # Búsqueda en tiempo real top 5 clientes
     │   └── ClienteModal.tsx         # Modal crear/editar cliente
@@ -144,6 +146,7 @@ src-tauri/src/
 ├── settings_model.rs                # Struct AppSettings (serializada como JSON)
 ├── finance.rs                       # CRUD ingresos (crear, obtener con filtro fechas, eliminar)
 ├── clientes.rs                      # CRUD clientes (crear, actualizar, buscar, obtener, eliminar)
+├── eventos.rs                       # CRUD eventos/recordatorios de calendario
 ├── reports.rs                       # Estadísticas agregadas (citas/mes, ingresos/mes, servicios, métodos pago)
 └── time_rules.rs                    # Reglas de horario y período de gracia
 ```
@@ -215,6 +218,24 @@ CREATE UNIQUE INDEX idx_clientes_document ON clientes(document_number);
 CREATE INDEX idx_clientes_nombres ON clientes(nombres, apellidos);
 ```
 
+### Tabla `eventos`
+
+```sql
+CREATE TABLE eventos (
+    id              TEXT PRIMARY KEY,
+    titulo          TEXT NOT NULL,
+    descripcion     TEXT NOT NULL DEFAULT '',
+    fecha           TEXT NOT NULL,    -- YYYY-MM-DD
+    todo_el_dia     INTEGER NOT NULL DEFAULT 1,  -- 1 = todo el día, 0 = hora específica
+    hora_inicio     TEXT,             -- HH:MM (null si todo_el_dia)
+    hora_fin        TEXT,             -- HH:MM (null si todo_el_dia)
+    color           TEXT NOT NULL DEFAULT 'amber',  -- amber|rose|violet|teal|sky|slate
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL
+);
+CREATE INDEX idx_eventos_fecha ON eventos(fecha);
+```
+
 ### Tabla `app_config`
 
 Singleton (id = 1). Guarda toda la configuración como JSON en `settings_json`.
@@ -271,6 +292,14 @@ Todos los comandos están registrados en `lib.rs` → `generate_handler!`. Conve
 | `estadisticas_ingresos_por_mes` | `estadisticasIngresosPorMes(start, end)` | SUM ingresos agrupados por mes |
 | `estadisticas_servicios` | `estadisticasServicios(start, end)` | Conteo por tipo de servicio |
 | `estadisticas_metodos_pago` | `estadisticasMetodosPago(start, end)` | Totales por método de pago |
+
+### Eventos / Recordatorios
+| Rust | TypeScript | Descripción |
+|------|-----------|-------------|
+| `listar_eventos_rango` | `listarEventosRango(start, end)` | Eventos en rango de fechas |
+| `crear_evento` | `crearEvento(input)` | Crea un evento nuevo |
+| `actualizar_evento` | `actualizarEvento(id, input)` | Actualiza evento existente |
+| `eliminar_evento` | `eliminarEvento(id)` | Elimina un evento |
 
 ### Configuración
 | Rust | TypeScript | Descripción |

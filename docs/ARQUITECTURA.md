@@ -106,6 +106,24 @@ Líneas ordenadas de cada factura. Totales calculados y persistidos al guardar/e
 
 Una fila por `serie` (PK). `ultimo_numero` se incrementa atómicamente bajo el `Mutex<Connection>` al emitir.
 
+### Tabla `eventos` (calendario — recordatorios)
+
+Eventos genéricos de calendario: mantenimiento programado, revisiones, alertas internas. No son citas de pacientes.
+
+| Campo | Descripción |
+|-------|-------------|
+| `id` | PK (UUID) |
+| `titulo` | Título del evento |
+| `descripcion` | Texto libre opcional |
+| `fecha` | `YYYY-MM-DD` |
+| `todo_el_dia` | `1` (todo el día) o `0` (hora específica) |
+| `hora_inicio` | `HH:MM`, NULL si todo el día |
+| `hora_fin` | `HH:MM`, NULL si todo el día |
+| `color` | Identificador de color: `amber` \| `rose` \| `violet` \| `teal` \| `sky` \| `slate` |
+| `created_at` / `updated_at` | Marcas de auditoría |
+
+Se cargan junto con las citas en `refreshAppointments` y se muestran en el calendario semanal (badges para todo-el-día, bloques con borde punteado para hora específica) y en la sidebar de hoy. El evento `evento_changed` en `window` refresca la vista.
+
 ### Reglas de transición de facturas
 
 - **Borrador → Emitida:** asigna número consecutivo, registra `fecha_emision`, opcionalmente crea ingreso vinculado (con `metodo_pago` y `factura_id` + `cita_id`).
@@ -124,6 +142,7 @@ La columna `dian_metadata_json` queda reservada para almacenar UUID de documento
 - **No** se acoplan inventario ni facturación al módulo de calendario: los consumidores se suscriben al mismo **contrato de payload** (snake_case). Ejemplo: `FinanceEventListener` escucha solo `cita_completada` y abre el modal de pago con el monto pre-llenado según el **precio sugerido** del `tipo_servicio` en configuración; el calendario no importa ese componente.
 - Tras persistir un ingreso desde el modal de pago, la UI dispara en el `window` el evento nativo **`ingreso_registrado`** para que la vista principal vuelva a cargar citas y refleje `isPaid` sin estado obsoleto.
 - Al crear, emitir o anular una factura, la UI dispara **`factura_changed`** para que `FacturasDashboard` recargue su listado. Si la emisión incluyó un ingreso, también se dispara `ingreso_registrado`.
+- Al crear, editar o eliminar un evento/recordatorio, la UI dispara **`evento_changed`** para que `App.tsx` recargue citas y eventos.
 
 Flujo conceptual:
 

@@ -214,3 +214,29 @@ export interface EmitirFacturaInput {
 	metodoPago: string;
 	crearIngreso: boolean;
 }
+
+export const EVENTO_COLORS = ["amber", "rose", "violet", "teal", "sky", "slate"] as const;
+export type EventoColor = (typeof EVENTO_COLORS)[number];
+
+export interface Evento {
+	id: string;
+	titulo: string;
+	descripcion: string;
+	fecha: string;
+	todoElDia: boolean;
+	horaInicio: string | null;
+	horaFin: string | null;
+	color: EventoColor;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface EventoInput {
+	titulo: string;
+	descripcion?: string;
+	fecha: string;
+	todoElDia: boolean;
+	horaInicio?: string | null;
+	horaFin?: string | null;
+	color?: EventoColor;
+}

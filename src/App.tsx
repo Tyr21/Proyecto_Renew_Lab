@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CitaEventNotifier } from "./components/CitaEventNotifier";
 import { FinanceEventListener } from "./components/FinanceEventListener";
-import { getSettings, listAppointmentsRange } from "./core/api";
-import { INGRESO_REGISTRADO_EVENT } from "./core/constants";
+import { getSettings, listAppointmentsRange, listarEventosRango } from "./core/api";
+import { EVENTO_CHANGED_EVENT, INGRESO_REGISTRADO_EVENT } from "./core/constants";
 import { isSlotBookableWithGracePeriod } from "./core/leadTime";
-import type { AppSettings, Appointment } from "./core/types";
+import type { AppSettings, Appointment, Evento } from "./core/types";
 import { addDays, getWeekDates, startOfWeekMonday, toISODateLocal } from "./core/weekUtils";
 import { AppointmentModal } from "./modules/appointments/AppointmentModal";
+import { EventoModal } from "./modules/calendar/EventoModal";
 import { TodayAgendaSidebar } from "./modules/calendar/TodayAgendaSidebar";
 import { WeekCalendarView } from "./modules/calendar/WeekCalendarView";
 import { ClientesDashboard } from "./modules/clientes/ClientesDashboard";
@@ -24,6 +25,7 @@ function App() {
 		startOfWeekMonday(new Date()),
 	);
 	const [appointments, setAppointments] = useState<Appointment[]>([]);
+	const [eventos, setEventos] = useState<Evento[]>([]);
 	const [calendarRefreshing, setCalendarRefreshing] = useState(false);
 	const [modalOpen, setModalOpen] = useState(false);
 	const [modalMode, setModalMode] = useState<"create" | "edit">("create");
@@ -32,6 +34,10 @@ function App() {
 		date: string;
 		startTime: string;
 	} | null>(null);
+	const [eventoModalOpen, setEventoModalOpen] = useState(false);
+	const [editingEvento, setEditingEvento] = useState<Evento | null>(null);
+	const [eventoPresetDate, setEventoPresetDate] = useState<string | null>(null);
+	const [eventoPresetTime, setEventoPresetTime] = useState<string | null>(null);
 
 	const weekRange = useMemo(() => {
 		if (!settings) return { start: "", end: "" };
@@ -61,8 +67,12 @@ function App() {
 		if (!settings || !fetchRange.start) return;
 		setCalendarRefreshing(true);
 		try {
-			const list = await listAppointmentsRange(fetchRange.start, fetchRange.end);
+			const [list, evts] = await Promise.all([
+				listAppointmentsRange(fetchRange.start, fetchRange.end),
+				listarEventosRango(fetchRange.start, fetchRange.end),
+			]);
 			setAppointments(list);
+			setEventos(evts);
 		} catch (e) {
 			console.error(e);
 		} finally {
@@ -89,12 +99,15 @@ function App() {
 	}, [refreshAppointments]);
 
 	useEffect(() => {
-		const onIngreso = () => {
+		const onRefresh = () => {
 			void refreshAppointments();
 		};
-		window.addEventListener(INGRESO_REGISTRADO_EVENT, onIngreso);
-		return () =>
-			window.removeEventListener(INGRESO_REGISTRADO_EVENT, onIngreso);
+		window.addEventListener(INGRESO_REGISTRADO_EVENT, onRefresh);
+		window.addEventListener(EVENTO_CHANGED_EVENT, onRefresh);
+		return () => {
+			window.removeEventListener(INGRESO_REGISTRADO_EVENT, onRefresh);
+			window.removeEventListener(EVENTO_CHANGED_EVENT, onRefresh);
+		};
 	}, [refreshAppointments]);
 
 	function onWeekShift(delta: number) {
@@ -117,6 +130,20 @@ function App() {
 		setEditing(a);
 		setPresetSlot(null);
 		setModalOpen(true);
+	}
+
+	function openEventoCreate(dateIso: string, startTime?: string) {
+		setEditingEvento(null);
+		setEventoPresetDate(dateIso);
+		setEventoPresetTime(startTime ?? null);
+		setEventoModalOpen(true);
+	}
+
+	function openEventoEdit(ev: Evento) {
+		setEditingEvento(ev);
+		setEventoPresetDate(null);
+		setEventoPresetTime(null);
+		setEventoModalOpen(true);
 	}
 
 	if (loadError) {
@@ -208,17 +235,22 @@ function App() {
 						<TodayAgendaSidebar
 							settings={settings}
 							appointments={appointments}
+							eventos={eventos}
+							onEventoClick={openEventoEdit}
 						/>
 						<WeekCalendarView
 							weekStartMonday={weekStartMonday}
 							settings={settings}
 							appointments={appointments}
+							eventos={eventos}
 							isSlotCreatable={(dateIso, startTime) =>
 								isSlotBookableWithGracePeriod(dateIso, startTime)
 							}
 							isRefreshing={calendarRefreshing}
 							onSlotClick={openCreate}
 							onAppointmentClick={openEdit}
+							onEventoClick={openEventoEdit}
+							onNewEvento={(dateIso) => openEventoCreate(dateIso)}
 							onWeekShift={onWeekShift}
 							onGoToToday={onGoToToday}
 						/>
@@ -252,6 +284,14 @@ function App() {
 				onClose={() => setModalOpen(false)}
 				onSaved={() => void refreshAppointments()}
 				adminMode={settings.adminMode ?? false}
+			/>
+			<EventoModal
+				open={eventoModalOpen}
+				initial={editingEvento}
+				presetDate={eventoPresetDate}
+				presetTime={eventoPresetTime}
+				adminMode={settings.adminMode ?? false}
+				onClose={() => setEventoModalOpen(false)}
 			/>
 			<CitaEventNotifier />
 			<FinanceEventListener settings={settings} />

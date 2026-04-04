@@ -46,9 +46,14 @@ export const TAURI_COMMANDS = {
 	guardarBorradorFactura: "guardar_borrador_factura",
 	emitirFactura: "emitir_factura",
 	anularFactura: "anular_factura",
+	listarEventosRango: "listar_eventos_rango",
+	crearEvento: "crear_evento",
+	actualizarEvento: "actualizar_evento",
+	eliminarEvento: "eliminar_evento",
 } as const;
 
 export const FACTURA_CHANGED_EVENT = "factura_changed";
+export const EVENTO_CHANGED_EVENT = "evento_changed";
 
 export function slotCountForDay(): number {
 	const minutes =

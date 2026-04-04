@@ -2,6 +2,7 @@ mod appointment_model;
 mod clientes;
 mod commands;
 mod db;
+mod eventos;
 mod facturacion;
 mod finance;
 mod reports;
@@ -48,6 +49,10 @@ pub fn run() {
 			facturacion::guardar_borrador_factura,
 			facturacion::emitir_factura,
 			facturacion::anular_factura,
+			eventos::listar_eventos_rango,
+			eventos::crear_evento,
+			eventos::actualizar_evento,
+			eventos::eliminar_evento,
 		])
 		.run(tauri::generate_context!())
 		.expect("error while running tauri application");
