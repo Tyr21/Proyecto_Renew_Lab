@@ -8,7 +8,7 @@ export const SLOT_MINUTES = 30;
  */
 export const MAX_GRACE_PERIOD_MINUTES = 15;
 /** Altura de cada franja de 30 min (legibilidad en pantalla) */
-export const SLOT_HEIGHT_PX = 44;
+export const SLOT_HEIGHT_PX = 35;
 /**
  * Fracción del ancho de la columna ocupada en total por todas las citas solapadas
  * (suma de bloques adyacentes). El resto queda como franja clicable a la derecha.
