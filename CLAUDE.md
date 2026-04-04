@@ -4,7 +4,13 @@ Aplicación de escritorio para gestión de citas médicas y finanzas de un consu
 
 ---
 
-## ⚠️ Decisiones de arquitectura — LEER ANTES DE PROPONER CAMBIOS
+## ⚠️ Reglas generales de desarrollo
+
+### Stack: diseño local, sin SaaS innecesarios
+
+- **Mantener todo local:** Base de datos SQLite local, cálculos en Rust/React, sin servicios en la nube (AWS, Firebase, Azure, etc.) salvo solicitud explícita del usuario.
+- **No proponer sustitutos SaaS:** Si algo puede resolverse con tecnología local ya en el stack (Tauri + SQLite + React), hacerlo así.
+- **Arquitectura de escritorio:** El proyecto es una app local de escritorio — sus ventajas son independencia, privacidad de datos y control total.
 
 ### Calendario: mantener simple, sin librerías externas
 
@@ -25,6 +31,47 @@ El calendario semanal está implementado con **CSS Grid puro + React** (`WeekCal
 - Navegación semanal con `addDays(weekStart, ±7)`
 
 **Si se necesita una mejora en el calendario**, implementarla extendiendo la lógica existente en `WeekCalendarView.tsx` y `overlapLayout.ts`, no reemplazando con una librería.
+
+### Modularidad: separación de dominios
+
+- **Módulo de calendario:** Solo coordina vistas de citas y entrada de usuario. No contiene lógica de inventario, finanzas ni otras capas de negocio.
+- **Reacción a eventos:** Otros módulos (finanzas, reportes) reaccionan a eventos locales (`window.dispatchEvent()`) que emite el calendario u otros dominios — sin dependencias acopladas.
+- **Ejemplo:** Cuando se registra un ingreso, el módulo de finanzas dispara `INGRESO_REGISTRADO_EVENT` para que el calendario se refresque. El calendario no depende de finanzas.
+
+### Cambios grandes: revisar y actualizar documentación
+
+- **Antes de cambios arquitectónicos** (tablas nuevas, restructuración de comandos, cambios en tipos principales): revisar `docs/PROJECT.md` y `docs/ARQUITECTURA.md` (si existen) para entender el contexto de decisiones previas.
+- **Después de cambios relevantes:** Actualizar la documentación afectada — que la realidad y los docs permanezcan sincronizados.
+- **"Cambios grandes" = cualquier cosa que afecte múltiples módulos o agregue filas nuevas en `CLAUDE.md`.**
+
+### Validación de citas: coherencia Rust ↔ TypeScript
+
+- **Lógica duplicada es intencional:** Las mismas reglas de validación existen en:
+  - `src-tauri/src/time_rules.rs` (backend Rust)
+  - `src/core/appointmentFormValidation.ts` (frontend TypeScript)
+  - `src/core/appointmentOverlap.ts` (detección de solapamiento frontend)
+- **Si cambia una regla:** cambiarla en ambos lados y actualizar la doc en `docs/ARQUITECTURA.md` si afecta la lógica de negocio.
+- **Razón:** El formulario valida antes de enviar (UX rápida); el backend valida después de recibir (seguridad); ambos deben concordar.
+
+### UI/CSS (KISS): simplicidad y HTML natural
+
+- **Preferir flex/grid + HTML natural:** No crear "capas estructurales" con `div` vacíos para simular márgenes o separadores.
+- **Ejemplo ❌:**
+  ```jsx
+  <div className="absolute inset-0">
+    <div className="flex">
+      <div className="h-1 bg-gray-200" />
+      {/* contenido */}
+    </div>
+  </div>
+  ```
+- **Ejemplo ✅:**
+  ```jsx
+  <div className="border-b border-gray-300 p-4">{/* contenido */}</div>
+  ```
+- **`absolute` / `z-index` solo para flotantes:** Usar posicionamiento absoluto solo para elementos que flotan sobre el flujo (modales, tooltips, notificaciones, tarjetas de citas en grid).
+- **Estados (deshabilitado, hover, etc.):** Aplicar colores y propiedades directamente en el elemento (`disabled:opacity-40`, `hover:bg-slate-50`), sin crear overlays invisibles para simular estado.
+- **Resultado:** CSS más limpio, menos especificidad, más fácil de leer y mantener.
 
 ---
 
