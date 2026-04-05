@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
 	APPOINTMENT_BLOCK_WIDTH_FRACTION,
 	MAX_GRACE_PERIOD_MINUTES,
@@ -18,6 +19,7 @@ import {
 	toISODateLocal,
 	weekDayLabels,
 } from "../../core/weekUtils";
+import { ContextMenu, type ContextMenuEntry } from "../../components/ContextMenu";
 import {
 	layoutDayAppointments,
 	serviceColorClasses,
@@ -37,6 +39,7 @@ interface WeekCalendarViewProps {
 	isRefreshing?: boolean;
 	onSlotClick: (dateIso: string, startTime: string) => void;
 	onAppointmentClick: (a: Appointment) => void;
+	onAppointmentStatusChange?: (id: string, status: "asistio" | "no_asistio") => void;
 	onEventoClick: (ev: Evento) => void;
 	onNewEvento: (dateIso: string) => void;
 	onWeekShift: (deltaWeeks: number) => void;
@@ -47,6 +50,12 @@ const SLOT_LABELS = generateSlotStarts();
 const NUM_SLOTS = slotCountForDay();
 const HEADER_TOP_H = 40;
 
+type CtxState = {
+	x: number;
+	y: number;
+	items: ContextMenuEntry[];
+} | null;
+
 export function WeekCalendarView({
 	weekStartMonday,
 	settings,
@@ -56,11 +65,13 @@ export function WeekCalendarView({
 	isRefreshing,
 	onSlotClick,
 	onAppointmentClick,
+	onAppointmentStatusChange,
 	onEventoClick,
 	onNewEvento,
 	onWeekShift,
 	onGoToToday,
 }: WeekCalendarViewProps) {
+	const [ctxMenu, setCtxMenu] = useState<CtxState>(null);
 	const days = getWeekDates(weekStartMonday, settings.showSundays);
 	const todayIso = toISODateLocal(new Date());
 	const isCurrentWeek = days.some((d) => toISODateLocal(d) === todayIso);
@@ -91,6 +102,32 @@ export function WeekCalendarView({
 	function layoutsForDate(iso: string): LayoutBlock[] {
 		const dayAppts = appointments.filter((a) => a.appointmentDate === iso);
 		return layoutDayAppointments(dayAppts);
+	}
+
+	function openSlotContextMenu(e: React.MouseEvent, dateIso: string, slot: string, creatable: boolean) {
+		e.preventDefault();
+		e.stopPropagation();
+		const items: ContextMenuEntry[] = [];
+		if (creatable) {
+			items.push({ label: "Nueva cita aquí", onClick: () => onSlotClick(dateIso, slot) });
+		}
+		items.push({ label: "Nuevo evento aquí", onClick: () => onNewEvento(dateIso) });
+		if (items.length > 0) setCtxMenu({ x: e.clientX, y: e.clientY, items });
+	}
+
+	function openApptContextMenu(e: React.MouseEvent, a: Appointment) {
+		e.preventDefault();
+		e.stopPropagation();
+		const items: ContextMenuEntry[] = [
+			{ label: "Editar cita", onClick: () => onAppointmentClick(a) },
+		];
+		if (onAppointmentStatusChange && a.status !== "asistio") {
+			items.push({ label: "Marcar: Asistió", onClick: () => onAppointmentStatusChange(a.id, "asistio") });
+		}
+		if (onAppointmentStatusChange && a.status !== "no_asistio") {
+			items.push({ label: "Marcar: No asistió", onClick: () => onAppointmentStatusChange(a.id, "no_asistio") });
+		}
+		setCtxMenu({ x: e.clientX, y: e.clientY, items });
 	}
 
 	return (
@@ -242,6 +279,7 @@ export function WeekCalendarView({
 												onClick={() => {
 													if (slotCreatable) onSlotClick(iso, slot);
 												}}
+												onContextMenu={(e) => openSlotContextMenu(e, iso, slot, slotCreatable)}
 												aria-label={
 													slotCreatable
 														? `Nueva cita el ${iso} a las ${slot}`
@@ -293,6 +331,7 @@ export function WeekCalendarView({
 														clickEv.stopPropagation();
 														onAppointmentClick(a);
 													}}
+													onContextMenu={(e) => openApptContextMenu(e, a)}
 												>
 													<div className="flex min-h-0 flex-col gap-0.5 leading-tight">
 														<div className="flex items-center gap-1 font-semibold truncate">
@@ -364,6 +403,15 @@ export function WeekCalendarView({
 					})}
 				</div>
 			</div>
+
+			{ctxMenu ? (
+				<ContextMenu
+					x={ctxMenu.x}
+					y={ctxMenu.y}
+					items={ctxMenu.items}
+					onClose={() => setCtxMenu(null)}
+				/>
+			) : null}
 		</div>
 	);
 }

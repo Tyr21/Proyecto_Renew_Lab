@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CitaEventNotifier } from "./components/CitaEventNotifier";
 import { FinanceEventListener } from "./components/FinanceEventListener";
-import { getSettings, listAppointmentsRange, listarEventosRango } from "./core/api";
+import { getAppointment, getSettings, listAppointmentsRange, listarEventosRango, updateAppointment } from "./core/api";
+import { formatInvokeError } from "./core/errors";
 import { EVENTO_CHANGED_EVENT, INGRESO_REGISTRADO_EVENT } from "./core/constants";
 import { isSlotBookableWithGracePeriod } from "./core/leadTime";
 import type { AppSettings, Appointment, Evento } from "./core/types";
@@ -149,12 +150,42 @@ function App() {
 		setEventoModalOpen(true);
 	}
 
+	async function handleQuickStatus(appointmentId: string, status: "asistio" | "no_asistio") {
+		try {
+			const appt = await getAppointment(appointmentId);
+			await updateAppointment(appointmentId, {
+				patientFullName: appt.patientFullName,
+				documentType: appt.documentType,
+				documentNumber: appt.documentNumber,
+				phoneDialCode: appt.phoneDialCode,
+				phoneNationalNumber: appt.phoneNationalNumber,
+				birthdayMonth: appt.birthdayMonth,
+				appointmentDate: appt.appointmentDate,
+				startTime: appt.startTime,
+				endTime: appt.endTime,
+				serviceType: appt.serviceType,
+				status,
+			});
+			void refreshAppointments();
+		} catch (err) {
+			alert(formatInvokeError(err));
+		}
+	}
+
 	function openEventoEdit(ev: Evento) {
 		setEditingEvento(ev);
 		setEventoPresetDate(null);
 		setEventoPresetTime(null);
 		setEventoModalOpen(true);
 	}
+
+	useEffect(() => {
+		function block(e: MouseEvent) {
+			e.preventDefault();
+		}
+		document.addEventListener("contextmenu", block);
+		return () => document.removeEventListener("contextmenu", block);
+	}, []);
 
 	if (loadError) {
 		return (
@@ -259,6 +290,7 @@ function App() {
 							isRefreshing={calendarRefreshing}
 							onSlotClick={openCreate}
 							onAppointmentClick={openEdit}
+							onAppointmentStatusChange={(id, st) => void handleQuickStatus(id, st)}
 							onEventoClick={openEventoEdit}
 							onNewEvento={(dateIso) => openEventoCreate(dateIso)}
 							onWeekShift={onWeekShift}
