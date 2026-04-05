@@ -5,6 +5,8 @@ import {
 	estadisticasMetodosPago,
 	estadisticasServicios,
 } from "../../core/api";
+import type { ChartDataPoint } from "../../components/IncomeBarChart";
+import { IncomeBarChart } from "../../components/IncomeBarChart";
 import { formatCurrency } from "../../core/currencyFormat";
 import { formatInvokeError } from "../../core/errors";
 import type {
@@ -122,6 +124,14 @@ export function ReportsDashboard({ settings }: ReportsDashboardProps) {
 	const metodoPagoMasUsado = useMemo(() => metodosPago[0] ?? null, [metodosPago]);
 
 	const servicioMasSolicitado = useMemo(() => servicios[0] ?? null, [servicios]);
+
+	const ingresosChartData = useMemo<ChartDataPoint[]>(() => {
+		return ingresosPorMes.map((row) => ({
+			label: row.mes,
+			value: row.montoTotal,
+			detail: `${row.cantidadTransacciones} transacciones · Prom: ${formatCurrency(row.montoPromedio)}`,
+		}));
+	}, [ingresosPorMes]);
 
 	function obtenerLabelServicio(serviceType: string): string {
 		return (
@@ -320,6 +330,15 @@ export function ReportsDashboard({ settings }: ReportsDashboardProps) {
 								</table>
 							</div>
 						</section>
+
+						{/* Gráfico de tendencia de ingresos */}
+						{ingresosChartData.length > 0 && (
+							<IncomeBarChart
+								data={ingresosChartData}
+								title="Tendencia de ingresos"
+								accentColor="emerald"
+							/>
+						)}
 
 						{/* Tabla de Ingresos por Mes */}
 						<section className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { eliminarIngreso, obtenerIngresos } from "../../core/api";
+import type { ChartDataPoint } from "../../components/IncomeBarChart";
+import { IncomeBarChart } from "../../components/IncomeBarChart";
 import { INGRESO_REGISTRADO_EVENT } from "../../core/constants";
 import { formatCurrency } from "../../core/currencyFormat";
 import { formatInvokeError } from "../../core/errors";
@@ -93,6 +95,38 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 			.map(([concepto, datos]) => ({ concepto, ...datos }))
 			.sort((a, b) => b.total - a.total);
 	}, [ingresos]);
+
+	const chartData = useMemo<ChartDataPoint[]>(() => {
+		if (ingresos.length === 0) return [];
+		const byDate = new Map<string, { total: number; count: number }>();
+		for (const r of ingresos) {
+			const fecha = fechaIngresoLocalISODate(r.fechaPago);
+			const prev = byDate.get(fecha) ?? { total: 0, count: 0 };
+			byDate.set(fecha, { total: prev.total + r.monto, count: prev.count + 1 });
+		}
+		const allDates: string[] = [];
+		const d0 = new Date(dateFrom + "T00:00:00");
+		const d1 = new Date(dateTo + "T00:00:00");
+		const cur = new Date(d0);
+		while (cur <= d1) {
+			allDates.push(toISODateLocal(cur));
+			cur.setDate(cur.getDate() + 1);
+		}
+		if (allDates.length === 0) {
+			allDates.push(...byDate.keys());
+			allDates.sort();
+		}
+		return allDates.map((fecha) => {
+			const entry = byDate.get(fecha);
+			const parts = fecha.split("-");
+			const shortLabel = `${parts[2]}/${parts[1]}`;
+			return {
+				label: shortLabel,
+				value: entry?.total ?? 0,
+				detail: entry ? `${entry.count} ingreso${entry.count === 1 ? "" : "s"}` : undefined,
+			};
+		});
+	}, [ingresos, dateFrom, dateTo]);
 
 	const handleDelete = useCallback(async (id: string) => {
 		if (!window.confirm("¿Confirmar eliminación del ingreso?")) return;
@@ -301,6 +335,15 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 						</div>
 					</section>
 				) : null}
+
+				{/* Gráfico de ingresos por día */}
+				{!loading && chartData.length > 0 && (
+					<IncomeBarChart
+						data={chartData}
+						title="Ingresos por día"
+						accentColor="emerald"
+					/>
+				)}
 
 				{/* Tabla de detalle */}
 				<section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
