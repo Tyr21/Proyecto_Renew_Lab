@@ -19,6 +19,12 @@ export interface BillingSettings {
 	ivaDefaultPct: number;
 }
 
+export interface BackupSettings {
+	enabled: boolean;
+	retentionCount: number;
+	externalPath: string;
+}
+
 export interface AppSettings {
 	showSundays: boolean;
 	timeDisplay: TimeDisplay;
@@ -29,6 +35,7 @@ export interface AppSettings {
 	/** Permite al administrador eliminar citas pasadas. Desactivado por defecto. */
 	adminMode: boolean;
 	billing: BillingSettings;
+	backup: BackupSettings;
 }
 
 export interface Appointment {

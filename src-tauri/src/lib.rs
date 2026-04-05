@@ -1,4 +1,5 @@
 mod appointment_model;
+mod backup;
 mod clientes;
 mod commands;
 mod db;
@@ -13,11 +14,52 @@ use std::sync::Mutex;
 
 use tauri::Manager;
 
+fn try_startup_backup(app_data_dir: &std::path::Path) {
+	let db_path = app_data_dir.join("consultorio.db");
+	if !db_path.exists() {
+		return;
+	}
+	let Ok(tmp_conn) = rusqlite::Connection::open_with_flags(
+		&db_path,
+		rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+	) else {
+		return;
+	};
+	let settings_json: Option<String> = tmp_conn
+		.query_row(
+			"SELECT settings_json FROM app_config WHERE id = 1",
+			[],
+			|row| row.get(0),
+		)
+		.ok();
+	drop(tmp_conn);
+
+	let backup_settings = settings_json
+		.and_then(|json| serde_json::from_str::<settings_model::AppSettings>(&json).ok())
+		.map(|s| s.backup)
+		.unwrap_or_default();
+
+	match backup::run_startup_backup(app_data_dir, &backup_settings) {
+		Ok(n) if n > 0 => println!("[backup] {n} respaldo(s) creado(s) al iniciar"),
+		Err(e) => eprintln!("[backup] error: {e}"),
+		_ => {}
+	}
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
 	tauri::Builder::default()
 		.plugin(tauri_plugin_opener::init())
 		.setup(|app| {
+			let dir = app.handle().path().app_data_dir().map_err(|e| {
+				std::io::Error::new(std::io::ErrorKind::Other, e.to_string())
+			})?;
+			std::fs::create_dir_all(&dir).map_err(|e| {
+				std::io::Error::new(std::io::ErrorKind::Other, e.to_string())
+			})?;
+
+			try_startup_backup(&dir);
+
 			let conn = db::open_connection(app.handle()).map_err(|e| {
 				std::io::Error::new(std::io::ErrorKind::Other, e)
 			})?;

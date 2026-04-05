@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { saveSettings } from "../../core/api";
 import { DEFAULT_SUGGESTED_PRICE_COP } from "../../core/constants";
 import { formatCurrency, parseCurrencyDigits } from "../../core/currencyFormat";
-import type { AppSettings, BillingSettings, ServiceTypeSetting, TimeDisplay } from "../../core/types";
+import type { AppSettings, BackupSettings, BillingSettings, ServiceTypeSetting, TimeDisplay } from "../../core/types";
 
 interface SettingsPanelProps {
 	settings: AppSettings;
@@ -107,6 +107,10 @@ export function SettingsPanel({
 
 	function updateBilling(patch: Partial<BillingSettings>) {
 		setDraft((d) => ({ ...d, billing: { ...d.billing, ...patch } }));
+	}
+
+	function updateBackup(patch: Partial<BackupSettings>) {
+		setDraft((d) => ({ ...d, backup: { ...d.backup, ...patch } }));
 	}
 
 	return (
@@ -371,6 +375,53 @@ export function SettingsPanel({
 							/>
 						</label>
 					</div>
+				</section>
+
+				<section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+					<h2 className="font-medium text-slate-800">Respaldos automáticos</h2>
+					<p className="text-xs text-slate-500">
+						Al iniciar la aplicación se copia la base de datos en la carpeta local de respaldos.
+						Si configura una carpeta externa (puede ser una sincronizada con la nube), también se guardará allí.
+					</p>
+					<label className="flex items-center gap-2 text-sm">
+						<input
+							type="checkbox"
+							checked={draft.backup?.enabled ?? true}
+							onChange={(e) => updateBackup({ enabled: e.target.checked })}
+						/>
+						Respaldos automáticos activados
+					</label>
+					<label className="block text-sm">
+						<span className="font-medium text-slate-700">
+							Cantidad de respaldos a conservar
+						</span>
+						<input
+							type="number"
+							min={1}
+							max={90}
+							className="mt-1 w-full max-w-[120px] rounded border border-slate-300 px-2 py-2 text-sm"
+							value={draft.backup?.retentionCount ?? 7}
+							onChange={(e) =>
+								updateBackup({ retentionCount: Math.max(1, Math.min(90, Number(e.target.value) || 7)) })
+							}
+							disabled={!draft.backup?.enabled}
+						/>
+					</label>
+					<label className="block text-sm">
+						<span className="font-medium text-slate-700">
+							Carpeta externa (opcional)
+						</span>
+						<p className="text-xs text-slate-400 mb-1">
+							Ruta absoluta a una carpeta adicional, por ejemplo una sincronizada con OneDrive, Google Drive o Dropbox.
+						</p>
+						<input
+							className="mt-1 w-full rounded border border-slate-300 px-2 py-2 text-sm font-mono"
+							placeholder="C:\Users\...\OneDrive\Backups\RenewLab"
+							value={draft.backup?.externalPath ?? ""}
+							onChange={(e) => updateBackup({ externalPath: e.target.value })}
+							disabled={!draft.backup?.enabled}
+						/>
+					</label>
 				</section>
 
 				<section className="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm space-y-3">

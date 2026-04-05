@@ -25,6 +25,11 @@ const baseSettings: AppSettings = {
 		serieDefault: "FV",
 		ivaDefaultPct: 19,
 	},
+	backup: {
+		enabled: true,
+		retentionCount: 7,
+		externalPath: "",
+	},
 };
 
 const baseInput: AppointmentInput = {

@@ -4,6 +4,10 @@ fn default_suggested_price() -> f64 {
 	150_000.0
 }
 
+fn default_backup_retention() -> u32 {
+	7
+}
+
 fn default_serie() -> String {
 	"FV".into()
 }
@@ -40,6 +44,28 @@ pub struct BillingSettings {
 	pub iva_default_pct: f64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BackupSettings {
+	#[serde(default)]
+	pub enabled: bool,
+	#[serde(default = "default_backup_retention")]
+	pub retention_count: u32,
+	/// Ruta absoluta a una carpeta externa (puede ser cloud-synced). Vacía = solo local.
+	#[serde(default)]
+	pub external_path: String,
+}
+
+impl Default for BackupSettings {
+	fn default() -> Self {
+		Self {
+			enabled: true,
+			retention_count: default_backup_retention(),
+			external_path: String::new(),
+		}
+	}
+}
+
 impl Default for BillingSettings {
 	fn default() -> Self {
 		Self {
@@ -68,6 +94,8 @@ pub struct AppSettings {
 	pub admin_mode: bool,
 	#[serde(default)]
 	pub billing: BillingSettings,
+	#[serde(default)]
+	pub backup: BackupSettings,
 }
 
 impl Default for AppSettings {
@@ -101,6 +129,7 @@ impl Default for AppSettings {
 			],
 			admin_mode: false,
 			billing: BillingSettings::default(),
+			backup: BackupSettings::default(),
 		}
 	}
 }

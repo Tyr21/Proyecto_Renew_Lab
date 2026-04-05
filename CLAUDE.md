@@ -141,6 +141,7 @@ src-tauri/src/
 ├── lib.rs                           # Punto de entrada Tauri — registra todos los comandos
 ├── main.rs                          # main() de Rust
 ├── db.rs                            # Conexión SQLite + migraciones + seed
+├── backup.rs                        # Respaldo automático de la DB al iniciar (local + carpeta externa)
 ├── commands.rs                      # DbConn type alias (Mutex<Connection>)
 ├── appointment_model.rs             # Structs AppointmentRow / AppointmentInput
 ├── settings_model.rs                # Struct AppSettings (serializada como JSON)
@@ -156,6 +157,8 @@ src-tauri/src/
 ## Base de datos SQLite
 
 El archivo se llama `consultorio.db` y vive en el directorio de datos de la app (gestionado por Tauri). Las migraciones usan `CREATE TABLE IF NOT EXISTS` — son no destructivas y se ejecutan en cada arranque. Al abrir la conexión se activan `PRAGMA journal_mode = WAL` (lecturas concurrentes) y `PRAGMA busy_timeout = 3000` (reintento automático ante bloqueos).
+
+**Respaldos automáticos:** Al iniciar la app, antes de abrir la conexión, se lee la configuración de backup y se copian hasta 2 respaldos: uno local en `{app_data_dir}/backups/` y uno en la carpeta externa configurada por el usuario (si existe). Se conservan los últimos N respaldos según `retentionCount` y se eliminan los más antiguos.
 
 ### Tabla `appointments`
 
@@ -347,6 +350,7 @@ interface AppSettings {
   defaultDocumentType: string;
   serviceTypes: ServiceType[];           // id, label, concurrentCapacity, suggestedPrice
   adminMode: boolean;                    // permite eliminar citas pasadas e ingresos
+  backup: BackupSettings;               // enabled, retentionCount, externalPath
 }
 ```
 
