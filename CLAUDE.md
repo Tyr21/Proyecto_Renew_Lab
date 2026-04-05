@@ -155,7 +155,7 @@ src-tauri/src/
 
 ## Base de datos SQLite
 
-El archivo se llama `consultorio.db` y vive en el directorio de datos de la app (gestionado por Tauri). Las migraciones usan `CREATE TABLE IF NOT EXISTS` — son no destructivas y se ejecutan en cada arranque.
+El archivo se llama `consultorio.db` y vive en el directorio de datos de la app (gestionado por Tauri). Las migraciones usan `CREATE TABLE IF NOT EXISTS` — son no destructivas y se ejecutan en cada arranque. Al abrir la conexión se activan `PRAGMA journal_mode = WAL` (lecturas concurrentes) y `PRAGMA busy_timeout = 3000` (reintento automático ante bloqueos).
 
 ### Tabla `appointments`
 
@@ -193,6 +193,7 @@ CREATE TABLE ingresos (
     fecha_pago          TEXT NOT NULL     -- RFC3339 UTC
 );
 CREATE INDEX idx_ingresos_fecha ON ingresos(fecha_pago);
+CREATE INDEX idx_ingresos_cita ON ingresos(cita_id);
 ```
 
 > `fecha_pago` se guarda en UTC. Para filtrar por fecha local usar `date(fecha_pago, 'localtime')` en SQL.

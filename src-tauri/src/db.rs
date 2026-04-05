@@ -13,7 +13,10 @@ pub fn open_connection(app: &AppHandle) -> Result<Connection, String> {
 	std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
 	let path = dir.join(DB_FILE);
 	let conn = Connection::open(path).map_err(|e| e.to_string())?;
-	conn.execute_batch("PRAGMA foreign_keys = ON;").map_err(|e| e.to_string())?;
+	conn.execute_batch(
+		"PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 3000;",
+	)
+	.map_err(|e| e.to_string())?;
 	run_migrations(&conn)?;
 	seed_settings_if_empty(&conn)?;
 	Ok(conn)
@@ -91,6 +94,10 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
 	);
 
 	backfill_ingresos_paciente_nombre(conn)?;
+
+	let _ = conn.execute_batch(
+		"CREATE INDEX IF NOT EXISTS idx_ingresos_cita ON ingresos(cita_id);",
+	);
 
 	run_facturacion_migrations(conn)?;
 	run_eventos_migrations(conn)?;
