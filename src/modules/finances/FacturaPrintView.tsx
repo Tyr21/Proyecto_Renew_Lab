@@ -14,9 +14,24 @@ export function FacturaPrintView({ factura, billing, onClose }: FacturaPrintView
 	const handlePrint = useCallback(() => {
 		const content = printRef.current;
 		if (!content) return;
-		const win = window.open("", "_blank", "width=800,height=900");
-		if (!win) return;
-		win.document.write(`<!DOCTYPE html>
+
+		const existing = document.getElementById("__factura_print_frame");
+		if (existing) existing.remove();
+
+		const iframe = document.createElement("iframe");
+		iframe.id = "__factura_print_frame";
+		iframe.style.position = "fixed";
+		iframe.style.width = "0";
+		iframe.style.height = "0";
+		iframe.style.border = "none";
+		iframe.style.left = "-9999px";
+		document.body.appendChild(iframe);
+
+		const doc = iframe.contentDocument ?? iframe.contentWindow?.document;
+		if (!doc) { iframe.remove(); return; }
+
+		doc.open();
+		doc.write(`<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Factura ${factura.serie}-${factura.numero ?? ""}</title>
 <style>
 	*{margin:0;padding:0;box-sizing:border-box}
@@ -42,10 +57,13 @@ export function FacturaPrintView({ factura, billing, onClose }: FacturaPrintView
 	.footer{margin-top:32px;text-align:center;font-size:11px;color:#94a3b8}
 	@media print{body{padding:0}button{display:none!important}}
 </style>
-</head><body>${content.innerHTML}
-<script>window.onafterprint=function(){window.close()};window.print();<\/script>
-</body></html>`);
-		win.document.close();
+</head><body>${content.innerHTML}</body></html>`);
+		doc.close();
+
+		setTimeout(() => {
+			try { iframe.contentWindow?.print(); }
+			finally { setTimeout(() => iframe.remove(), 1000); }
+		}, 250);
 	}, [factura]);
 
 	const fechaDisplay = factura.fechaEmision

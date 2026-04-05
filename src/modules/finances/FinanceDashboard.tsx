@@ -6,6 +6,7 @@ import { INGRESO_REGISTRADO_EVENT } from "../../core/constants";
 import { formatCurrency } from "../../core/currencyFormat";
 import { formatInvokeError } from "../../core/errors";
 import { fechaIngresoLocalISODate, formatHoraPago } from "../../core/ingresoDate";
+import { esc, openPrintWindow } from "../../core/printReport";
 import type { Ingreso } from "../../core/types";
 import { addDays, startOfWeekMonday, toISODateLocal } from "../../core/weekUtils";
 
@@ -158,6 +159,55 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 		setTimeout(() => setCsvToast(false), 3000);
 	}, [ingresos, dateFrom, dateTo]);
 
+	const handleExportPDF = useCallback(() => {
+		if (ingresos.length === 0) return;
+		const rangeLabel = dateFrom === dateTo ? dateFrom : `${dateFrom} al ${dateTo}`;
+
+		const cardsHtml = `
+		<div class="cards">
+			<div class="card"><div class="card-label">Total efectivo</div><div class="card-value">${formatCurrency(totals.efectivo)}</div></div>
+			<div class="card"><div class="card-label">Total bancos</div><div class="card-value">${formatCurrency(totals.bancos)}</div><div class="card-detail">Tarjeta y transferencia</div></div>
+			<div class="card card-accent"><div class="card-label">Total general</div><div class="card-value">${formatCurrency(totals.total)}</div></div>
+		</div>`;
+
+		let servicioHtml = "";
+		if (reportePorServicio.length > 0) {
+			servicioHtml = `<div class="section-title">Resumen por servicio</div><div class="cards">${
+				reportePorServicio.map(({ concepto, total, cantidad }) =>
+					`<div class="card"><div class="card-label">${esc(concepto)}</div><div class="card-value">${formatCurrency(total)}</div><div class="card-detail">${cantidad} ingreso${cantidad === 1 ? "" : "s"}</div></div>`
+				).join("")
+			}</div>`;
+		}
+
+		const tableRows = ingresos.map((r) =>
+			`<tr>
+				<td class="num">${esc(fechaIngresoLocalISODate(r.fechaPago))}</td>
+				<td class="num">${esc(formatHoraPago(r.fechaPago))}</td>
+				<td>${esc(r.pacienteNombre || "—")}</td>
+				<td>${esc(r.pacienteDocumento)}</td>
+				<td>${esc(r.concepto)}</td>
+				<td>${esc(r.metodoPago)}</td>
+				<td class="num bold">${formatCurrency(r.monto)}</td>
+			</tr>`
+		).join("");
+
+		const body = `
+		<h1>Cierre de caja / Ingresos</h1>
+		<p class="subtitle">${esc(rangeLabel)} &mdash; ${ingresos.length} movimiento${ingresos.length === 1 ? "" : "s"}</p>
+		${cardsHtml}
+		${servicioHtml}
+		<div class="section-title">Detalle del per\u00edodo</div>
+		<table>
+			<thead><tr>
+				<th>Fecha</th><th>Hora</th><th>Paciente</th><th>Documento</th><th>Concepto</th><th>M\u00e9todo</th><th class="num">Monto</th>
+			</tr></thead>
+			<tbody>${tableRows}</tbody>
+		</table>
+		<p class="footer">Generado el ${new Date().toLocaleString("es-CO")} &mdash; Consultorio Renew Lab</p>`;
+
+		openPrintWindow(`Cierre de caja ${rangeLabel}`, body);
+	}, [ingresos, dateFrom, dateTo, totals, reportePorServicio]);
+
 	function setHoy() {
 		const t = toISODateLocal(new Date());
 		setDateFrom(t);
@@ -240,6 +290,14 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 								className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 shadow-sm disabled:opacity-40"
 							>
 								Exportar CSV
+							</button>
+							<button
+								type="button"
+								onClick={handleExportPDF}
+								disabled={ingresos.length === 0 || loading}
+								className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 shadow-sm disabled:opacity-40"
+							>
+								Exportar PDF
 							</button>
 						</div>
 						{/* Inputs de rango */}

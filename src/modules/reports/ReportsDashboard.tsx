@@ -9,6 +9,7 @@ import type { ChartDataPoint } from "../../components/IncomeBarChart";
 import { IncomeBarChart } from "../../components/IncomeBarChart";
 import { formatCurrency } from "../../core/currencyFormat";
 import { formatInvokeError } from "../../core/errors";
+import { esc, openPrintWindow } from "../../core/printReport";
 import type {
 	AppSettings,
 	CitasPorMes,
@@ -133,11 +134,11 @@ export function ReportsDashboard({ settings }: ReportsDashboardProps) {
 		}));
 	}, [ingresosPorMes]);
 
-	function obtenerLabelServicio(serviceType: string): string {
+	const obtenerLabelServicio = useCallback((serviceType: string): string => {
 		return (
 			settings.serviceTypes.find((s) => s.id === serviceType)?.label ?? serviceType
 		);
-	}
+	}, [settings.serviceTypes]);
 
 	function aplicarCustom() {
 		if (desdeInput && hastaInput && desdeInput <= hastaInput) {
@@ -145,13 +146,73 @@ export function ReportsDashboard({ settings }: ReportsDashboardProps) {
 		}
 	}
 
+	const handleExportPDF = useCallback(() => {
+		const rangeLabel = `${rango.inicio} al ${rango.fin}`;
+
+		const cardsHtml = `
+		<div class="cards">
+			<div class="card"><div class="card-label">Total citas</div><div class="card-value">${totalCitasRango}</div></div>
+			<div class="card card-accent"><div class="card-label">Total ingresos</div><div class="card-value">${formatCurrency(totalIngresosRango)}</div></div>
+			<div class="card"><div class="card-label">M\u00e9todo m\u00e1s usado</div><div class="card-value">${esc(metodoPagoMasUsado?.metodoPago ?? "\u2014")}</div>${metodoPagoMasUsado ? `<div class="card-detail">${metodoPagoMasUsado.cantidadTransacciones} transacciones</div>` : ""}</div>
+			<div class="card"><div class="card-label">Servicio m\u00e1s solicitado</div><div class="card-value">${esc(servicioMasSolicitado ? obtenerLabelServicio(servicioMasSolicitado.serviceType) : "\u2014")}</div>${servicioMasSolicitado ? `<div class="card-detail">${servicioMasSolicitado.totalCitas} citas</div>` : ""}</div>
+		</div>`;
+
+		const citasRows = citasPorMes.map((r) =>
+			`<tr><td>${esc(r.mes)}</td><td class="num bold">${r.totalCitas}</td><td class="num">${r.asistieron}</td><td class="num">${r.noAsistieron}</td><td class="num">${r.porcentajeAsistencia.toFixed(1)}%</td></tr>`
+		).join("");
+		const citasTable = citasPorMes.length > 0
+			? `<div class="section-title">Citas por mes</div><table><thead><tr><th>Mes</th><th class="num">Total</th><th class="num">Asistieron</th><th class="num">No asistieron</th><th class="num">% Asistencia</th></tr></thead><tbody>${citasRows}</tbody></table>`
+			: "";
+
+		const ingresosRows = ingresosPorMes.map((r) =>
+			`<tr><td>${esc(r.mes)}</td><td class="num bold">${formatCurrency(r.montoTotal)}</td><td class="num">${r.cantidadTransacciones}</td><td class="num">${formatCurrency(r.montoPromedio)}</td></tr>`
+		).join("");
+		const ingresosTable = ingresosPorMes.length > 0
+			? `<div class="section-title">Ingresos por mes</div><table><thead><tr><th>Mes</th><th class="num">Monto total</th><th class="num">Transacciones</th><th class="num">Promedio</th></tr></thead><tbody>${ingresosRows}</tbody></table>`
+			: "";
+
+		const serviciosRows = servicios.map((r) =>
+			`<tr><td>${esc(obtenerLabelServicio(r.serviceType))}</td><td class="num bold">${r.totalCitas}</td><td class="num">${r.asistieron}</td><td class="num">${r.porcentajeAsistencia.toFixed(1)}%</td></tr>`
+		).join("");
+		const serviciosTable = servicios.length > 0
+			? `<div class="section-title">Servicios m\u00e1s solicitados</div><table><thead><tr><th>Servicio</th><th class="num">Total citas</th><th class="num">Asistieron</th><th class="num">% Asistencia</th></tr></thead><tbody>${serviciosRows}</tbody></table>`
+			: "";
+
+		const metodosRows = metodosPago.map((r) =>
+			`<tr><td>${esc(r.metodoPago)}</td><td class="num bold">${formatCurrency(r.montoTotal)}</td><td class="num">${r.cantidadTransacciones}</td><td class="num">${r.porcentajeDelTotal.toFixed(1)}%</td></tr>`
+		).join("");
+		const metodosTable = metodosPago.length > 0
+			? `<div class="section-title">M\u00e9todos de pago</div><table><thead><tr><th>M\u00e9todo</th><th class="num">Monto total</th><th class="num">Transacciones</th><th class="num">% del total</th></tr></thead><tbody>${metodosRows}</tbody></table>`
+			: "";
+
+		const body = `
+		<h1>Reportes y Estad\u00edsticas</h1>
+		<p class="subtitle">${esc(rangeLabel)}</p>
+		${cardsHtml}
+		${citasTable}
+		${ingresosTable}
+		${serviciosTable}
+		${metodosTable}
+		<p class="footer">Generado el ${new Date().toLocaleString("es-CO")} &mdash; Consultorio Renew Lab</p>`;
+
+		openPrintWindow(`Reportes ${rangeLabel}`, body);
+	}, [rango, totalCitasRango, totalIngresosRango, metodoPagoMasUsado, servicioMasSolicitado, citasPorMes, ingresosPorMes, servicios, metodosPago, obtenerLabelServicio]);
+
 	return (
 		<div className="h-full overflow-y-auto bg-slate-50 p-4 md:p-6">
 			<div className="mx-auto max-w-6xl space-y-6">
-				<header>
+				<header className="flex items-center justify-between">
 					<h1 className="text-xl font-semibold text-slate-800">
-						📊 Reportes y Estadísticas
+						Reportes y Estadísticas
 					</h1>
+					<button
+						type="button"
+						onClick={handleExportPDF}
+						disabled={loading || (citasPorMes.length === 0 && ingresosPorMes.length === 0)}
+						className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 shadow-sm disabled:opacity-40"
+					>
+						Exportar PDF
+					</button>
 				</header>
 
 				{/* Filtros de fechas */}
