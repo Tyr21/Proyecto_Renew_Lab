@@ -3,6 +3,7 @@ import { serviceLabelFromSettings } from "../../core/serviceLabels";
 import { formatTimeLabel } from "../../core/timeFormat";
 import type { AppSettings, Appointment, Evento } from "../../core/types";
 import { toISODateLocal } from "../../core/weekUtils";
+import { MiniCalendar } from "./MiniCalendar";
 import { eventoBadgeClasses } from "./overlapLayout";
 
 interface TodayAgendaSidebarProps {
@@ -10,6 +11,13 @@ interface TodayAgendaSidebarProps {
 	appointments: Appointment[];
 	eventos: Evento[];
 	onEventoClick?: (ev: Evento) => void;
+	/** Estado del mini calendario */
+	miniCalYear: number;
+	miniCalMonth: number;
+	weekStartMonday: Date;
+	datesWithAppointments: Set<string>;
+	onMiniCalMonthChange: (year: number, month: number) => void;
+	onMiniCalDateSelect: (dateIso: string) => void;
 }
 
 export function TodayAgendaSidebar({
@@ -17,6 +25,12 @@ export function TodayAgendaSidebar({
 	appointments,
 	eventos,
 	onEventoClick,
+	miniCalYear,
+	miniCalMonth,
+	weekStartMonday,
+	datesWithAppointments,
+	onMiniCalMonthChange,
+	onMiniCalDateSelect,
 }: TodayAgendaSidebarProps) {
 	const now = new Date();
 	const todayIso = toISODateLocal(now);
@@ -49,9 +63,19 @@ export function TodayAgendaSidebar({
 	return (
 		<aside
 			className="flex w-[14.4rem] shrink-0 flex-col border-r border-slate-200 bg-white"
-			aria-label="Citas y eventos del día de hoy"
+			aria-label="Mini calendario y citas del día"
 		>
-			<div className="border-b border-slate-200 px-3 py-3">
+			<div className="border-b border-slate-200">
+				<MiniCalendar
+					year={miniCalYear}
+					month={miniCalMonth}
+					weekStartMonday={weekStartMonday}
+					datesWithAppointments={datesWithAppointments}
+					onMonthChange={onMiniCalMonthChange}
+					onDateSelect={onMiniCalDateSelect}
+				/>
+			</div>
+			<div className="border-b border-slate-200 px-3 py-2">
 				<h2 className="text-sm font-semibold capitalize text-slate-800">
 					Hoy
 				</h2>

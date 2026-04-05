@@ -36,6 +36,8 @@ function App() {
 		startTime: string;
 	} | null>(null);
 	const settingsDirtyRef = useRef(false);
+	const [miniCalYear, setMiniCalYear] = useState(() => new Date().getFullYear());
+	const [miniCalMonth, setMiniCalMonth] = useState(() => new Date().getMonth());
 	const [eventoModalOpen, setEventoModalOpen] = useState(false);
 	const [editingEvento, setEditingEvento] = useState<Evento | null>(null);
 	const [eventoPresetDate, setEventoPresetDate] = useState<string | null>(null);
@@ -54,16 +56,16 @@ function App() {
 	const fetchRange = useMemo(() => {
 		if (!weekRange.start) return { start: "", end: "" };
 		const today = toISODateLocal(new Date());
+		const miniStart = toISODateLocal(new Date(miniCalYear, miniCalMonth, 1));
+		const miniEnd = toISODateLocal(new Date(miniCalYear, miniCalMonth + 1, 0));
 		let start = weekRange.start;
 		let end = weekRange.end;
-		if (today < start) {
-			start = today;
-		}
-		if (today > end) {
-			end = today;
-		}
+		if (today < start) start = today;
+		if (today > end) end = today;
+		if (miniStart < start) start = miniStart;
+		if (miniEnd > end) end = miniEnd;
 		return { start, end };
-	}, [weekRange]);
+	}, [weekRange, miniCalYear, miniCalMonth]);
 
 	const refreshAppointments = useCallback(async () => {
 		if (!settings || !fetchRange.start) return;
@@ -121,12 +123,38 @@ function App() {
 		setTab(next);
 	}
 
+	const datesWithAppointments = useMemo(() => {
+		const s = new Set<string>();
+		for (const a of appointments) s.add(a.appointmentDate);
+		return s;
+	}, [appointments]);
+
+	function handleMiniCalMonthChange(y: number, m: number) {
+		setMiniCalYear(y);
+		setMiniCalMonth(m);
+	}
+
+	function handleMiniCalDateSelect(dateIso: string) {
+		const d = new Date(dateIso + "T00:00:00");
+		setWeekStartMonday(startOfWeekMonday(d));
+		setMiniCalYear(d.getFullYear());
+		setMiniCalMonth(d.getMonth());
+	}
+
 	function onWeekShift(delta: number) {
-		setWeekStartMonday((w) => addDays(w, delta * 7));
+		setWeekStartMonday((w) => {
+			const next = addDays(w, delta * 7);
+			setMiniCalYear(next.getFullYear());
+			setMiniCalMonth(next.getMonth());
+			return next;
+		});
 	}
 
 	function onGoToToday() {
-		setWeekStartMonday(startOfWeekMonday(new Date()));
+		const now = new Date();
+		setWeekStartMonday(startOfWeekMonday(now));
+		setMiniCalYear(now.getFullYear());
+		setMiniCalMonth(now.getMonth());
 	}
 
 	function openCreate(date: string, startTime: string) {
@@ -278,6 +306,12 @@ function App() {
 							appointments={appointments}
 							eventos={eventos}
 							onEventoClick={openEventoEdit}
+							miniCalYear={miniCalYear}
+							miniCalMonth={miniCalMonth}
+							weekStartMonday={weekStartMonday}
+							datesWithAppointments={datesWithAppointments}
+							onMiniCalMonthChange={handleMiniCalMonthChange}
+							onMiniCalDateSelect={handleMiniCalDateSelect}
 						/>
 						<WeekCalendarView
 							weekStartMonday={weekStartMonday}
