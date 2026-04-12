@@ -4,6 +4,9 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::commands::DbConn;
+use crate::error;
+
+const COLORES_VALIDOS: &[&str] = &["amber", "rose", "violet", "teal", "sky", "slate"];
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -55,6 +58,14 @@ fn validate_evento(input: &EventoInput) -> Result<(), String> {
 	if input.fecha.trim().is_empty() {
 		return Err("La fecha del evento es obligatoria".into());
 	}
+	if let Some(ref c) = input.color {
+		if !COLORES_VALIDOS.contains(&c.as_str()) {
+			return Err(format!(
+				"Color no permitido. Opciones: {}",
+				COLORES_VALIDOS.join(", ")
+			));
+		}
+	}
 	if !input.todo_el_dia {
 		let start = input.hora_inicio.as_deref().unwrap_or("");
 		let end = input.hora_fin.as_deref().unwrap_or("");
@@ -74,7 +85,7 @@ pub fn listar_eventos_rango(
 	start_date: String,
 	end_date: String,
 ) -> Result<Vec<EventoRow>, String> {
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 	let mut stmt = conn
 		.prepare(
 			r#"
@@ -85,12 +96,12 @@ pub fn listar_eventos_rango(
 			ORDER BY fecha, todo_el_dia DESC, hora_inicio
 		"#,
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	let rows = stmt
 		.query_map(params![start_date, end_date], row_to_evento)
-		.map_err(|e| e.to_string())?
+		.map_err(error::db)?
 		.collect::<Result<Vec<_>, _>>()
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	Ok(rows)
 }
 
@@ -100,7 +111,7 @@ pub fn crear_evento(
 	input: EventoInput,
 ) -> Result<EventoRow, String> {
 	validate_evento(&input)?;
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 	let id = Uuid::new_v4().to_string();
 	let now = Utc::now().to_rfc3339();
 	let color = input.color.as_deref().unwrap_or("amber");
@@ -130,7 +141,7 @@ pub fn crear_evento(
 			now,
 		],
 	)
-	.map_err(|e| e.to_string())?;
+	.map_err(error::db)?;
 
 	load_evento_by_id(&conn, &id)
 }
@@ -142,7 +153,7 @@ pub fn actualizar_evento(
 	input: EventoInput,
 ) -> Result<EventoRow, String> {
 	validate_evento(&input)?;
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 
 	let exists: bool = conn
 		.query_row(
@@ -150,7 +161,7 @@ pub fn actualizar_evento(
 			params![id],
 			|row| row.get::<_, i64>(0),
 		)
-		.map_err(|e| e.to_string())?
+		.map_err(error::db)?
 		!= 0;
 	if !exists {
 		return Err("Evento no encontrado".into());
@@ -184,7 +195,7 @@ pub fn actualizar_evento(
 			id,
 		],
 	)
-	.map_err(|e| e.to_string())?;
+	.map_err(error::db)?;
 
 	load_evento_by_id(&conn, &id)
 }
@@ -194,10 +205,10 @@ pub fn eliminar_evento(
 	db: tauri::State<'_, DbConn>,
 	id: String,
 ) -> Result<(), String> {
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 	let affected = conn
 		.execute("DELETE FROM eventos WHERE id = ?1", params![id])
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	if affected == 0 {
 		return Err("Evento no encontrado".into());
 	}
@@ -213,9 +224,9 @@ fn load_evento_by_id(conn: &rusqlite::Connection, id: &str) -> Result<EventoRow,
 			FROM eventos WHERE id = ?1
 		"#,
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	stmt.query_row(params![id], row_to_evento)
-		.map_err(|e| e.to_string())
+		.map_err(error::db)
 }
 
 #[cfg(test)]

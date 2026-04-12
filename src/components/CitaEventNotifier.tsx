@@ -32,8 +32,11 @@ export function CitaEventNotifier() {
 								typeof event.payload?.tipo_servicio === "string"
 									? event.payload.tipo_servicio
 									: "?";
-							const line = `[CitaEvent] ${eventName} | servicio=${tipo} | payload=${JSON.stringify(event.payload)}`;
-							console.log(line);
+							if (import.meta.env.DEV) {
+								console.log(
+									`[CitaEvent] ${eventName} | servicio=${tipo} | payload=${JSON.stringify(event.payload)}`,
+								);
+							}
 							if (hideTimer.current) {
 								clearTimeout(hideTimer.current);
 							}

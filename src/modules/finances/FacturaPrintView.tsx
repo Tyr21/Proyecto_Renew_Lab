@@ -8,6 +8,12 @@ interface FacturaPrintViewProps {
 	onClose: () => void;
 }
 
+/**
+ * SECURITY: The print flow reads `printRef.innerHTML` and injects it into an
+ * iframe via `doc.write()`. All content inside `printRef` MUST be pure React
+ * text nodes — never use `dangerouslySetInnerHTML` or raw HTML strings here,
+ * as that would create an XSS amplification vector through the print channel.
+ */
 export function FacturaPrintView({ factura, billing, onClose }: FacturaPrintViewProps) {
 	const printRef = useRef<HTMLDivElement>(null);
 

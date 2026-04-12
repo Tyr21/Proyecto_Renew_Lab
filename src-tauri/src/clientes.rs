@@ -4,7 +4,8 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
-use crate::commands::DbConn;
+use crate::commands::{DbConn, load_settings_json};
+use crate::error;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -64,9 +65,9 @@ fn load_cliente_by_id(conn: &Connection, id: &str) -> Result<ClienteRow, String>
 			FROM clientes WHERE id = ?1
 		"#,
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	stmt.query_row(params![id], row_to_cliente)
-		.map_err(|e| e.to_string())
+		.map_err(error::db)
 }
 
 fn validate_input(input: &CrearClienteInput) -> Result<(), String> {
@@ -91,7 +92,7 @@ pub fn crear_cliente(
 	input: CrearClienteInput,
 ) -> Result<ClienteRow, String> {
 	validate_input(&input)?;
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 	let id = Uuid::new_v4().to_string();
 	let now = Utc::now().to_rfc3339();
 
@@ -119,13 +120,14 @@ pub fn crear_cliente(
 		],
 	)
 	.map_err(|e| {
-		if e.to_string().contains("UNIQUE constraint failed") {
+		let msg = e.to_string();
+		if msg.contains("UNIQUE constraint failed") {
 			format!(
 				"Ya existe un cliente con el documento {}",
 				input.document_number.trim()
 			)
 		} else {
-			e.to_string()
+			error::db(e)
 		}
 	})?;
 
@@ -143,7 +145,7 @@ pub fn actualizar_cliente(
 	if id.is_empty() {
 		return Err("El id del cliente es obligatorio".into());
 	}
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 	let now = Utc::now().to_rfc3339();
 
 	let rows_affected = conn
@@ -177,13 +179,14 @@ pub fn actualizar_cliente(
 			],
 		)
 		.map_err(|e| {
-			if e.to_string().contains("UNIQUE constraint failed") {
+			let msg = e.to_string();
+			if msg.contains("UNIQUE constraint failed") {
 				format!(
 					"Ya existe un cliente con el documento {}",
 					input.document_number.trim()
 				)
 			} else {
-				e.to_string()
+				error::db(e)
 			}
 		})?;
 
@@ -199,8 +202,9 @@ pub fn buscar_clientes(
 	db: State<'_, DbConn>,
 	query: String,
 ) -> Result<Vec<ClienteRow>, String> {
-	let conn = db.lock().map_err(|e| e.to_string())?;
-	let q = format!("%{}%", query.trim());
+	let conn = db.lock().map_err(error::lock)?;
+	let escaped = query.trim().replace('\\', "\\\\").replace('%', "\\%").replace('_', "\\_");
+	let q = format!("%{escaped}%");
 
 	let mut stmt = conn
 		.prepare(
@@ -209,20 +213,20 @@ pub fn buscar_clientes(
 			       phone_dial_code, phone_national_number, email,
 			       birthday_month, notas, created_at, updated_at
 			FROM clientes
-			WHERE nombres LIKE ?1
-			   OR apellidos LIKE ?1
-			   OR document_number LIKE ?1
+			WHERE nombres LIKE ?1 ESCAPE '\'
+			   OR apellidos LIKE ?1 ESCAPE '\'
+			   OR document_number LIKE ?1 ESCAPE '\'
 			ORDER BY apellidos, nombres
 			LIMIT 5
 		"#,
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 
 	let rows = stmt
 		.query_map(params![q], row_to_cliente)
-		.map_err(|e| e.to_string())?
+		.map_err(error::db)?
 		.collect::<Result<Vec<_>, _>>()
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 
 	Ok(rows)
 }
@@ -232,7 +236,7 @@ pub fn obtener_cliente(
 	db: State<'_, DbConn>,
 	id: String,
 ) -> Result<ClienteRow, String> {
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 	load_cliente_by_id(&conn, id.trim())
 }
 
@@ -245,10 +249,14 @@ pub fn eliminar_cliente(
 	if id.is_empty() {
 		return Err("El id del cliente es obligatorio".into());
 	}
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
+	let settings = load_settings_json(&conn)?;
+	if !settings.admin_mode {
+		return Err("Se requiere modo administrador para eliminar clientes".into());
+	}
 	let rows_affected = conn
 		.execute("DELETE FROM clientes WHERE id = ?1", params![id])
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	if rows_affected == 0 {
 		return Err("Cliente no encontrado".into());
 	}

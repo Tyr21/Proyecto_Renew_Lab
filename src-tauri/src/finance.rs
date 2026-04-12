@@ -4,7 +4,8 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
-use crate::commands::DbConn;
+use crate::commands::{DbConn, load_settings_json};
+use crate::error;
 
 const METODOS_VALIDOS: &[&str] = &["Efectivo", "Tarjeta", "Transferencia"];
 
@@ -53,10 +54,10 @@ fn load_ingreso_by_id(conn: &Connection, id: &str) -> Result<IngresoRow, String>
 			FROM ingresos WHERE id = ?1
 		"#,
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	let row = stmt
 		.query_row(params![id], row_to_ingreso)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	Ok(row)
 }
 
@@ -69,7 +70,7 @@ pub fn crear_ingreso(
 	db: State<'_, DbConn>,
 	input: CrearIngresoInput,
 ) -> Result<IngresoRow, String> {
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 	if input.paciente_nombre.trim().is_empty() {
 		return Err("El nombre del paciente es obligatorio".into());
 	}
@@ -111,7 +112,7 @@ pub fn crear_ingreso(
 			fecha_pago,
 		],
 	)
-	.map_err(|e| e.to_string())?;
+	.map_err(error::db)?;
 
 	load_ingreso_by_id(&conn, &id)
 }
@@ -122,7 +123,7 @@ pub fn obtener_ingresos(
 	start_date: String,
 	end_date: String,
 ) -> Result<Vec<IngresoRow>, String> {
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 	let mut stmt = conn
 		.prepare(
 			r#"
@@ -133,12 +134,12 @@ pub fn obtener_ingresos(
 			ORDER BY fecha_pago DESC
 		"#,
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	let rows = stmt
 		.query_map(params![&start_date, &end_date], row_to_ingreso)
-		.map_err(|e| e.to_string())?
+		.map_err(error::db)?
 		.collect::<Result<Vec<_>, _>>()
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	Ok(rows)
 }
 
@@ -148,18 +149,22 @@ pub fn eliminar_ingreso(db: State<'_, DbConn>, id: String) -> Result<(), String>
 	if id.is_empty() {
 		return Err("El id del ingreso es obligatorio".into());
 	}
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
+	let settings = load_settings_json(&conn)?;
+	if !settings.admin_mode {
+		return Err("Se requiere modo administrador para eliminar ingresos".into());
+	}
 	let exists: i64 = conn
 		.query_row(
 			"SELECT COUNT(*) FROM ingresos WHERE id = ?1",
 			params![id],
 			|row| row.get(0),
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	if exists == 0 {
 		return Err("Ingreso no encontrado".into());
 	}
 	conn.execute("DELETE FROM ingresos WHERE id = ?1", params![id])
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	Ok(())
 }

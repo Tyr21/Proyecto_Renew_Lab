@@ -3,6 +3,7 @@ mod backup;
 mod clientes;
 mod commands;
 mod db;
+mod error;
 mod eventos;
 mod facturacion;
 mod finance;
@@ -49,7 +50,6 @@ fn try_startup_backup(app_data_dir: &std::path::Path) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
 	tauri::Builder::default()
-		.plugin(tauri_plugin_opener::init())
 		.setup(|app| {
 			let dir = app.handle().path().app_data_dir().map_err(|e| {
 				std::io::Error::new(std::io::ErrorKind::Other, e.to_string())

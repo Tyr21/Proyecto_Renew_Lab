@@ -5,6 +5,35 @@ use crate::settings_model::AppSettings;
 
 const DB_FILE: &str = "consultorio.db";
 
+// ---------------------------------------------------------------------------
+// CIFRADO DE BASE DE DATOS — Evaluación de seguridad (2026-04)
+// ---------------------------------------------------------------------------
+// La BD almacena datos sensibles de pacientes (nombres, documentos, teléfonos)
+// en texto plano. Para cifrarla con SQLCipher:
+//
+// 1. Cambiar en Cargo.toml: features = ["bundled-sqlcipher-vendored-openssl"]
+//    (esto compila OpenSSL junto con SQLCipher, sin dependencias externas).
+//
+// 2. Después de `Connection::open()`, ejecutar:
+//      conn.execute_batch("PRAGMA key = 'clave-segura';")?;
+//
+// 3. Gestión de clave: usar el keychain del SO (Windows Credential Manager
+//    / DPAPI) mediante la crate `keyring` para almacenar/recuperar la clave.
+//    NUNCA almacenar la clave en el código o en configuración.
+//
+// 4. Migrar la BD existente (sin cifrar) a cifrada:
+//      - Abrir BD sin cifrar
+//      - ATTACH la nueva BD cifrada con la clave
+//      - SELECT sqlcipher_export('nombre_attached')
+//      - Reemplazar el archivo original
+//
+// 5. Los respaldos (backup.rs) copiarán el archivo cifrado tal cual, que es
+//    ilegible sin la clave.
+//
+// REQUISITOS PREVIOS: Planificar mecanismo de recuperación de clave y
+// migración antes de activar en producción.
+// ---------------------------------------------------------------------------
+
 pub fn open_connection(app: &AppHandle) -> Result<Connection, String> {
 	let dir = app
 		.path()
@@ -14,7 +43,7 @@ pub fn open_connection(app: &AppHandle) -> Result<Connection, String> {
 	let path = dir.join(DB_FILE);
 	let conn = Connection::open(path).map_err(|e| e.to_string())?;
 	conn.execute_batch(
-		"PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 3000;",
+		"PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 3000; PRAGMA secure_delete = ON;",
 	)
 	.map_err(|e| e.to_string())?;
 	run_migrations(&conn)?;

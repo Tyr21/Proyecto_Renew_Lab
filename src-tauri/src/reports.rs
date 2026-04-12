@@ -1,8 +1,9 @@
-use rusqlite::{params, Connection};
+use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::commands::DbConn;
+use crate::error;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -47,7 +48,7 @@ pub fn estadisticas_citas_por_mes(
 	start_date: String,
 	end_date: String,
 ) -> Result<Vec<CitasPorMes>, String> {
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 
 	let mut stmt = conn
 		.prepare(
@@ -63,7 +64,7 @@ pub fn estadisticas_citas_por_mes(
 			ORDER BY mes DESC
 		"#,
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 
 	let rows = stmt
 		.query_map(params![&start_date, &end_date], |row| {
@@ -82,9 +83,9 @@ pub fn estadisticas_citas_por_mes(
 				porcentaje_asistencia: porcentaje,
 			})
 		})
-		.map_err(|e| e.to_string())?
+		.map_err(error::db)?
 		.collect::<Result<Vec<_>, _>>()
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 
 	Ok(rows)
 }
@@ -95,7 +96,7 @@ pub fn estadisticas_ingresos_por_mes(
 	start_date: String,
 	end_date: String,
 ) -> Result<Vec<IngresosPorMes>, String> {
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 
 	let mut stmt = conn
 		.prepare(
@@ -111,7 +112,7 @@ pub fn estadisticas_ingresos_por_mes(
 			ORDER BY mes DESC
 		"#,
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 
 	let rows = stmt
 		.query_map(params![&start_date, &end_date], |row| {
@@ -122,9 +123,9 @@ pub fn estadisticas_ingresos_por_mes(
 				monto_promedio: row.get(3)?,
 			})
 		})
-		.map_err(|e| e.to_string())?
+		.map_err(error::db)?
 		.collect::<Result<Vec<_>, _>>()
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 
 	Ok(rows)
 }
@@ -135,7 +136,7 @@ pub fn estadisticas_servicios(
 	start_date: String,
 	end_date: String,
 ) -> Result<Vec<ServicioStats>, String> {
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 
 	let mut stmt = conn
 		.prepare(
@@ -150,7 +151,7 @@ pub fn estadisticas_servicios(
 			ORDER BY total_citas DESC
 		"#,
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 
 	let rows = stmt
 		.query_map(params![&start_date, &end_date], |row| {
@@ -168,9 +169,9 @@ pub fn estadisticas_servicios(
 				porcentaje_asistencia: porcentaje,
 			})
 		})
-		.map_err(|e| e.to_string())?
+		.map_err(error::db)?
 		.collect::<Result<Vec<_>, _>>()
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 
 	Ok(rows)
 }
@@ -181,16 +182,15 @@ pub fn estadisticas_metodos_pago(
 	start_date: String,
 	end_date: String,
 ) -> Result<Vec<MetodoPagoStats>, String> {
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 
-	// Total general filtrado por rango de fechas
 	let total_general: f64 = conn
 		.query_row(
 			"SELECT COALESCE(SUM(monto), 0.0) FROM ingresos WHERE fecha_pago >= ?1 AND fecha_pago <= ?2",
 			params![&start_date, &end_date],
 			|row| row.get(0),
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 
 	let mut stmt = conn
 		.prepare(
@@ -205,7 +205,7 @@ pub fn estadisticas_metodos_pago(
 			ORDER BY monto_total DESC
 		"#,
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 
 	let rows = stmt
 		.query_map(params![&start_date, &end_date], |row| {
@@ -222,9 +222,9 @@ pub fn estadisticas_metodos_pago(
 				porcentaje_del_total: porcentaje,
 			})
 		})
-		.map_err(|e| e.to_string())?
+		.map_err(error::db)?
 		.collect::<Result<Vec<_>, _>>()
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 
 	Ok(rows)
 }

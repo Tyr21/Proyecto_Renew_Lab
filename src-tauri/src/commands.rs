@@ -6,6 +6,7 @@ use tauri::{AppHandle, Emitter};
 use uuid::Uuid;
 
 use crate::appointment_model::{AppointmentInput, AppointmentRow};
+use crate::error;
 use crate::settings_model::AppSettings;
 use crate::time_rules::{
 	is_duration_multiple_30, is_half_hour_aligned, is_appointment_past, minutes_since_midnight,
@@ -44,31 +45,31 @@ fn emit_after_update(app: &AppHandle, previous: &AppointmentRow, current: &Appoi
 	}
 }
 
-fn load_settings_json(conn: &rusqlite::Connection) -> Result<AppSettings, String> {
+pub(crate) fn load_settings_json(conn: &rusqlite::Connection) -> Result<AppSettings, String> {
 	let json: String = conn
 		.query_row(
 			"SELECT settings_json FROM app_config WHERE id = 1",
 			[],
 			|row| row.get(0),
 		)
-		.map_err(|e| e.to_string())?;
-	serde_json::from_str(&json).map_err(|e| e.to_string())
+		.map_err(error::db)?;
+	serde_json::from_str(&json).map_err(error::config)
 }
 
 fn save_settings_json(conn: &rusqlite::Connection, settings: &AppSettings) -> Result<(), String> {
-	let json = serde_json::to_string(settings).map_err(|e| e.to_string())?;
+	let json = serde_json::to_string(settings).map_err(error::config)?;
 	conn
 		.execute(
 			"UPDATE app_config SET settings_json = ?1 WHERE id = 1",
 			params![json],
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	Ok(())
 }
 
 #[tauri::command]
 pub fn get_settings(db: tauri::State<'_, DbConn>) -> Result<AppSettings, String> {
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 	load_settings_json(&conn)
 }
 
@@ -101,7 +102,7 @@ pub fn save_settings(db: tauri::State<'_, DbConn>, settings: AppSettings) -> Res
 			return Err("El precio sugerido de cada servicio debe ser un número válido ≥ 0".into());
 		}
 	}
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 	save_settings_json(&conn, &settings)?;
 	Ok(settings)
 }
@@ -134,7 +135,7 @@ fn has_ingreso_for_cita(conn: &rusqlite::Connection, cita_id: &str) -> Result<bo
 			params![cita_id],
 			|row| row.get(0),
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	Ok(n != 0)
 }
 
@@ -144,7 +145,7 @@ pub fn list_appointments_range(
 	start_date: String,
 	end_date: String,
 ) -> Result<Vec<AppointmentRow>, String> {
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 	let mut stmt = conn
 		.prepare(
 			r#"
@@ -158,12 +159,12 @@ pub fn list_appointments_range(
 			ORDER BY a.appointment_date, a.start_time
 		"#,
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	let rows = stmt
 		.query_map(params![start_date, end_date], row_to_appointment)
-		.map_err(|e| e.to_string())?
+		.map_err(error::db)?
 		.collect::<Result<Vec<_>, _>>()
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	Ok(rows)
 }
 
@@ -193,6 +194,14 @@ fn validate_against_settings(settings: &AppSettings, input: &AppointmentInput) -
 	let doc = input.document_number.trim();
 	if doc.is_empty() || !doc.chars().all(|c| c.is_alphanumeric()) {
 		return Err("El documento debe ser alfanumérico".into());
+	}
+	let dial = input.phone_dial_code.trim();
+	if dial.is_empty()
+		|| !dial.starts_with('+')
+		|| dial.len() > 5
+		|| !dial[1..].chars().all(|c| c.is_ascii_digit())
+	{
+		return Err("El código de marcación debe tener formato +N (ej: +57)".into());
 	}
 	let phone = input.phone_national_number.trim();
 	if phone.is_empty() || !phone.chars().all(|c| c.is_ascii_digit()) {
@@ -229,7 +238,7 @@ fn count_overlapping_same_service(
 			WHERE appointment_date = ?1 AND service_type = ?2
 		"#,
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	let rows = stmt
 		.query_map(params![date, service_type], |row| {
 			Ok((
@@ -239,11 +248,11 @@ fn count_overlapping_same_service(
 				row.get::<_, String>(3)?,
 			))
 		})
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 
 	let mut count: u32 = 0;
 	for r in rows {
-		let (apt_id, start_str, end_str, _) = r.map_err(|e| e.to_string())?;
+		let (apt_id, start_str, end_str, _) = r.map_err(error::db)?;
 		if Some(apt_id.as_str()) == exclude_id {
 			continue;
 		}
@@ -318,7 +327,7 @@ pub(crate) fn create_appointment_core(
 			now_s,
 		],
 	)
-	.map_err(|e| e.to_string())?;
+	.map_err(error::db)?;
 
 	load_appointment_by_id(conn, &id)
 }
@@ -329,7 +338,7 @@ pub fn create_appointment(
 	db: tauri::State<'_, DbConn>,
 	input: AppointmentInput,
 ) -> Result<AppointmentRow, String> {
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 	let row = create_appointment_core(&conn, input)?;
 	emit_cita_event(&app, "cita_creada", &row);
 	Ok(row)
@@ -347,10 +356,10 @@ fn load_appointment_by_id(conn: &rusqlite::Connection, id: &str) -> Result<Appoi
 			FROM appointments a WHERE a.id = ?1
 		"#,
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	let row = stmt
 		.query_row(params![id], row_to_appointment)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	Ok(row)
 }
 
@@ -361,7 +370,7 @@ pub fn update_appointment(
 	id: String,
 	input: AppointmentInput,
 ) -> Result<AppointmentRow, String> {
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 	let existing = load_appointment_by_id(&conn, &id)?;
 	let settings = load_settings_json(&conn)?;
 	let past = is_appointment_past(&existing.appointment_date, &existing.end_time)?;
@@ -403,7 +412,7 @@ pub fn update_appointment(
 			"UPDATE appointments SET status = ?1, updated_at = ?2 WHERE id = ?3",
 			params![status, now_s, id],
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 		let updated = load_appointment_by_id(&conn, &id)?;
 		emit_after_update(&app, &existing, &updated);
 		return Ok(updated);
@@ -479,7 +488,7 @@ pub fn update_appointment(
 			id,
 		],
 	)
-	.map_err(|e| e.to_string())?;
+	.map_err(error::db)?;
 
 	let updated = load_appointment_by_id(&conn, &id)?;
 	emit_after_update(&app, &existing, &updated);
@@ -492,7 +501,7 @@ pub fn delete_appointment(
 	db: tauri::State<'_, DbConn>,
 	id: String,
 ) -> Result<(), String> {
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 	let existing = load_appointment_by_id(&conn, &id)?;
 	let settings = load_settings_json(&conn)?;
 	if !settings.admin_mode && is_appointment_past(&existing.appointment_date, &existing.end_time)? {
@@ -500,7 +509,7 @@ pub fn delete_appointment(
 	}
 	conn
 		.execute("DELETE FROM appointments WHERE id = ?1", params![id])
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	emit_cita_event(&app, "cita_cancelada", &existing);
 	Ok(())
 }
@@ -508,7 +517,7 @@ pub fn delete_appointment(
 /// Carga una cita o error (para armar payload después de acciones desde el front si hace falta).
 #[tauri::command]
 pub fn get_appointment(db: tauri::State<'_, DbConn>, id: String) -> Result<AppointmentRow, String> {
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 	load_appointment_by_id(&conn, &id)
 }
 
@@ -529,7 +538,7 @@ mod integration_tests {
 			patient_full_name: patient.into(),
 			document_type: "CC".into(),
 			document_number: "1".into(),
-			phone_dial_code: "57".into(),
+			phone_dial_code: "+57".into(),
 			phone_national_number: "300".into(),
 			birthday_month: None,
 			appointment_date: date.into(),

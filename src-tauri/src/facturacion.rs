@@ -5,6 +5,7 @@ use tauri::State;
 use uuid::Uuid;
 
 use crate::commands::DbConn;
+use crate::error;
 use crate::settings_model::AppSettings;
 
 const METODOS_VALIDOS: &[&str] = &["Efectivo", "Tarjeta", "Transferencia"];
@@ -120,7 +121,7 @@ fn load_lineas(conn: &Connection, factura_id: &str) -> Result<Vec<FacturaLineaRo
 			FROM factura_lineas WHERE factura_id = ?1 ORDER BY orden
 		"#,
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	let rows = stmt
 		.query_map(params![factura_id], |r| {
 			Ok(FacturaLineaRow {
@@ -136,9 +137,9 @@ fn load_lineas(conn: &Connection, factura_id: &str) -> Result<Vec<FacturaLineaRo
 				total_linea: r.get(9)?,
 			})
 		})
-		.map_err(|e| e.to_string())?
+		.map_err(error::db)?
 		.collect::<Result<Vec<_>, _>>()
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	Ok(rows)
 }
 
@@ -153,10 +154,10 @@ fn load_factura_full(conn: &Connection, id: &str) -> Result<FacturaRow, String> 
 			FROM facturas WHERE id = ?1
 		"#,
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	let mut f = stmt
 		.query_row(params![id], row_to_factura)
-		.map_err(|e| format!("Factura no encontrada: {e}"))?;
+		.map_err(|_| "Factura no encontrada".to_string())?;
 	f.lineas = load_lineas(conn, id)?;
 	Ok(f)
 }
@@ -174,8 +175,8 @@ fn load_settings(conn: &Connection) -> Result<AppSettings, String> {
 			[],
 			|row| row.get(0),
 		)
-		.map_err(|e| e.to_string())?;
-	serde_json::from_str(&json).map_err(|e| e.to_string())
+		.map_err(error::db)?;
+	serde_json::from_str(&json).map_err(error::config)
 }
 
 // ---------------------------------------------------------------------------
@@ -189,7 +190,7 @@ pub fn listar_facturas(
 	end_date: String,
 	estado: Option<String>,
 ) -> Result<Vec<FacturaRow>, String> {
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 	let base_query = r#"
 		SELECT id, estado, serie, numero, cliente_nombre, cliente_documento_tipo,
 			cliente_documento_numero, subtotal, impuesto_total, total, notas,
@@ -202,21 +203,21 @@ pub fn listar_facturas(
 
 	let mut facturas: Vec<FacturaRow> = if let Some(ref est) = estado {
 		let q = format!("{base_query} AND estado = ?3 ORDER BY created_at DESC");
-		let mut stmt = conn.prepare(&q).map_err(|e| e.to_string())?;
+		let mut stmt = conn.prepare(&q).map_err(error::db)?;
 		let rows = stmt
 			.query_map(params![&start_date, &end_date, est], row_to_factura)
-			.map_err(|e| e.to_string())?
+			.map_err(error::db)?
 			.collect::<Result<Vec<_>, _>>()
-			.map_err(|e| e.to_string())?;
+			.map_err(error::db)?;
 		rows
 	} else {
 		let q = format!("{base_query} ORDER BY created_at DESC");
-		let mut stmt = conn.prepare(&q).map_err(|e| e.to_string())?;
+		let mut stmt = conn.prepare(&q).map_err(error::db)?;
 		let rows = stmt
 			.query_map(params![&start_date, &end_date], row_to_factura)
-			.map_err(|e| e.to_string())?
+			.map_err(error::db)?
 			.collect::<Result<Vec<_>, _>>()
-			.map_err(|e| e.to_string())?;
+			.map_err(error::db)?;
 		rows
 	};
 
@@ -228,7 +229,7 @@ pub fn listar_facturas(
 
 #[tauri::command]
 pub fn obtener_factura(db: State<'_, DbConn>, id: String) -> Result<FacturaRow, String> {
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 	load_factura_full(&conn, &id)
 }
 
@@ -237,7 +238,7 @@ pub fn guardar_borrador_factura(
 	db: State<'_, DbConn>,
 	input: GuardarBorradorInput,
 ) -> Result<FacturaRow, String> {
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 	let settings = load_settings(&conn)?;
 	let serie = settings.billing.serie_default.clone();
 	let now = Utc::now().to_rfc3339();
@@ -272,7 +273,7 @@ pub fn guardar_borrador_factura(
 			"DELETE FROM factura_lineas WHERE factura_id = ?1",
 			params![existing_id],
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 		existing_id.clone()
 	} else {
 		let new_id = Uuid::new_v4().to_string();
@@ -294,7 +295,7 @@ pub fn guardar_borrador_factura(
 				now,
 			],
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 		new_id
 	};
 
@@ -326,7 +327,7 @@ pub fn guardar_borrador_factura(
 				total_l,
 			],
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	}
 
 	let total = subtotal + impuesto_total;
@@ -351,7 +352,7 @@ pub fn guardar_borrador_factura(
 			factura_id,
 		],
 	)
-	.map_err(|e| e.to_string())?;
+	.map_err(error::db)?;
 
 	load_factura_full(&conn, &factura_id)
 }
@@ -361,7 +362,7 @@ pub fn emitir_factura(
 	db: State<'_, DbConn>,
 	input: EmitirFacturaInput,
 ) -> Result<FacturaRow, String> {
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 	let factura = load_factura_full(&conn, &input.factura_id)?;
 
 	if factura.estado != "borrador" {
@@ -388,7 +389,7 @@ pub fn emitir_factura(
 	"#,
 		params![numero, now, now, factura.id],
 	)
-	.map_err(|e| e.to_string())?;
+	.map_err(error::db)?;
 
 	if input.crear_ingreso {
 		let ingreso_id = Uuid::new_v4().to_string();
@@ -410,7 +411,7 @@ pub fn emitir_factura(
 				factura.id,
 			],
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	}
 
 	load_factura_full(&conn, &factura.id)
@@ -422,14 +423,14 @@ fn next_consecutive(conn: &Connection, serie: &str) -> Result<i64, String> {
 			"UPDATE facturacion_contadores SET ultimo_numero = ultimo_numero + 1 WHERE serie = ?1",
 			params![serie],
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 
 	if updated == 0 {
 		conn.execute(
 			"INSERT INTO facturacion_contadores (serie, ultimo_numero) VALUES (?1, 1)",
 			params![serie],
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 		return Ok(1);
 	}
 
@@ -439,7 +440,7 @@ fn next_consecutive(conn: &Connection, serie: &str) -> Result<i64, String> {
 			params![serie],
 			|row| row.get(0),
 		)
-		.map_err(|e| e.to_string())?;
+		.map_err(error::db)?;
 	Ok(num)
 }
 
@@ -449,7 +450,7 @@ pub fn anular_factura(
 	id: String,
 	motivo: String,
 ) -> Result<FacturaRow, String> {
-	let conn = db.lock().map_err(|e| e.to_string())?;
+	let conn = db.lock().map_err(error::lock)?;
 	let settings = load_settings(&conn)?;
 	if !settings.admin_mode {
 		return Err("Se requiere modo administrador para anular facturas".into());
@@ -468,13 +469,13 @@ pub fn anular_factura(
 		"UPDATE facturas SET estado = 'anulada', anulacion_motivo = ?1, anulada_at = ?2, updated_at = ?3 WHERE id = ?4",
 		params![motivo.trim(), now, now, id],
 	)
-	.map_err(|e| e.to_string())?;
+	.map_err(error::db)?;
 
 	conn.execute(
 		"DELETE FROM ingresos WHERE factura_id = ?1",
 		params![id],
 	)
-	.map_err(|e| e.to_string())?;
+	.map_err(error::db)?;
 
 	load_factura_full(&conn, &id)
 }
