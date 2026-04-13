@@ -65,6 +65,9 @@ pub fn run() {
 			let conn = db::open_connection(app.handle()).map_err(|e| {
 				std::io::Error::new(std::io::ErrorKind::Other, e)
 			})?;
+			commands::ensure_persisted_admin_mode_off(&conn).map_err(|e| {
+				std::io::Error::new(std::io::ErrorKind::Other, e)
+			})?;
 			app.manage(Mutex::new(conn));
 			Ok(())
 		})

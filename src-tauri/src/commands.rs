@@ -67,6 +67,17 @@ fn save_settings_json(conn: &rusqlite::Connection, settings: &AppSettings) -> Re
 	Ok(())
 }
 
+/// Fuerza `admin_mode = false` en `app_config` si estaba activo. Se llama una vez al arrancar la app:
+/// el modo administrador no debe permanecer activo entre sesiones.
+pub(crate) fn ensure_persisted_admin_mode_off(conn: &rusqlite::Connection) -> Result<(), String> {
+	let mut s = load_settings_json(conn)?;
+	if !s.admin_mode {
+		return Ok(());
+	}
+	s.admin_mode = false;
+	save_settings_json(conn, &s)
+}
+
 #[tauri::command]
 pub fn get_settings(db: tauri::State<'_, DbConn>) -> Result<AppSettings, String> {
 	let conn = db.lock().map_err(error::lock)?;
