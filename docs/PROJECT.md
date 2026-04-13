@@ -53,5 +53,6 @@ Comportamientos que deben mantenerse al evolucionar el código:
 
 ## Documentos relacionados
 
+- [MANUAL_USUARIO.md](./MANUAL_USUARIO.md) — guía de uso para personal del consultorio (pantallas, opciones y seguridad).
 - [ARQUITECTURA.md](./ARQUITECTURA.md) — stack, base de datos, eventos.
 - [README.md](../README.md) — arranque rápido del entorno de desarrollo.

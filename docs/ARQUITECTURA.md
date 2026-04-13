@@ -218,4 +218,5 @@ Los eventos como `cita_creada`, `cita_actualizada`, `cita_completada` o `cita_ca
 ## Documentos relacionados
 
 - [PROJECT.md](./PROJECT.md) — visión y fases.
+- [MANUAL_USUARIO.md](./MANUAL_USUARIO.md) — instrucciones para usuarios finales.
 - [README.md](../README.md) — desarrollo local.
