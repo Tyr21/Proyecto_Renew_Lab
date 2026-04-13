@@ -39,7 +39,20 @@ Representa una cita agendada. Los nombres de columna coinciden con el modelo per
 
 ### Tabla `app_config`
 
-Una fila (`id = 1`) con `settings_json`: configuración global (domingos, formato de hora, duración por defecto, listas de tipos de documento/servicio, capacidades concurrentes, **precio sugerido por tipo de servicio** en moneda local, y **`billing`**: datos fiscales del consultorio — razón social, NIT, dirección, teléfono, serie por defecto e IVA por defecto). JSON antiguo sin campos nuevos se completa al deserializar con `#[serde(default)]`.
+Una fila (`id = 1`) con `settings_json`: configuración global (domingos, formato de hora, duración por defecto, listas de tipos de documento/servicio, capacidades concurrentes, **precio sugerido por tipo de servicio** en moneda local, **`billing`**, **`backup`**, y **`adminMode`**). JSON antiguo sin campos nuevos se completa al deserializar con `#[serde(default)]`.
+
+**`adminMode`:** se persiste en JSON durante la sesión de edición/guardado, pero **al iniciar el proceso** (`setup` en `lib.rs`, tras `open_connection`) se ejecuta `commands::ensure_persisted_admin_mode_off`: si venía `true` en disco, se reescribe a `false`. Así el modo administrador **no queda activo por defecto** tras cerrar y reabrir la aplicación.
+
+### Tablas `startup_auth` y `admin_auth`
+
+Cada una con una fila fija (`id = 1`) y columna `password_hash` (nullable). Los hashes son **Argon2**; el frontend solo recibe flags del tipo `hasPassword`, nunca el hash.
+
+| Tabla | Uso |
+|-------|-----|
+| `startup_auth` | Contraseña opcional para desbloquear la app al arrancar (`verify_startup_password`, `set_startup_password`, etc.). |
+| `admin_auth` | Contraseña de administrador: acceso al tab Configuración, verificación al cambiar el modo administrador, y operaciones que exigen validar al admin (p. ej. quitar contraseña de inicio vía `clear_startup_password_with_admin`). |
+
+Migraciones en `db.rs` (`run_startup_auth_migration`, `run_admin_auth_migration`).
 
 ### Auditoría: cita con ingreso vinculado
 
@@ -188,6 +201,19 @@ Los eventos como `cita_creada`, `cita_actualizada`, `cita_completada` o `cita_ca
 ## Accesibilidad (modal de cita)
 
 - Contenedor con `role="dialog"`, `aria-modal` y `aria-labelledby` apuntando al título; mensajes de error con `role="alert"` y `aria-live`; foco inicial en el panel al abrir para lectores de pantalla y teclado.
+
+## Autenticación local y tablas de seguridad
+
+- **Módulos Rust:** `startup_auth.rs`, `admin_auth.rs`; registro de comandos en `lib.rs`.
+- **Frontend:** `StartupLoginScreen` (bloqueo al arranque si hay contraseña de inicio); `ConfigAdminGate` (crear o verificar contraseña de administrador antes de mostrar `SettingsPanel`); secciones `StartupPasswordAdminSection` y `AdminPasswordAdminSection` bajo Administración cuando el modo administrador está activo en el borrador de configuración.
+- **Formularios anidados:** los formularios de contraseña en configuración no usan `<form>` internos dentro del formulario principal de “Guardar configuración” (evita envíos accidentales del padre); botones `type="button"` y manejadores `onClick` / tecla Enter acotada.
+- **Comandos relevantes (resumen):** `get_startup_auth_status`, `verify_startup_password`, `set_startup_password`, `clear_startup_password_with_admin`, `set_startup_password_with_admin`; `get_admin_auth_status`, `verify_admin_password`, `set_admin_password`, `clear_admin_password`.
+
+## Consideraciones de seguridad
+
+- **Modelo de amenaza:** aplicación de escritorio con datos en disco; la protección apunta a **uso casual** y **separación de roles** en el consultorio, no a resistencia a copia offline del archivo `consultorio.db` ni a malware con privilegios en el equipo.
+- **Sin cifrado de BD en el estado actual:** quien obtenga una copia del archivo puede intentar ataques offline contra los hashes (mitigar con contraseñas largas) o manipular filas si controla el disco.
+- **Mejora futura opcional:** cifrado de SQLite (p. ej. SQLCipher) + gestión de clave vía keyring del SO; coste de complejidad y recuperación ante pérdida de clave.
 
 ## Documentos relacionados
 

@@ -117,7 +117,9 @@ src/
 │   └── serviceLabels.ts             # Etiquetas de servicios desde settings
 ├── components/
 │   ├── CitaEventNotifier.tsx        # Escucha eventos Rust → notificaciones
-│   └── FinanceEventListener.tsx     # Escucha ingreso_registrado
+│   ├── ConfigAdminGate.tsx          # Crear / verificar contraseña de administrador antes de Configuración
+│   ├── FinanceEventListener.tsx     # Escucha ingreso_registrado
+│   └── StartupLoginScreen.tsx       # Contraseña de inicio al arrancar (si está configurada)
 └── modules/
     ├── appointments/
     │   └── AppointmentModal.tsx     # Modal crear/editar cita (con autocomplete clientes)
@@ -135,14 +137,18 @@ src/
     ├── reports/
     │   └── ReportsDashboard.tsx     # Estadísticas con filtros de período
     └── settings/
-        └── SettingsPanel.tsx        # Configuración de la app
+        ├── SettingsPanel.tsx              # Configuración (incl. modo admin + modales de verificación)
+        ├── StartupPasswordAdminSection.tsx # Contraseña de inicio (requiere modo admin en borrador)
+        └── AdminPasswordAdminSection.tsx  # Contraseña de administrador (requiere modo admin)
 
 src-tauri/src/
 ├── lib.rs                           # Punto de entrada Tauri — registra todos los comandos
 ├── main.rs                          # main() de Rust
 ├── db.rs                            # Conexión SQLite + migraciones + seed
 ├── backup.rs                        # Respaldo automático de la DB al iniciar (local + carpeta externa)
-├── commands.rs                      # DbConn type alias (Mutex<Connection>)
+├── commands.rs                      # DbConn, get/save settings, ensure_persisted_admin_mode_off al iniciar
+├── admin_auth.rs                    # Contraseña de administrador (Argon2, tabla admin_auth)
+├── startup_auth.rs                  # Contraseña de inicio de app (Argon2, tabla startup_auth)
 ├── appointment_model.rs             # Structs AppointmentRow / AppointmentInput
 ├── settings_model.rs                # Struct AppSettings (serializada como JSON)
 ├── finance.rs                       # CRUD ingresos (crear, obtener con filtro fechas, eliminar)
@@ -244,6 +250,10 @@ CREATE INDEX idx_eventos_fecha ON eventos(fecha);
 
 Singleton (id = 1). Guarda toda la configuración como JSON en `settings_json`.
 
+### Tablas `startup_auth` y `admin_auth`
+
+Cada una: una fila (`id = 1`), columna `password_hash` (nullable), hashes **Argon2**. Ver comandos en la sección *Contraseña de inicio* y *Contraseña de administrador*.
+
 ---
 
 ## Tabs de la aplicación
@@ -256,7 +266,7 @@ Singleton (id = 1). Guarda toda la configuración como JSON en `settings_json`.
 | `finanzas` | `FinanceDashboard` | Cierre de caja con filtros de fecha |
 | `reportes` | `ReportsDashboard` | Estadísticas y gráficas por período |
 | `clientes` | `ClientesDashboard` | Maestro de clientes con búsqueda fluida |
-| `configuracion` | `SettingsPanel` | Configuración general |
+| `configuracion` | `ConfigAdminGate` → `SettingsPanel` | Tras verificar contraseña de administrador (o crearla la primera vez), configuración general |
 
 ---
 
@@ -311,6 +321,23 @@ Todos los comandos están registrados en `lib.rs` → `generate_handler!`. Conve
 | `get_settings` | `getSettings()` | Lee configuración desde SQLite |
 | `save_settings` | `saveSettings(settings)` | Guarda configuración en SQLite |
 
+### Contraseña de inicio (`startup_auth`)
+| Rust | TypeScript | Descripción |
+|------|-----------|-------------|
+| `get_startup_auth_status` | `getStartupAuthStatus()` | `{ hasPassword }` — el hash no sale del backend |
+| `verify_startup_password` | `verifyStartupPassword(password)` | Comprueba contraseña antes de cargar el resto de la app |
+| `set_startup_password` | `setStartupPassword(currentPassword, newPassword)` | Primera vez `current` null; si ya hay hash, exige la actual |
+| `clear_startup_password_with_admin` | `clearStartupPasswordWithAdmin(adminPassword)` | Quita inicio; valida **admin**, no la contraseña de inicio |
+| `set_startup_password_with_admin` | `setStartupPasswordWithAdmin(adminPassword, newPassword)` | Restablece inicio validando **admin** |
+
+### Contraseña de administrador (`admin_auth`)
+| Rust | TypeScript | Descripción |
+|------|-----------|-------------|
+| `get_admin_auth_status` | `getAdminAuthStatus()` | `{ hasPassword }` |
+| `verify_admin_password` | `verifyAdminPassword(password)` | Usado al entrar en Config, al togglear modo admin, etc. |
+| `set_admin_password` | `setAdminPassword(currentPassword, newPassword)` | Primera vez `current` null |
+| `clear_admin_password` | `clearAdminPassword(currentPassword)` | Elimina la contraseña de admin de la BD |
+
 ---
 
 ## Convenciones de código
@@ -349,12 +376,14 @@ interface AppSettings {
   documentTypes: string[];               // ["CC", "CE", "TI", "PA", "RC", "NIT"]
   defaultDocumentType: string;
   serviceTypes: ServiceType[];           // id, label, concurrentCapacity, suggestedPrice
-  adminMode: boolean;                    // permite eliminar citas pasadas e ingresos
+  adminMode: boolean;                    // permite eliminar citas pasadas, ingresos, clientes, anular facturas…
   backup: BackupSettings;               // enabled, retentionCount, externalPath
 }
 ```
 
-**Admin Mode**: cuando está activo, aparece el botón de eliminar en citas pasadas, ingresos y clientes. Se activa en Configuración.
+**Modo administrador (`adminMode`):** cuando está activo en la configuración **cargada**, la UI muestra acciones destructivas según reglas de cada módulo. Activar o desactivar el checkbox en Configuración **pide la contraseña de administrador**. **Al iniciar la app**, `ensure_persisted_admin_mode_off` en Rust fuerza `adminMode: false` en `app_config`, de modo que **no queda activo entre sesiones** tras cerrar la aplicación.
+
+**Contraseñas:** distintas de `adminMode` — **contraseña de inicio** (tabla `startup_auth`, pantalla al arrancar) y **contraseña de administrador** (tabla `admin_auth`, acceso al tab Configuración). Constantes de longitud: `STARTUP_PASSWORD_*`, `ADMIN_PASSWORD_*` en `constants.ts` (alineadas con el backend).
 
 ---
 

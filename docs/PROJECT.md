@@ -20,6 +20,19 @@ La numeración sigue el plan acordado: cada fase es un bloque de producto; el **
 - **Calendario:** **CSS Grid nativo** (sin librerías tipo FullCalendar) para control total del layout y solapes tipo agenda.
 - **Capacidad por tipo de servicio:** configurable; el calendario no calcula inventario ni cifras económicas.
 - **Eventos de dominio:** payload estandarizado para integración futura (ver [ARQUITECTURA.md](./ARQUITECTURA.md)).
+- **Autenticación local:** dos secretos distintos — **contraseña de inicio** (opcional, para abrir la app) y **contraseña de administrador** (acceso a Configuración y confirmación del modo administrador). Hashes **Argon2** en tablas dedicadas; el modo administrador (`adminMode` en `app_config`) **no permanece activo entre sesiones**: al arrancar la aplicación se fuerza a `false` en base de datos. Detalle técnico en [ARQUITECTURA.md](./ARQUITECTURA.md) (secciones *Autenticación local y tablas de seguridad* y *Consideraciones de seguridad*).
+
+## Autenticación local (resumen de producto)
+
+| Concepto | Comportamiento |
+|----------|------------------|
+| **Inicio de la app** | Si existe contraseña de inicio en BD, pantalla de verificación antes del resto de la UI. |
+| **Configuración** | Requiere contraseña de administrador al entrar al tab (creación la primera vez, o verificación si ya existe). Al salir del tab y volver, se vuelve a pedir. |
+| **Modo administrador** | Checkbox en Administración: activar/desactivar pide contraseña de administrador. Tras guardar, puede usarse en la sesión; **al cerrar y reabrir la app** queda desactivado. |
+| **Contraseña de inicio (gestión)** | Solo con modo administrador activo en el borrador de configuración: establecer, cambiar, restablecer con admin, o quitar (solo con contraseña de administrador, no la de inicio). |
+| **Contraseña de administrador (gestión)** | Solo con modo administrador activo: cambiar o eliminar la contraseña de admin. |
+
+> La BD SQLite permanece **sin cifrado** por defecto; la protección es adecuada frente a uso casual, no frente a copia física del archivo por un atacante avanzado (ver *Consideraciones de seguridad* en [ARQUITECTURA.md](./ARQUITECTURA.md)).
 
 ## Fase 2 — Criterios de aceptación (validados)
 
