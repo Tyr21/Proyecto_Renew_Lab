@@ -25,6 +25,16 @@ export interface BackupSettings {
 	externalPath: string;
 }
 
+/** Estado de la contraseña de inicio (el hash nunca sale del backend). */
+export interface StartupAuthStatus {
+	hasPassword: boolean;
+}
+
+/** Estado de la contraseña de administrador (el hash nunca sale del backend). */
+export interface AdminAuthStatus {
+	hasPassword: boolean;
+}
+
 export interface AppSettings {
 	showSundays: boolean;
 	timeDisplay: TimeDisplay;

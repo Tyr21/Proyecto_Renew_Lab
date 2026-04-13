@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { saveSettings } from "../../core/api";
+import { saveSettings, verifyAdminPassword } from "../../core/api";
 import { DEFAULT_SUGGESTED_PRICE_COP } from "../../core/constants";
+import { formatInvokeError } from "../../core/errors";
+import { AdminPasswordAdminSection } from "./AdminPasswordAdminSection";
+import { StartupPasswordAdminSection } from "./StartupPasswordAdminSection";
 import { formatCurrency, parseCurrencyDigits } from "../../core/currencyFormat";
 import type { AppSettings, BackupSettings, BillingSettings, ServiceTypeSetting, TimeDisplay } from "../../core/types";
 
@@ -28,7 +31,11 @@ const SECTIONS: { id: SettingsSectionId; label: string; description: string }[] 
 	{ id: "servicios", label: "Tipos de servicio", description: "Capacidad y precios sugeridos" },
 	{ id: "facturacion", label: "Facturación", description: "Datos del consultorio en facturas" },
 	{ id: "respaldos", label: "Respaldos", description: "Copias automáticas de la base de datos" },
-	{ id: "administracion", label: "Administración", description: "Modo administrador" },
+	{
+		id: "administracion",
+		label: "Administración",
+		description: "Modo administrador y contraseñas de seguridad",
+	},
 ];
 
 export function SettingsPanel({
@@ -43,6 +50,39 @@ export function SettingsPanel({
 	const [successToast, setSuccessToast] = useState(false);
 	const savedSettingsRef = useRef<string>(JSON.stringify(settings));
 	const [activeSection, setActiveSection] = useState<SettingsSectionId>("calendario");
+
+	const [adminModeModalOpen, setAdminModeModalOpen] = useState(false);
+	const [adminModeTarget, setAdminModeTarget] = useState(false);
+	const [adminModePwd, setAdminModePwd] = useState("");
+	const [adminModeErr, setAdminModeErr] = useState<string | null>(null);
+	const [adminModeBusy, setAdminModeBusy] = useState(false);
+
+	function openAdminModeToggle(target: boolean) {
+		if (target === (draft.adminMode ?? false)) return;
+		setAdminModeTarget(target);
+		setAdminModePwd("");
+		setAdminModeErr(null);
+		setAdminModeModalOpen(true);
+	}
+
+	async function confirmAdminModeToggle() {
+		setAdminModeErr(null);
+		if (!adminModePwd.trim()) {
+			setAdminModeErr("Introduzca la contraseña de administrador");
+			return;
+		}
+		setAdminModeBusy(true);
+		try {
+			await verifyAdminPassword(adminModePwd);
+			setDraft((d) => ({ ...d, adminMode: adminModeTarget }));
+			setAdminModeModalOpen(false);
+			setAdminModePwd("");
+		} catch (e) {
+			setAdminModeErr(formatInvokeError(e));
+		} finally {
+			setAdminModeBusy(false);
+		}
+	}
 
 	useEffect(() => {
 		setDraft(settings);
@@ -614,18 +654,21 @@ export function SettingsPanel({
 										type="checkbox"
 										className="mt-0.5"
 										checked={draft.adminMode ?? false}
-										onChange={(e) =>
-											setDraft((d) => ({ ...d, adminMode: e.target.checked }))
+										onChange={() =>
+											openAdminModeToggle(!(draft.adminMode ?? false))
 										}
 									/>
 									<span>
 										<span className="font-medium">Activar modo administrador</span>
 										<span className="mt-1 block text-amber-800/95">
-											Permite eliminar citas pasadas, ingresos, clientes y anular facturas según las reglas de la aplicación.
+											Permite eliminar citas pasadas, ingresos, clientes y anular facturas según las reglas de la aplicación. Al activar o desactivar se solicita la contraseña de administrador.
 										</span>
 									</span>
 								</label>
 							</div>
+
+							<StartupPasswordAdminSection adminModeActive={draft.adminMode ?? false} />
+							{(draft.adminMode ?? false) ? <AdminPasswordAdminSection /> : null}
 						</section>
 					)}
 
@@ -652,6 +695,62 @@ export function SettingsPanel({
 			{successToast ? (
 				<div className="fixed bottom-6 right-6 z-50 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg">
 					Configuración guardada correctamente
+				</div>
+			) : null}
+
+			{adminModeModalOpen ? (
+				<div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/40 p-4">
+					<div
+						className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-5 shadow-xl"
+						role="dialog"
+						aria-modal="true"
+						aria-labelledby="admin-mode-verify-title"
+					>
+						<h2 id="admin-mode-verify-title" className="text-base font-semibold text-slate-800">
+							Contraseña de administrador
+						</h2>
+						<p className="mt-2 text-sm text-slate-600">
+							{adminModeTarget
+								? "Introduzca la contraseña de administrador para activar el modo administrador."
+								: "Introduzca la contraseña de administrador para desactivar el modo administrador."}
+						</p>
+						{adminModeErr ? (
+							<div className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{adminModeErr}</div>
+						) : null}
+						<label className="mt-4 block text-sm">
+							<span className="font-medium text-slate-700">Contraseña</span>
+							<input
+								type="password"
+								autoComplete="current-password"
+								className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+								value={adminModePwd}
+								onChange={(e) => setAdminModePwd(e.target.value)}
+								autoFocus
+							/>
+						</label>
+						<div className="mt-5 flex flex-wrap gap-2">
+							<button
+								type="button"
+								disabled={adminModeBusy}
+								onClick={() => void confirmAdminModeToggle()}
+								className="rounded-lg bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+							>
+								{adminModeBusy ? "Comprobando…" : "Confirmar"}
+							</button>
+							<button
+								type="button"
+								disabled={adminModeBusy}
+								onClick={() => {
+									setAdminModeModalOpen(false);
+									setAdminModePwd("");
+									setAdminModeErr(null);
+								}}
+								className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+							>
+								Cancelar
+							</button>
+						</div>
+					</div>
 				</div>
 			) : null}
 		</div>

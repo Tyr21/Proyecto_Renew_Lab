@@ -130,7 +130,49 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
 
 	run_facturacion_migrations(conn)?;
 	run_eventos_migrations(conn)?;
+	run_startup_auth_migration(conn)?;
+	run_admin_auth_migration(conn)?;
 
+	Ok(())
+}
+
+fn run_startup_auth_migration(conn: &Connection) -> Result<(), String> {
+	conn
+		.execute_batch(
+			r#"
+			CREATE TABLE IF NOT EXISTS startup_auth (
+				id INTEGER PRIMARY KEY CHECK (id = 1),
+				password_hash TEXT
+			);
+			"#,
+		)
+		.map_err(|e| e.to_string())?;
+	conn
+		.execute(
+			"INSERT OR IGNORE INTO startup_auth (id, password_hash) VALUES (1, NULL)",
+			[],
+		)
+		.map_err(|e| e.to_string())?;
+	Ok(())
+}
+
+fn run_admin_auth_migration(conn: &Connection) -> Result<(), String> {
+	conn
+		.execute_batch(
+			r#"
+			CREATE TABLE IF NOT EXISTS admin_auth (
+				id INTEGER PRIMARY KEY CHECK (id = 1),
+				password_hash TEXT
+			);
+			"#,
+		)
+		.map_err(|e| e.to_string())?;
+	conn
+		.execute(
+			"INSERT OR IGNORE INTO admin_auth (id, password_hash) VALUES (1, NULL)",
+			[],
+		)
+		.map_err(|e| e.to_string())?;
 	Ok(())
 }
 

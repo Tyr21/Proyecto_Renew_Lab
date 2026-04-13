@@ -1,7 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CitaEventNotifier } from "./components/CitaEventNotifier";
 import { FinanceEventListener } from "./components/FinanceEventListener";
-import { getAppointment, getSettings, listAppointmentsRange, listarEventosRango, updateAppointment } from "./core/api";
+import { ConfigAdminGate } from "./components/ConfigAdminGate";
+import { StartupLoginScreen } from "./components/StartupLoginScreen";
+import {
+	getAdminAuthStatus,
+	getAppointment,
+	getSettings,
+	getStartupAuthStatus,
+	listAppointmentsRange,
+	listarEventosRango,
+	updateAppointment,
+} from "./core/api";
 import { formatInvokeError } from "./core/errors";
 import { EVENTO_CHANGED_EVENT, INGRESO_REGISTRADO_EVENT } from "./core/constants";
 import { isSlotBookableWithGracePeriod } from "./core/leadTime";
@@ -18,10 +28,18 @@ import { SettingsPanel } from "./modules/settings/SettingsPanel";
 
 type Tab = "calendario" | "finanzas" | "reportes" | "clientes" | "configuracion";
 
+/** Sin contraseña o ya verificada: se puede cargar configuración y UI principal. */
+type StartupGate = "checking" | "password" | "ready";
+
+/** Acceso al módulo Configuración (contraseña de administrador). */
+type ConfigAdminPhase = "na" | "loading" | "bootstrap" | "verify" | "ready";
+
 function App() {
 	const [tab, setTab] = useState<Tab>("calendario");
+	const [configAdminPhase, setConfigAdminPhase] = useState<ConfigAdminPhase>("na");
 	const [settings, setSettings] = useState<AppSettings | null>(null);
 	const [loadError, setLoadError] = useState<string | null>(null);
+	const [startupGate, setStartupGate] = useState<StartupGate>("checking");
 	const [weekStartMonday, setWeekStartMonday] = useState(() =>
 		startOfWeekMonday(new Date()),
 	);
@@ -84,19 +102,30 @@ function App() {
 		}
 	}, [settings, fetchRange.start, fetchRange.end]);
 
+	const loadSettingsAfterAuth = useCallback(async () => {
+		const s = await getSettings();
+		setSettings(s);
+		setLoadError(null);
+		setStartupGate("ready");
+	}, []);
+
 	useEffect(() => {
 		(async () => {
 			try {
-				const s = await getSettings();
-				setSettings(s);
-				setLoadError(null);
+				const status = await getStartupAuthStatus();
+				if (status.hasPassword) {
+					setStartupGate("password");
+				} else {
+					await loadSettingsAfterAuth();
+				}
 			} catch (e) {
 				setLoadError(
 					e instanceof Error ? e.message : "No se pudo cargar la configuración",
 				);
+				setStartupGate("ready");
 			}
 		})();
-	}, []);
+	}, [loadSettingsAfterAuth]);
 
 	useEffect(() => {
 		void refreshAppointments();
@@ -113,6 +142,27 @@ function App() {
 			window.removeEventListener(EVENTO_CHANGED_EVENT, onRefresh);
 		};
 	}, [refreshAppointments]);
+
+	useEffect(() => {
+		if (tab !== "configuracion") {
+			setConfigAdminPhase("na");
+			return;
+		}
+		let cancelled = false;
+		setConfigAdminPhase("loading");
+		(async () => {
+			try {
+				const s = await getAdminAuthStatus();
+				if (cancelled) return;
+				setConfigAdminPhase(s.hasPassword ? "verify" : "bootstrap");
+			} catch {
+				if (!cancelled) setConfigAdminPhase("bootstrap");
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [tab]);
 
 	function switchTab(next: Tab) {
 		if (tab === "configuracion" && next !== "configuracion" && settingsDirtyRef.current) {
@@ -230,6 +280,30 @@ function App() {
 		);
 	}
 
+	if (startupGate === "checking") {
+		return (
+			<div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-600">
+				Cargando…
+			</div>
+		);
+	}
+
+	if (startupGate === "password") {
+		return (
+			<StartupLoginScreen
+				onSuccess={async () => {
+					try {
+						await loadSettingsAfterAuth();
+					} catch (e) {
+						setLoadError(
+							e instanceof Error ? e.message : "No se pudo cargar la configuración",
+						);
+					}
+				}}
+			/>
+		);
+	}
+
 	if (!settings) {
 		return (
 			<div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-600">
@@ -337,18 +411,33 @@ function App() {
 					<ReportsDashboard settings={settings} />
 				) : tab === "clientes" ? (
 					<ClientesDashboard settings={settings} />
+				) : configAdminPhase === "ready" ? (
+					<div className="h-full overflow-y-auto bg-slate-50">
+						<SettingsPanel
+							settings={settings}
+							onSettingsSaved={(s) => {
+								setSettings(s);
+								void refreshAppointments();
+							}}
+							onClose={() => setTab("calendario")}
+							dirtyRef={settingsDirtyRef}
+						/>
+					</div>
 				) : (
-				<div className="h-full overflow-y-auto bg-slate-50">
-					<SettingsPanel
-						settings={settings}
-						onSettingsSaved={(s) => {
-							setSettings(s);
-							void refreshAppointments();
-						}}
-						onClose={() => setTab("calendario")}
-						dirtyRef={settingsDirtyRef}
-					/>
-				</div>
+					<div className="h-full min-h-0 overflow-y-auto bg-slate-50">
+						<ConfigAdminGate
+							phase={
+								configAdminPhase === "bootstrap"
+									? "bootstrap"
+									: configAdminPhase === "verify"
+										? "verify"
+										: "loading"
+							}
+							onBootstrapComplete={() => setConfigAdminPhase("ready")}
+							onVerifyComplete={() => setConfigAdminPhase("ready")}
+							onCancel={() => setTab("calendario")}
+						/>
+					</div>
 				)}
 			</main>
 

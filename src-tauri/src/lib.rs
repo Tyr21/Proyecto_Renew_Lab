@@ -1,3 +1,4 @@
+mod admin_auth;
 mod appointment_model;
 mod backup;
 mod clientes;
@@ -9,6 +10,7 @@ mod facturacion;
 mod finance;
 mod reports;
 mod settings_model;
+mod startup_auth;
 mod time_rules;
 
 use std::sync::Mutex;
@@ -95,6 +97,15 @@ pub fn run() {
 			eventos::crear_evento,
 			eventos::actualizar_evento,
 			eventos::eliminar_evento,
+			startup_auth::get_startup_auth_status,
+			startup_auth::verify_startup_password,
+			startup_auth::set_startup_password,
+			startup_auth::clear_startup_password_with_admin,
+			startup_auth::set_startup_password_with_admin,
+			admin_auth::get_admin_auth_status,
+			admin_auth::verify_admin_password,
+			admin_auth::set_admin_password,
+			admin_auth::clear_admin_password,
 		])
 		.run(tauri::generate_context!())
 		.expect("error while running tauri application");

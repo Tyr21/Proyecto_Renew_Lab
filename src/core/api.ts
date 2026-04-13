@@ -17,7 +17,67 @@ import type {
 	Ingreso,
 	MetodoPagoStats,
 	ServicioStats,
+	StartupAuthStatus,
+	AdminAuthStatus,
 } from "./types";
+
+export async function getStartupAuthStatus(): Promise<StartupAuthStatus> {
+	return invoke<StartupAuthStatus>(TAURI_COMMANDS.getStartupAuthStatus);
+}
+
+export async function verifyStartupPassword(password: string): Promise<void> {
+	return invoke(TAURI_COMMANDS.verifyStartupPassword, { password });
+}
+
+export async function setStartupPassword(
+	currentPassword: string | null,
+	newPassword: string,
+): Promise<void> {
+	return invoke(TAURI_COMMANDS.setStartupPassword, {
+		currentPassword,
+		newPassword,
+	});
+}
+
+export async function clearStartupPasswordWithAdmin(
+	adminPassword: string,
+): Promise<void> {
+	return invoke(TAURI_COMMANDS.clearStartupPasswordWithAdmin, {
+		adminPassword,
+	});
+}
+
+export async function setStartupPasswordWithAdmin(
+	adminPassword: string,
+	newPassword: string,
+): Promise<void> {
+	return invoke(TAURI_COMMANDS.setStartupPasswordWithAdmin, {
+		adminPassword,
+		newPassword,
+	});
+}
+
+export async function getAdminAuthStatus(): Promise<AdminAuthStatus> {
+	return invoke<AdminAuthStatus>(TAURI_COMMANDS.getAdminAuthStatus);
+}
+
+export async function verifyAdminPassword(password: string): Promise<void> {
+	return invoke(TAURI_COMMANDS.verifyAdminPassword, { password });
+}
+
+export async function setAdminPassword(
+	currentPassword: string | null,
+	newPassword: string,
+): Promise<void> {
+	return invoke(TAURI_COMMANDS.setAdminPassword, {
+		currentPassword,
+		newPassword,
+	});
+}
+
+export async function clearAdminPassword(currentPassword: string): Promise<void> {
+	return invoke(TAURI_COMMANDS.clearAdminPassword, { currentPassword });
+}
 
 export async function getSettings(): Promise<AppSettings> {
 	return invoke<AppSettings>(TAURI_COMMANDS.getSettings);
