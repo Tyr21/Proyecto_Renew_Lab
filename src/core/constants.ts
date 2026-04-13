@@ -37,6 +37,7 @@ export const TAURI_COMMANDS = {
 	getAppointment: "get_appointment",
 	crearIngreso: "crear_ingreso",
 	obtenerIngresos: "obtener_ingresos",
+	listarMovimientosFinancierosDetalle: "listar_movimientos_financieros_detalle",
 	eliminarIngreso: "eliminar_ingreso",
 	estadisticasCitasPorMes: "estadisticas_citas_por_mes",
 	estadisticasIngresosPorMes: "estadisticas_ingresos_por_mes",

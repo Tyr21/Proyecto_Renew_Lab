@@ -22,11 +22,10 @@ import { EventoModal } from "./modules/calendar/EventoModal";
 import { TodayAgendaSidebar } from "./modules/calendar/TodayAgendaSidebar";
 import { WeekCalendarView } from "./modules/calendar/WeekCalendarView";
 import { ClientesDashboard } from "./modules/clientes/ClientesDashboard";
-import { FinanzasView } from "./modules/finances/FinanzasView";
-import { ReportsDashboard } from "./modules/reports/ReportsDashboard";
+import { ReportesModuleView } from "./modules/reports/ReportesModuleView";
 import { SettingsPanel } from "./modules/settings/SettingsPanel";
 
-type Tab = "calendario" | "finanzas" | "reportes" | "clientes" | "configuracion";
+type Tab = "calendario" | "reportes" | "clientes" | "configuracion";
 
 /** Sin contraseña o ya verificada: se puede cargar configuración y UI principal. */
 type StartupGate = "checking" | "password" | "ready";
@@ -329,17 +328,6 @@ function App() {
 				<button
 					type="button"
 					className={`rounded-lg px-4 py-2 text-sm font-medium ${
-						tab === "finanzas"
-							? "bg-sky-600 text-white"
-							: "text-slate-700 hover:bg-slate-100"
-					}`}
-					onClick={() => switchTab("finanzas")}
-				>
-					💰 Cierre de caja
-				</button>
-				<button
-					type="button"
-					className={`rounded-lg px-4 py-2 text-sm font-medium ${
 						tab === "reportes"
 							? "bg-sky-600 text-white"
 							: "text-slate-700 hover:bg-slate-100"
@@ -405,10 +393,8 @@ function App() {
 							onGoToToday={onGoToToday}
 						/>
 					</div>
-				) : tab === "finanzas" ? (
-					<FinanzasView settings={settings} />
 				) : tab === "reportes" ? (
-					<ReportsDashboard settings={settings} />
+					<ReportesModuleView settings={settings} />
 				) : tab === "clientes" ? (
 					<ClientesDashboard settings={settings} />
 				) : configAdminPhase === "ready" ? (

@@ -81,6 +81,7 @@ pub fn run() {
 			commands::get_appointment,
 			finance::crear_ingreso,
 			finance::obtener_ingresos,
+			finance::listar_movimientos_financieros_detalle,
 			finance::eliminar_ingreso,
 			reports::estadisticas_citas_por_mes,
 			reports::estadisticas_ingresos_por_mes,

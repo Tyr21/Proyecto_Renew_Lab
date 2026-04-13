@@ -133,8 +133,11 @@ src/
     │   └── ClienteModal.tsx         # Modal crear/editar cliente
     ├── finances/
     │   ├── FinanceDashboard.tsx     # Cierre de caja con filtros de fecha
+    │   ├── FacturasDashboard.tsx    # Listado y emisión de facturas
     │   └── PaymentModal.tsx         # Modal registrar pago de cita
     ├── reports/
+    │   ├── ReportesModuleView.tsx   # Pestaña Reportes: submenú (cierre, facturas, estadísticas, movimientos)
+    │   ├── MovimientosDetalleDashboard.tsx # Ingresos con detalle e impresión por rango
     │   └── ReportsDashboard.tsx     # Estadísticas con filtros de período
     └── settings/
         ├── SettingsPanel.tsx              # Configuración (incl. modo admin + modales de verificación)
@@ -258,13 +261,12 @@ Cada una: una fila (`id = 1`), columna `password_hash` (nullable), hashes **Argo
 
 ## Tabs de la aplicación
 
-`App.tsx` gestiona 5 tabs:
+`App.tsx` gestiona 4 tabs:
 
 | Tab | Componente | Descripción |
 |-----|-----------|-------------|
 | `calendario` | `WeekCalendarView` + `TodayAgendaSidebar` | Vista semanal de citas |
-| `finanzas` | `FinanceDashboard` | Cierre de caja con filtros de fecha |
-| `reportes` | `ReportsDashboard` | Estadísticas y gráficas por período |
+| `reportes` | `ReportesModuleView` | Submenú: cierre de caja, facturas, estadísticas, movimientos detallados |
 | `clientes` | `ClientesDashboard` | Maestro de clientes con búsqueda fluida |
 | `configuracion` | `ConfigAdminGate` → `SettingsPanel` | Tras verificar contraseña de administrador (o crearla la primera vez), configuración general |
 
@@ -288,6 +290,7 @@ Todos los comandos están registrados en `lib.rs` → `generate_handler!`. Conve
 |------|-----------|-------------|
 | `crear_ingreso` | `crearIngreso(input)` | Registra un pago |
 | `obtener_ingresos` | `obtenerIngresos(startDate, endDate)` | Ingresos filtrados por fecha en SQL |
+| `listar_movimientos_financieros_detalle` | `listarMovimientosFinancierosDetalle(startDate, endDate)` | Ingresos con JOIN opcional a `facturas` (recibo, total factura) |
 | `eliminar_ingreso` | `eliminarIngreso(id)` | Elimina un ingreso (adminMode) |
 
 ### Clientes

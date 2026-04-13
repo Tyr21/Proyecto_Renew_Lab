@@ -108,6 +108,21 @@ export interface Ingreso {
 	fechaPago: string;
 }
 
+/** Ingreso con factura vinculada opcional (listados / impresión). */
+export interface MovimientoFinancieroDetalle {
+	id: string;
+	fechaPago: string;
+	pacienteNombre: string;
+	pacienteDocumento: string;
+	concepto: string;
+	monto: number;
+	metodoPago: string;
+	facturaId: string | null;
+	facturaSerie: string | null;
+	facturaNumero: number | null;
+	facturaTotal: number | null;
+}
+
 export interface CrearIngresoInput {
 	citaId?: string | null;
 	pacienteNombre: string;

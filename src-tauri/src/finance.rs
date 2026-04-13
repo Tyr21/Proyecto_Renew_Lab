@@ -65,6 +65,67 @@ fn validate_metodo(m: &str) -> bool {
 	METODOS_VALIDOS.iter().any(|&v| v == m)
 }
 
+/// Ingreso con datos de factura vinculada (si existe) para listados e impresión.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MovimientoFinancieroDetalle {
+	pub id: String,
+	pub fecha_pago: String,
+	pub paciente_nombre: String,
+	pub paciente_documento: String,
+	pub concepto: String,
+	pub monto: f64,
+	pub metodo_pago: String,
+	pub factura_id: Option<String>,
+	pub factura_serie: Option<String>,
+	pub factura_numero: Option<i64>,
+	pub factura_total: Option<f64>,
+}
+
+fn row_to_movimiento_detalle(row: &rusqlite::Row<'_>) -> rusqlite::Result<MovimientoFinancieroDetalle> {
+	Ok(MovimientoFinancieroDetalle {
+		id: row.get(0)?,
+		fecha_pago: row.get(1)?,
+		paciente_nombre: row.get(2)?,
+		paciente_documento: row.get(3)?,
+		concepto: row.get(4)?,
+		monto: row.get(5)?,
+		metodo_pago: row.get(6)?,
+		factura_id: row.get(7)?,
+		factura_serie: row.get(8)?,
+		factura_numero: row.get(9)?,
+		factura_total: row.get(10)?,
+	})
+}
+
+#[tauri::command]
+pub fn listar_movimientos_financieros_detalle(
+	db: State<'_, DbConn>,
+	start_date: String,
+	end_date: String,
+) -> Result<Vec<MovimientoFinancieroDetalle>, String> {
+	let conn = db.lock().map_err(error::lock)?;
+	let mut stmt = conn
+		.prepare(
+			r#"
+			SELECT i.id, i.fecha_pago, i.paciente_nombre, i.paciente_documento, i.concepto, i.monto, i.metodo_pago,
+			       i.factura_id, f.serie, f.numero, f.total
+			FROM ingresos i
+			LEFT JOIN facturas f ON i.factura_id = f.id
+			WHERE date(i.fecha_pago, 'localtime') >= ?1
+			  AND date(i.fecha_pago, 'localtime') <= ?2
+			ORDER BY i.fecha_pago DESC
+		"#,
+		)
+		.map_err(error::db)?;
+	let rows = stmt
+		.query_map(params![&start_date, &end_date], row_to_movimiento_detalle)
+		.map_err(error::db)?
+		.collect::<Result<Vec<_>, _>>()
+		.map_err(error::db)?;
+	Ok(rows)
+}
+
 #[tauri::command]
 pub fn crear_ingreso(
 	db: State<'_, DbConn>,

@@ -15,6 +15,7 @@ import type {
 	GuardarBorradorInput,
 	IngresosPorMes,
 	Ingreso,
+	MovimientoFinancieroDetalle,
 	MetodoPagoStats,
 	ServicioStats,
 	StartupAuthStatus,
@@ -134,6 +135,16 @@ export async function obtenerIngresos(
 	endDate: string,
 ): Promise<Ingreso[]> {
 	return invoke<Ingreso[]>(TAURI_COMMANDS.obtenerIngresos, { startDate, endDate });
+}
+
+export async function listarMovimientosFinancierosDetalle(
+	startDate: string,
+	endDate: string,
+): Promise<MovimientoFinancieroDetalle[]> {
+	return invoke<MovimientoFinancieroDetalle[]>(
+		TAURI_COMMANDS.listarMovimientosFinancierosDetalle,
+		{ startDate, endDate },
+	);
 }
 
 export async function eliminarIngreso(id: string): Promise<void> {
