@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CitaEventNotifier } from "./components/CitaEventNotifier";
 import { FinanceEventListener } from "./components/FinanceEventListener";
+import { HelpModal } from "./components/HelpModal";
 import { ConfigAdminGate } from "./components/ConfigAdminGate";
 import { StartupLoginScreen } from "./components/StartupLoginScreen";
 import {
@@ -59,6 +60,7 @@ function App() {
 	const [editingEvento, setEditingEvento] = useState<Evento | null>(null);
 	const [eventoPresetDate, setEventoPresetDate] = useState<string | null>(null);
 	const [eventoPresetTime, setEventoPresetTime] = useState<string | null>(null);
+	const [helpOpen, setHelpOpen] = useState(false);
 
 	const weekRange = useMemo(() => {
 		if (!settings) return { start: "", end: "" };
@@ -314,49 +316,59 @@ function App() {
 	return (
 		<div className="h-screen flex flex-col bg-slate-100">
 			<nav className="flex shrink-0 items-center gap-1 border-b border-slate-200 bg-white px-3 py-2">
+				<div className="flex flex-wrap items-center gap-1">
+					<button
+						type="button"
+						className={`rounded-lg px-4 py-2 text-sm font-medium ${
+							tab === "calendario"
+								? "bg-sky-600 text-white"
+								: "text-slate-700 hover:bg-slate-100"
+						}`}
+						onClick={() => switchTab("calendario")}
+					>
+						Calendario
+					</button>
+					<button
+						type="button"
+						className={`rounded-lg px-4 py-2 text-sm font-medium ${
+							tab === "reportes"
+								? "bg-sky-600 text-white"
+								: "text-slate-700 hover:bg-slate-100"
+						}`}
+						onClick={() => switchTab("reportes")}
+					>
+						📊 Reportes
+					</button>
+					<button
+						type="button"
+						className={`rounded-lg px-4 py-2 text-sm font-medium ${
+							tab === "clientes"
+								? "bg-sky-600 text-white"
+								: "text-slate-700 hover:bg-slate-100"
+						}`}
+						onClick={() => switchTab("clientes")}
+					>
+						👥 Clientes
+					</button>
+					<button
+						type="button"
+						className={`rounded-lg px-4 py-2 text-sm font-medium ${
+							tab === "configuracion"
+								? "bg-sky-600 text-white"
+								: "text-slate-700 hover:bg-slate-100"
+						}`}
+						onClick={() => switchTab("configuracion")}
+					>
+						Configuración
+					</button>
+				</div>
 				<button
 					type="button"
-					className={`rounded-lg px-4 py-2 text-sm font-medium ${
-						tab === "calendario"
-							? "bg-sky-600 text-white"
-							: "text-slate-700 hover:bg-slate-100"
-					}`}
-					onClick={() => switchTab("calendario")}
+					onClick={() => setHelpOpen(true)}
+					className="ml-auto shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+					title="Ayuda"
 				>
-					Calendario
-				</button>
-				<button
-					type="button"
-					className={`rounded-lg px-4 py-2 text-sm font-medium ${
-						tab === "reportes"
-							? "bg-sky-600 text-white"
-							: "text-slate-700 hover:bg-slate-100"
-					}`}
-					onClick={() => switchTab("reportes")}
-				>
-					📊 Reportes
-				</button>
-				<button
-					type="button"
-					className={`rounded-lg px-4 py-2 text-sm font-medium ${
-						tab === "clientes"
-							? "bg-sky-600 text-white"
-							: "text-slate-700 hover:bg-slate-100"
-					}`}
-					onClick={() => switchTab("clientes")}
-				>
-					👥 Clientes
-				</button>
-				<button
-					type="button"
-					className={`rounded-lg px-4 py-2 text-sm font-medium ${
-						tab === "configuracion"
-							? "bg-sky-600 text-white"
-							: "text-slate-700 hover:bg-slate-100"
-					}`}
-					onClick={() => switchTab("configuracion")}
-				>
-					Configuración
+					❓ Ayuda
 				</button>
 			</nav>
 
@@ -448,6 +460,7 @@ function App() {
 			/>
 			<CitaEventNotifier />
 			<FinanceEventListener settings={settings} />
+			<HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
 		</div>
 	);
 }
