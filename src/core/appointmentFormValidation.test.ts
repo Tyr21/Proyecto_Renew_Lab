@@ -16,6 +16,20 @@ const baseSettings: AppSettings = {
 			suggestedPrice: 150_000,
 		},
 	],
+	adminMode: false,
+	billing: {
+		razonSocial: "",
+		nit: "",
+		direccion: "",
+		telefono: "",
+		serieDefault: "FV",
+		ivaDefaultPct: 19,
+	},
+	backup: {
+		enabled: true,
+		retentionCount: 7,
+		externalPath: "",
+	},
 };
 
 const baseInput: AppointmentInput = {

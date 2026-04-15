@@ -13,13 +13,26 @@ La numeración sigue el plan acordado: cada fase es un bloque de producto; el **
 | **Fase 1** | Completada | Setup de **Tauri**, **React (Vite)**, **Tailwind**, **SQLite** y construcción visual del calendario con **CSS Grid** (celdas de **30 min**, citas por defecto de **1 h**), navegación semanal y ajustes de vista (domingos, formato de hora). |
 | **Fase 2** | Completada (refinamiento continuo) | **Conexión calendario ↔ base de datos**: CRUD de citas, configuración (tipos de documento/servicio, capacidades concurrentes), validaciones de **choques de horarios** y reglas de negocio ya persistidas. Lo que sigue aquí es pulir UX, pruebas y reglas adicionales según el consultorio. |
 | **Fase 3** | Completada | **Bus de eventos local**: emisión **solo desde Rust** tras persistir (`tauri::Emitter::emit` + payload JSON en `commands.rs`); el frontend se suscribe con `@tauri-apps/api/event` (`listen`). Consumidor de prueba: `CitaEventNotifier` (consola + toast). **Extender consumidores** (Inventario/Finanzas) en fases posteriores sin acoplar al calendario. |
-| **Fase 4** | En curso | **Finanzas (inicio):** tabla `ingresos`, comandos `crear_ingreso` / `obtener_ingresos`, modal de pago abierto por **`FinanceEventListener`** al evento `cita_completada` (sin tocar el calendario). **Inventario** y el resto de facturación pendientes. |
+| **Fase 4** | En curso | **Finanzas:** tabla `ingresos`, comandos `crear_ingreso` / `obtener_ingresos`, modal de pago abierto por **`FinanceEventListener`** al evento `cita_completada`. **Facturación local:** tablas `facturas`, `factura_lineas`, `facturacion_contadores`; estados borrador → emitida → anulada; numeración consecutiva atómica por serie; líneas con IVA configurable; emisión con ingreso automático en una transacción; impresión HTML; datos fiscales del consultorio en `BillingSettings`; opción de generar factura desde el modal de pago rápido. Diseño preparado para futura integración DIAN (columna `dian_metadata_json`). **Inventario** pendiente. |
 
 ## Decisiones clave
 
 - **Calendario:** **CSS Grid nativo** (sin librerías tipo FullCalendar) para control total del layout y solapes tipo agenda.
 - **Capacidad por tipo de servicio:** configurable; el calendario no calcula inventario ni cifras económicas.
 - **Eventos de dominio:** payload estandarizado para integración futura (ver [ARQUITECTURA.md](./ARQUITECTURA.md)).
+- **Autenticación local:** dos secretos distintos — **contraseña de inicio** (opcional, para abrir la app) y **contraseña de administrador** (acceso a Configuración y confirmación del modo administrador). Hashes **Argon2** en tablas dedicadas; el modo administrador (`adminMode` en `app_config`) **no permanece activo entre sesiones**: al arrancar la aplicación se fuerza a `false` en base de datos. Detalle técnico en [ARQUITECTURA.md](./ARQUITECTURA.md) (secciones *Autenticación local y tablas de seguridad* y *Consideraciones de seguridad*).
+
+## Autenticación local (resumen de producto)
+
+| Concepto | Comportamiento |
+|----------|------------------|
+| **Inicio de la app** | Si existe contraseña de inicio en BD, pantalla de verificación antes del resto de la UI. |
+| **Configuración** | Requiere contraseña de administrador al entrar al tab (creación la primera vez, o verificación si ya existe). Al salir del tab y volver, se vuelve a pedir. |
+| **Modo administrador** | Checkbox en Administración: activar/desactivar pide contraseña de administrador. Tras guardar, puede usarse en la sesión; **al cerrar y reabrir la app** queda desactivado. |
+| **Contraseña de inicio (gestión)** | Solo con modo administrador activo en el borrador de configuración: establecer, cambiar, restablecer con admin, o quitar (solo con contraseña de administrador, no la de inicio). |
+| **Contraseña de administrador (gestión)** | Solo con modo administrador activo: cambiar o eliminar la contraseña de admin. |
+
+> La BD SQLite permanece **sin cifrado** por defecto; la protección es adecuada frente a uso casual, no frente a copia física del archivo por un atacante avanzado (ver *Consideraciones de seguridad* en [ARQUITECTURA.md](./ARQUITECTURA.md)).
 
 ## Fase 2 — Criterios de aceptación (validados)
 
@@ -34,11 +47,12 @@ Comportamientos que deben mantenerse al evolucionar el código:
 
 ## Pruebas y calidad
 
-- **Frontend (Vitest):** en la raíz, `npm run test` — solapes, validación de formulario y periodo de gracia (`src/core/*.test.ts`).
-- **Backend (Rust):** `cd src-tauri` y `cargo test` — `time_rules` (ventana, solapes, periodo de gracia) e integración mínima en `commands` (capacidad concurrente con BD en memoria).
+- **Frontend (Vitest):** en la raíz, `npm run test` — solapes, validación de formulario, periodo de gracia y cálculos de totales de factura (`src/core/*.test.ts`).
+- **Backend (Rust):** `cd src-tauri` y `cargo test` — `time_rules` (ventana, solapes, periodo de gracia), integración en `commands` (capacidad concurrente con BD en memoria), y `facturacion` (borrador → emisión → consecutivo → ingreso, edición rechazada en emitida).
 - **Manual:** `npm run tauri dev` — recorrer los flujos de la lista anterior tras cambios en calendario o citas; al crear/editar/eliminar citas, comprobar consola del WebView y toast inferior por eventos de dominio (`cita_*`).
 
 ## Documentos relacionados
 
+- [MANUAL_USUARIO.md](./MANUAL_USUARIO.md) — guía de uso para personal del consultorio (pantallas, opciones y seguridad).
 - [ARQUITECTURA.md](./ARQUITECTURA.md) — stack, base de datos, eventos.
 - [README.md](../README.md) — arranque rápido del entorno de desarrollo.

@@ -5,6 +5,35 @@ use crate::settings_model::AppSettings;
 
 const DB_FILE: &str = "consultorio.db";
 
+// ---------------------------------------------------------------------------
+// CIFRADO DE BASE DE DATOS — Evaluación de seguridad (2026-04)
+// ---------------------------------------------------------------------------
+// La BD almacena datos sensibles de pacientes (nombres, documentos, teléfonos)
+// en texto plano. Para cifrarla con SQLCipher:
+//
+// 1. Cambiar en Cargo.toml: features = ["bundled-sqlcipher-vendored-openssl"]
+//    (esto compila OpenSSL junto con SQLCipher, sin dependencias externas).
+//
+// 2. Después de `Connection::open()`, ejecutar:
+//      conn.execute_batch("PRAGMA key = 'clave-segura';")?;
+//
+// 3. Gestión de clave: usar el keychain del SO (Windows Credential Manager
+//    / DPAPI) mediante la crate `keyring` para almacenar/recuperar la clave.
+//    NUNCA almacenar la clave en el código o en configuración.
+//
+// 4. Migrar la BD existente (sin cifrar) a cifrada:
+//      - Abrir BD sin cifrar
+//      - ATTACH la nueva BD cifrada con la clave
+//      - SELECT sqlcipher_export('nombre_attached')
+//      - Reemplazar el archivo original
+//
+// 5. Los respaldos (backup.rs) copiarán el archivo cifrado tal cual, que es
+//    ilegible sin la clave.
+//
+// REQUISITOS PREVIOS: Planificar mecanismo de recuperación de clave y
+// migración antes de activar en producción.
+// ---------------------------------------------------------------------------
+
 pub fn open_connection(app: &AppHandle) -> Result<Connection, String> {
 	let dir = app
 		.path()
@@ -13,7 +42,10 @@ pub fn open_connection(app: &AppHandle) -> Result<Connection, String> {
 	std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
 	let path = dir.join(DB_FILE);
 	let conn = Connection::open(path).map_err(|e| e.to_string())?;
-	conn.execute_batch("PRAGMA foreign_keys = ON;").map_err(|e| e.to_string())?;
+	conn.execute_batch(
+		"PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 3000; PRAGMA secure_delete = ON;",
+	)
+	.map_err(|e| e.to_string())?;
 	run_migrations(&conn)?;
 	seed_settings_if_empty(&conn)?;
 	Ok(conn)
@@ -92,6 +124,55 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
 
 	backfill_ingresos_paciente_nombre(conn)?;
 
+	let _ = conn.execute_batch(
+		"CREATE INDEX IF NOT EXISTS idx_ingresos_cita ON ingresos(cita_id);",
+	);
+
+	run_facturacion_migrations(conn)?;
+	run_eventos_migrations(conn)?;
+	run_startup_auth_migration(conn)?;
+	run_admin_auth_migration(conn)?;
+
+	Ok(())
+}
+
+fn run_startup_auth_migration(conn: &Connection) -> Result<(), String> {
+	conn
+		.execute_batch(
+			r#"
+			CREATE TABLE IF NOT EXISTS startup_auth (
+				id INTEGER PRIMARY KEY CHECK (id = 1),
+				password_hash TEXT
+			);
+			"#,
+		)
+		.map_err(|e| e.to_string())?;
+	conn
+		.execute(
+			"INSERT OR IGNORE INTO startup_auth (id, password_hash) VALUES (1, NULL)",
+			[],
+		)
+		.map_err(|e| e.to_string())?;
+	Ok(())
+}
+
+fn run_admin_auth_migration(conn: &Connection) -> Result<(), String> {
+	conn
+		.execute_batch(
+			r#"
+			CREATE TABLE IF NOT EXISTS admin_auth (
+				id INTEGER PRIMARY KEY CHECK (id = 1),
+				password_hash TEXT
+			);
+			"#,
+		)
+		.map_err(|e| e.to_string())?;
+	conn
+		.execute(
+			"INSERT OR IGNORE INTO admin_auth (id, password_hash) VALUES (1, NULL)",
+			[],
+		)
+		.map_err(|e| e.to_string())?;
 	Ok(())
 }
 
@@ -138,6 +219,97 @@ fn backfill_ingresos_paciente_nombre(conn: &Connection) -> Result<(), String> {
 		)
 		.map_err(|e| e.to_string())?;
 
+	Ok(())
+}
+
+fn run_facturacion_migrations(conn: &Connection) -> Result<(), String> {
+	conn
+		.execute_batch(
+			r#"
+			CREATE TABLE IF NOT EXISTS facturas (
+				id TEXT PRIMARY KEY,
+				estado TEXT NOT NULL DEFAULT 'borrador',
+				serie TEXT NOT NULL DEFAULT 'FV',
+				numero INTEGER,
+				cliente_nombre TEXT NOT NULL DEFAULT '',
+				cliente_documento_tipo TEXT NOT NULL DEFAULT '',
+				cliente_documento_numero TEXT NOT NULL DEFAULT '',
+				subtotal REAL NOT NULL DEFAULT 0,
+				impuesto_total REAL NOT NULL DEFAULT 0,
+				total REAL NOT NULL DEFAULT 0,
+				notas TEXT NOT NULL DEFAULT '',
+				cita_id TEXT,
+				fecha_emision TEXT,
+				anulacion_motivo TEXT,
+				anulada_at TEXT,
+				dian_metadata_json TEXT,
+				created_at TEXT NOT NULL,
+				updated_at TEXT NOT NULL
+			);
+
+			CREATE UNIQUE INDEX IF NOT EXISTS idx_facturas_serie_numero
+				ON facturas(serie, numero) WHERE numero IS NOT NULL;
+
+			CREATE INDEX IF NOT EXISTS idx_facturas_estado ON facturas(estado);
+			CREATE INDEX IF NOT EXISTS idx_facturas_fecha ON facturas(fecha_emision);
+
+			CREATE TABLE IF NOT EXISTS factura_lineas (
+				id TEXT PRIMARY KEY,
+				factura_id TEXT NOT NULL REFERENCES facturas(id) ON DELETE CASCADE,
+				orden INTEGER NOT NULL DEFAULT 0,
+				descripcion TEXT NOT NULL DEFAULT '',
+				cantidad REAL NOT NULL DEFAULT 1,
+				precio_unitario REAL NOT NULL DEFAULT 0,
+				tasa_impuesto_pct REAL NOT NULL DEFAULT 0,
+				base_imponible REAL NOT NULL DEFAULT 0,
+				impuesto REAL NOT NULL DEFAULT 0,
+				total_linea REAL NOT NULL DEFAULT 0
+			);
+
+			CREATE INDEX IF NOT EXISTS idx_factura_lineas_factura
+				ON factura_lineas(factura_id);
+
+			CREATE TABLE IF NOT EXISTS facturacion_contadores (
+				serie TEXT PRIMARY KEY,
+				ultimo_numero INTEGER NOT NULL DEFAULT 0
+			);
+		"#,
+		)
+		.map_err(|e| e.to_string())?;
+
+	let _ = conn.execute(
+		"ALTER TABLE ingresos ADD COLUMN factura_id TEXT DEFAULT NULL",
+		[],
+	);
+
+	let _ = conn.execute_batch(
+		"CREATE INDEX IF NOT EXISTS idx_ingresos_factura ON ingresos(factura_id);",
+	);
+
+	Ok(())
+}
+
+fn run_eventos_migrations(conn: &Connection) -> Result<(), String> {
+	conn
+		.execute_batch(
+			r#"
+			CREATE TABLE IF NOT EXISTS eventos (
+				id TEXT PRIMARY KEY,
+				titulo TEXT NOT NULL,
+				descripcion TEXT NOT NULL DEFAULT '',
+				fecha TEXT NOT NULL,
+				todo_el_dia INTEGER NOT NULL DEFAULT 1,
+				hora_inicio TEXT,
+				hora_fin TEXT,
+				color TEXT NOT NULL DEFAULT 'amber',
+				created_at TEXT NOT NULL,
+				updated_at TEXT NOT NULL
+			);
+
+			CREATE INDEX IF NOT EXISTS idx_eventos_fecha ON eventos(fecha);
+		"#,
+		)
+		.map_err(|e| e.to_string())?;
 	Ok(())
 }
 

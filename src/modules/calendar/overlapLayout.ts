@@ -1,5 +1,5 @@
 import { minutesFromHHMM } from "../../core/timeFormat";
-import type { Appointment } from "../../core/types";
+import type { Appointment, EventoColor } from "../../core/types";
 
 export interface LayoutBlock {
 	appointment: Appointment;
@@ -109,10 +109,29 @@ export function serviceColorClasses(serviceId: string): string {
 		camara_hiperbarica:
 			"bg-sky-100 border-sky-400 text-sky-950",
 		sueroterapia:
-			"bg-emerald-100 border-emerald-500 text-emerald-950",
+			"bg-sky-100 border-sky-400 text-sky-950",
 	};
 	return (
 		palette[serviceId] ??
 		"bg-violet-100 border-violet-400 text-violet-950"
 	);
+}
+
+const EVENTO_COLOR_MAP: Record<EventoColor, { bg: string; border: string; text: string; badge: string }> = {
+	amber: { bg: "bg-amber-50", border: "border-amber-400", text: "text-amber-900", badge: "bg-amber-200 text-amber-900" },
+	rose: { bg: "bg-rose-50", border: "border-rose-400", text: "text-rose-900", badge: "bg-rose-200 text-rose-900" },
+	violet: { bg: "bg-violet-50", border: "border-violet-400", text: "text-violet-900", badge: "bg-violet-200 text-violet-900" },
+	teal: { bg: "bg-teal-50", border: "border-teal-400", text: "text-teal-900", badge: "bg-teal-200 text-teal-900" },
+	sky: { bg: "bg-sky-50", border: "border-sky-400", text: "text-sky-900", badge: "bg-sky-200 text-sky-900" },
+	slate: { bg: "bg-slate-100", border: "border-slate-400", text: "text-slate-900", badge: "bg-slate-300 text-slate-900" },
+};
+
+export function eventoBlockClasses(color: EventoColor): string {
+	const c = EVENTO_COLOR_MAP[color] ?? EVENTO_COLOR_MAP.amber;
+	return `${c.bg} ${c.border} ${c.text}`;
+}
+
+export function eventoBadgeClasses(color: EventoColor): string {
+	const c = EVENTO_COLOR_MAP[color] ?? EVENTO_COLOR_MAP.amber;
+	return c.badge;
 }

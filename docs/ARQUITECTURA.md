@@ -39,7 +39,20 @@ Representa una cita agendada. Los nombres de columna coinciden con el modelo per
 
 ### Tabla `app_config`
 
-Una fila (`id = 1`) con `settings_json`: configuración global (domingos, formato de hora, duración por defecto, listas de tipos de documento/servicio, capacidades concurrentes y **precio sugerido por tipo de servicio** en moneda local, p. ej. COP). JSON antiguo sin `suggestedPrice` se completa al deserializar en Rust con valor por defecto.
+Una fila (`id = 1`) con `settings_json`: configuración global (domingos, formato de hora, duración por defecto, listas de tipos de documento/servicio, capacidades concurrentes, **precio sugerido por tipo de servicio** en moneda local, **`billing`**, **`backup`**, y **`adminMode`**). JSON antiguo sin campos nuevos se completa al deserializar con `#[serde(default)]`.
+
+**`adminMode`:** se persiste en JSON durante la sesión de edición/guardado, pero **al iniciar el proceso** (`setup` en `lib.rs`, tras `open_connection`) se ejecuta `commands::ensure_persisted_admin_mode_off`: si venía `true` en disco, se reescribe a `false`. Así el modo administrador **no queda activo por defecto** tras cerrar y reabrir la aplicación.
+
+### Tablas `startup_auth` y `admin_auth`
+
+Cada una con una fila fija (`id = 1`) y columna `password_hash` (nullable). Los hashes son **Argon2**; el frontend solo recibe flags del tipo `hasPassword`, nunca el hash.
+
+| Tabla | Uso |
+|-------|-----|
+| `startup_auth` | Contraseña opcional para desbloquear la app al arrancar (`verify_startup_password`, `set_startup_password`, etc.). |
+| `admin_auth` | Contraseña de administrador: acceso al tab Configuración, verificación al cambiar el modo administrador, y operaciones que exigen validar al admin (p. ej. quitar contraseña de inicio vía `clear_startup_password_with_admin`). |
+
+Migraciones en `db.rs` (`run_startup_auth_migration`, `run_admin_auth_migration`).
 
 ### Auditoría: cita con ingreso vinculado
 
@@ -53,11 +66,87 @@ Registro de pagos/ingresos locales. `cita_id` opcional (texto UUID) para enlazar
 |-------------|-------------|
 | `id` | PK (UUID en texto) |
 | `cita_id` | Opcional, referencia lógica a `appointments.id` |
+| `paciente_nombre` | Nombre del paciente (migración incremental, backfill) |
 | `paciente_documento` | Documento del paciente |
 | `concepto` | Texto (p. ej. etiqueta o id de servicio) |
 | `monto` | REAL |
 | `metodo_pago` | `Efectivo` \| `Tarjeta` \| `Transferencia` |
 | `fecha_pago` | ISO-8601 |
+| `factura_id` | Opcional, referencia lógica a `facturas.id` (agregada por migración) |
+
+### Tabla `facturas` (Fase 4 — facturación local)
+
+Documento de venta con snapshot de datos del cliente y totales persistidos (no recalculados tras emitir).
+
+| Campo (SQL) | Descripción |
+|-------------|-------------|
+| `id` | PK (UUID en texto) |
+| `estado` | `borrador` \| `emitida` \| `anulada` |
+| `serie` | Prefijo de la numeración (p. ej. `FV`) |
+| `numero` | Consecutivo entero dentro de la serie; NULL en borrador. **UNIQUE** `(serie, numero)` donde `numero IS NOT NULL` |
+| `cliente_nombre` | Nombre completo del cliente |
+| `cliente_documento_tipo` | Tipo de documento (CC, NIT, etc.) |
+| `cliente_documento_numero` | Número de documento |
+| `subtotal` | Suma de bases imponibles |
+| `impuesto_total` | Suma de impuestos |
+| `total` | subtotal + impuesto_total |
+| `notas` | Texto libre |
+| `cita_id` | Opcional, referencia lógica a `appointments.id` |
+| `fecha_emision` | ISO-8601, asignada al emitir |
+| `anulacion_motivo` | Texto de motivo (solo si anulada) |
+| `anulada_at` | ISO-8601 (solo si anulada) |
+| `dian_metadata_json` | Reservado para futura integración DIAN (NULL por ahora) |
+| `created_at` / `updated_at` | Marcas de auditoría |
+
+### Tabla `factura_lineas`
+
+Líneas ordenadas de cada factura. Totales calculados y persistidos al guardar/emitir para auditoría.
+
+| Campo | Descripción |
+|-------|-------------|
+| `id` | PK (UUID) |
+| `factura_id` | FK a `facturas.id` (CASCADE al eliminar) |
+| `orden` | Posición (0-based) |
+| `descripcion` | Texto del concepto |
+| `cantidad` | REAL > 0 |
+| `precio_unitario` | REAL >= 0 |
+| `tasa_impuesto_pct` | 0–100 |
+| `base_imponible` | cantidad × precio_unitario |
+| `impuesto` | base_imponible × (tasa/100) |
+| `total_linea` | base_imponible + impuesto |
+
+### Tabla `facturacion_contadores`
+
+Una fila por `serie` (PK). `ultimo_numero` se incrementa atómicamente bajo el `Mutex<Connection>` al emitir.
+
+### Tabla `eventos` (calendario — recordatorios)
+
+Eventos genéricos de calendario: mantenimiento programado, revisiones, alertas internas. No son citas de pacientes.
+
+| Campo | Descripción |
+|-------|-------------|
+| `id` | PK (UUID) |
+| `titulo` | Título del evento |
+| `descripcion` | Texto libre opcional |
+| `fecha` | `YYYY-MM-DD` |
+| `todo_el_dia` | `1` (todo el día) o `0` (hora específica) |
+| `hora_inicio` | `HH:MM`, NULL si todo el día |
+| `hora_fin` | `HH:MM`, NULL si todo el día |
+| `color` | Identificador de color: `amber` \| `rose` \| `violet` \| `teal` \| `sky` \| `slate` |
+| `created_at` / `updated_at` | Marcas de auditoría |
+
+Se cargan junto con las citas en `refreshAppointments` y se muestran en el calendario semanal (badges para todo-el-día, bloques con borde punteado para hora específica) y en la sidebar de hoy. El evento `evento_changed` en `window` refresca la vista.
+
+### Reglas de transición de facturas
+
+- **Borrador → Emitida:** asigna número consecutivo, registra `fecha_emision`, opcionalmente crea ingreso vinculado (con `metodo_pago` y `factura_id` + `cita_id`).
+- **Emitida → Anulada:** requiere modo administrador y motivo; elimina el ingreso vinculado a la `factura_id`.
+- **Borrador:** CRUD libre de cabecera y líneas.
+- **Emitida/Anulada:** solo lectura e impresión.
+
+### Extensión DIAN (futura)
+
+La columna `dian_metadata_json` queda reservada para almacenar UUID de documento electrónico, track ID y respuesta del proveedor tecnológico. No se usa actualmente. La numeración local y los estados existentes son compatibles con el flujo DIAN estándar (borrador → envío → aceptación → anulación con nota crédito).
 
 ## Patrón: arquitectura orientada a eventos local
 
@@ -65,6 +154,8 @@ Registro de pagos/ingresos locales. `cita_id` opcional (texto UUID) para enlazar
 - Tras una transacción SQLite exitosa en `commands.rs`, Rust emite eventos con **`AppHandle::emit`** (Tauri 2), visibles para todos los webviews (`listen` en el frontend).
 - **No** se acoplan inventario ni facturación al módulo de calendario: los consumidores se suscriben al mismo **contrato de payload** (snake_case). Ejemplo: `FinanceEventListener` escucha solo `cita_completada` y abre el modal de pago con el monto pre-llenado según el **precio sugerido** del `tipo_servicio` en configuración; el calendario no importa ese componente.
 - Tras persistir un ingreso desde el modal de pago, la UI dispara en el `window` el evento nativo **`ingreso_registrado`** para que la vista principal vuelva a cargar citas y refleje `isPaid` sin estado obsoleto.
+- Al crear, emitir o anular una factura, la UI dispara **`factura_changed`** para que `FacturasDashboard` recargue su listado. Si la emisión incluyó un ingreso, también se dispara `ingreso_registrado`.
+- Al crear, editar o eliminar un evento/recordatorio, la UI dispara **`evento_changed`** para que `App.tsx` recargue citas y eventos.
 
 Flujo conceptual:
 
@@ -111,7 +202,21 @@ Los eventos como `cita_creada`, `cita_actualizada`, `cita_completada` o `cita_ca
 
 - Contenedor con `role="dialog"`, `aria-modal` y `aria-labelledby` apuntando al título; mensajes de error con `role="alert"` y `aria-live`; foco inicial en el panel al abrir para lectores de pantalla y teclado.
 
+## Autenticación local y tablas de seguridad
+
+- **Módulos Rust:** `startup_auth.rs`, `admin_auth.rs`; registro de comandos en `lib.rs`.
+- **Frontend:** `StartupLoginScreen` (bloqueo al arranque si hay contraseña de inicio); `ConfigAdminGate` (crear o verificar contraseña de administrador antes de mostrar `SettingsPanel`); secciones `StartupPasswordAdminSection` y `AdminPasswordAdminSection` bajo Administración cuando el modo administrador está activo en el borrador de configuración.
+- **Formularios anidados:** los formularios de contraseña en configuración no usan `<form>` internos dentro del formulario principal de “Guardar configuración” (evita envíos accidentales del padre); botones `type="button"` y manejadores `onClick` / tecla Enter acotada.
+- **Comandos relevantes (resumen):** `get_startup_auth_status`, `verify_startup_password`, `set_startup_password`, `clear_startup_password_with_admin`, `set_startup_password_with_admin`; `get_admin_auth_status`, `verify_admin_password`, `set_admin_password`, `clear_admin_password`.
+
+## Consideraciones de seguridad
+
+- **Modelo de amenaza:** aplicación de escritorio con datos en disco; la protección apunta a **uso casual** y **separación de roles** en el consultorio, no a resistencia a copia offline del archivo `consultorio.db` ni a malware con privilegios en el equipo.
+- **Sin cifrado de BD en el estado actual:** quien obtenga una copia del archivo puede intentar ataques offline contra los hashes (mitigar con contraseñas largas) o manipular filas si controla el disco.
+- **Mejora futura opcional:** cifrado de SQLite (p. ej. SQLCipher) + gestión de clave vía keyring del SO; coste de complejidad y recuperación ante pérdida de clave.
+
 ## Documentos relacionados
 
 - [PROJECT.md](./PROJECT.md) — visión y fases.
+- [MANUAL_USUARIO.md](./MANUAL_USUARIO.md) — instrucciones para usuarios finales.
 - [README.md](../README.md) — desarrollo local.

@@ -180,7 +180,7 @@ export function ClientesDashboard({ settings }: ClientesDashboardProps) {
 												<span>✉️ {c.email}</span>
 											) : null}
 											{c.birthdayMonth ? (
-												<span>🎂 {MESES[(c.birthdayMonth - 1) ?? 0]}</span>
+												<span>🎂 {MESES[c.birthdayMonth - 1]}</span>
 											) : null}
 										</div>
 

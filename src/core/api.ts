@@ -8,11 +8,77 @@ import type {
 	Cliente,
 	ClienteInput,
 	CrearIngresoInput,
+	EmitirFacturaInput,
+	Evento,
+	EventoInput,
+	Factura,
+	GuardarBorradorInput,
 	IngresosPorMes,
 	Ingreso,
+	MovimientoFinancieroDetalle,
 	MetodoPagoStats,
 	ServicioStats,
+	StartupAuthStatus,
+	AdminAuthStatus,
 } from "./types";
+
+export async function getStartupAuthStatus(): Promise<StartupAuthStatus> {
+	return invoke<StartupAuthStatus>(TAURI_COMMANDS.getStartupAuthStatus);
+}
+
+export async function verifyStartupPassword(password: string): Promise<void> {
+	return invoke(TAURI_COMMANDS.verifyStartupPassword, { password });
+}
+
+export async function setStartupPassword(
+	currentPassword: string | null,
+	newPassword: string,
+): Promise<void> {
+	return invoke(TAURI_COMMANDS.setStartupPassword, {
+		currentPassword,
+		newPassword,
+	});
+}
+
+export async function clearStartupPasswordWithAdmin(
+	adminPassword: string,
+): Promise<void> {
+	return invoke(TAURI_COMMANDS.clearStartupPasswordWithAdmin, {
+		adminPassword,
+	});
+}
+
+export async function setStartupPasswordWithAdmin(
+	adminPassword: string,
+	newPassword: string,
+): Promise<void> {
+	return invoke(TAURI_COMMANDS.setStartupPasswordWithAdmin, {
+		adminPassword,
+		newPassword,
+	});
+}
+
+export async function getAdminAuthStatus(): Promise<AdminAuthStatus> {
+	return invoke<AdminAuthStatus>(TAURI_COMMANDS.getAdminAuthStatus);
+}
+
+export async function verifyAdminPassword(password: string): Promise<void> {
+	return invoke(TAURI_COMMANDS.verifyAdminPassword, { password });
+}
+
+export async function setAdminPassword(
+	currentPassword: string | null,
+	newPassword: string,
+): Promise<void> {
+	return invoke(TAURI_COMMANDS.setAdminPassword, {
+		currentPassword,
+		newPassword,
+	});
+}
+
+export async function clearAdminPassword(currentPassword: string): Promise<void> {
+	return invoke(TAURI_COMMANDS.clearAdminPassword, { currentPassword });
+}
 
 export async function getSettings(): Promise<AppSettings> {
 	return invoke<AppSettings>(TAURI_COMMANDS.getSettings);
@@ -69,6 +135,16 @@ export async function obtenerIngresos(
 	endDate: string,
 ): Promise<Ingreso[]> {
 	return invoke<Ingreso[]>(TAURI_COMMANDS.obtenerIngresos, { startDate, endDate });
+}
+
+export async function listarMovimientosFinancierosDetalle(
+	startDate: string,
+	endDate: string,
+): Promise<MovimientoFinancieroDetalle[]> {
+	return invoke<MovimientoFinancieroDetalle[]>(
+		TAURI_COMMANDS.listarMovimientosFinancierosDetalle,
+		{ startDate, endDate },
+	);
 }
 
 export async function eliminarIngreso(id: string): Promise<void> {
@@ -136,4 +212,47 @@ export async function obtenerCliente(id: string): Promise<Cliente> {
 
 export async function eliminarCliente(id: string): Promise<void> {
 	return invoke(TAURI_COMMANDS.eliminarCliente, { id });
+}
+
+export async function listarFacturas(
+	startDate: string,
+	endDate: string,
+	estado?: string,
+): Promise<Factura[]> {
+	return invoke<Factura[]>(TAURI_COMMANDS.listarFacturas, { startDate, endDate, estado: estado ?? null });
+}
+
+export async function obtenerFactura(id: string): Promise<Factura> {
+	return invoke<Factura>(TAURI_COMMANDS.obtenerFactura, { id });
+}
+
+export async function guardarBorradorFactura(input: GuardarBorradorInput): Promise<Factura> {
+	return invoke<Factura>(TAURI_COMMANDS.guardarBorradorFactura, { input });
+}
+
+export async function emitirFactura(input: EmitirFacturaInput): Promise<Factura> {
+	return invoke<Factura>(TAURI_COMMANDS.emitirFactura, { input });
+}
+
+export async function anularFactura(id: string, motivo: string): Promise<Factura> {
+	return invoke<Factura>(TAURI_COMMANDS.anularFactura, { id, motivo });
+}
+
+export async function listarEventosRango(
+	startDate: string,
+	endDate: string,
+): Promise<Evento[]> {
+	return invoke<Evento[]>(TAURI_COMMANDS.listarEventosRango, { startDate, endDate });
+}
+
+export async function crearEvento(input: EventoInput): Promise<Evento> {
+	return invoke<Evento>(TAURI_COMMANDS.crearEvento, { input });
+}
+
+export async function actualizarEvento(id: string, input: EventoInput): Promise<Evento> {
+	return invoke<Evento>(TAURI_COMMANDS.actualizarEvento, { id, input });
+}
+
+export async function eliminarEvento(id: string): Promise<void> {
+	return invoke(TAURI_COMMANDS.eliminarEvento, { id });
 }

@@ -85,6 +85,7 @@ export function FinanceEventListener({ settings }: FinanceEventListenerProps) {
 		<PaymentModal
 			open={open}
 			prefill={prefill}
+			settings={settings}
 			onClose={() => {
 				setOpen(false);
 				setPrefill(null);

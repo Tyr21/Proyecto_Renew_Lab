@@ -223,6 +223,17 @@ export function AppointmentModal({
 		return () => clearTimeout(id);
 	}, [open]);
 
+	useEffect(() => {
+		if (!open) return;
+		function handleKeyDown(e: KeyboardEvent) {
+			if (e.key === "Escape") {
+				onClose();
+			}
+		}
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [open, onClose]);
+
 	async function handleActualizarCliente() {
 		if (!clienteOriginal) { onSaved(); onClose(); return; }
 		setGuardandoCliente(true);

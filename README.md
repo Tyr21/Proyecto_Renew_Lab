@@ -6,6 +6,7 @@ Aplicación de **escritorio local** para gestionar citas de **cámaras hiperbár
 
 - **[docs/PROJECT.md](docs/PROJECT.md)** — visión del producto, fases e hitos.
 - **[docs/ARQUITECTURA.md](docs/ARQUITECTURA.md)** — stack, esquema de datos y eventos de dominio.
+- **[docs/MANUAL_USUARIO.md](docs/MANUAL_USUARIO.md)** — manual de uso para personal del consultorio.
 
 ## Requisitos
 

@@ -8,7 +8,7 @@ export const SLOT_MINUTES = 30;
  */
 export const MAX_GRACE_PERIOD_MINUTES = 15;
 /** Altura de cada franja de 30 min (legibilidad en pantalla) */
-export const SLOT_HEIGHT_PX = 44;
+export const SLOT_HEIGHT_PX = 35;
 /**
  * Fracción del ancho de la columna ocupada en total por todas las citas solapadas
  * (suma de bloques adyacentes). El resto queda como franja clicable a la derecha.
@@ -17,6 +17,12 @@ export const APPOINTMENT_BLOCK_WIDTH_FRACTION = 0.95;
 
 /** Valor inicial al añadir un tipo de servicio nuevo (COP). */
 export const DEFAULT_SUGGESTED_PRICE_COP = 150_000;
+
+/** Alineado con backend `startup_auth` y `admin_auth` (Argon2). */
+export const STARTUP_PASSWORD_MIN_LENGTH = 8;
+export const STARTUP_PASSWORD_MAX_LENGTH = 128;
+export const ADMIN_PASSWORD_MIN_LENGTH = STARTUP_PASSWORD_MIN_LENGTH;
+export const ADMIN_PASSWORD_MAX_LENGTH = STARTUP_PASSWORD_MAX_LENGTH;
 
 /** Evento nativo en `window` tras persistir un ingreso (refresco de citas / `isPaid`). */
 export const INGRESO_REGISTRADO_EVENT = "ingreso_registrado";
@@ -31,6 +37,7 @@ export const TAURI_COMMANDS = {
 	getAppointment: "get_appointment",
 	crearIngreso: "crear_ingreso",
 	obtenerIngresos: "obtener_ingresos",
+	listarMovimientosFinancierosDetalle: "listar_movimientos_financieros_detalle",
 	eliminarIngreso: "eliminar_ingreso",
 	estadisticasCitasPorMes: "estadisticas_citas_por_mes",
 	estadisticasIngresosPorMes: "estadisticas_ingresos_por_mes",
@@ -41,7 +48,28 @@ export const TAURI_COMMANDS = {
 	buscarClientes: "buscar_clientes",
 	obtenerCliente: "obtener_cliente",
 	eliminarCliente: "eliminar_cliente",
+	listarFacturas: "listar_facturas",
+	obtenerFactura: "obtener_factura",
+	guardarBorradorFactura: "guardar_borrador_factura",
+	emitirFactura: "emitir_factura",
+	anularFactura: "anular_factura",
+	listarEventosRango: "listar_eventos_rango",
+	crearEvento: "crear_evento",
+	actualizarEvento: "actualizar_evento",
+	eliminarEvento: "eliminar_evento",
+	getStartupAuthStatus: "get_startup_auth_status",
+	verifyStartupPassword: "verify_startup_password",
+	setStartupPassword: "set_startup_password",
+	clearStartupPasswordWithAdmin: "clear_startup_password_with_admin",
+	setStartupPasswordWithAdmin: "set_startup_password_with_admin",
+	getAdminAuthStatus: "get_admin_auth_status",
+	verifyAdminPassword: "verify_admin_password",
+	setAdminPassword: "set_admin_password",
+	clearAdminPassword: "clear_admin_password",
 } as const;
+
+export const FACTURA_CHANGED_EVENT = "factura_changed";
+export const EVENTO_CHANGED_EVENT = "evento_changed";
 
 export function slotCountForDay(): number {
 	const minutes =

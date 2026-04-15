@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { eliminarIngreso, obtenerIngresos } from "../../core/api";
+import type { ChartDataPoint } from "../../components/IncomeBarChart";
+import { IncomeBarChart } from "../../components/IncomeBarChart";
 import { INGRESO_REGISTRADO_EVENT } from "../../core/constants";
 import { formatCurrency } from "../../core/currencyFormat";
 import { formatInvokeError } from "../../core/errors";
 import { fechaIngresoLocalISODate, formatHoraPago } from "../../core/ingresoDate";
+import { esc, openPrintWindow } from "../../core/printReport";
 import type { Ingreso } from "../../core/types";
 import { addDays, startOfWeekMonday, toISODateLocal } from "../../core/weekUtils";
 
@@ -58,6 +61,7 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [deletingId, setDeletingId] = useState<string | null>(null);
+	const [csvToast, setCsvToast] = useState(false);
 
 	const loadIngresos = useCallback(async () => {
 		setError(null);
@@ -93,6 +97,38 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 			.sort((a, b) => b.total - a.total);
 	}, [ingresos]);
 
+	const chartData = useMemo<ChartDataPoint[]>(() => {
+		if (ingresos.length === 0) return [];
+		const byDate = new Map<string, { total: number; count: number }>();
+		for (const r of ingresos) {
+			const fecha = fechaIngresoLocalISODate(r.fechaPago);
+			const prev = byDate.get(fecha) ?? { total: 0, count: 0 };
+			byDate.set(fecha, { total: prev.total + r.monto, count: prev.count + 1 });
+		}
+		const allDates: string[] = [];
+		const d0 = new Date(dateFrom + "T00:00:00");
+		const d1 = new Date(dateTo + "T00:00:00");
+		const cur = new Date(d0);
+		while (cur <= d1) {
+			allDates.push(toISODateLocal(cur));
+			cur.setDate(cur.getDate() + 1);
+		}
+		if (allDates.length === 0) {
+			allDates.push(...byDate.keys());
+			allDates.sort();
+		}
+		return allDates.map((fecha) => {
+			const entry = byDate.get(fecha);
+			const parts = fecha.split("-");
+			const shortLabel = `${parts[2]}/${parts[1]}`;
+			return {
+				label: shortLabel,
+				value: entry?.total ?? 0,
+				detail: entry ? `${entry.count} ingreso${entry.count === 1 ? "" : "s"}` : undefined,
+			};
+		});
+	}, [ingresos, dateFrom, dateTo]);
+
 	const handleDelete = useCallback(async (id: string) => {
 		if (!window.confirm("¿Confirmar eliminación del ingreso?")) return;
 		setDeletingId(id);
@@ -119,7 +155,58 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 		a.click();
 		document.body.removeChild(a);
 		URL.revokeObjectURL(url);
+		setCsvToast(true);
+		setTimeout(() => setCsvToast(false), 3000);
 	}, [ingresos, dateFrom, dateTo]);
+
+	const handleExportPDF = useCallback(() => {
+		if (ingresos.length === 0) return;
+		const rangeLabel = dateFrom === dateTo ? dateFrom : `${dateFrom} al ${dateTo}`;
+
+		const cardsHtml = `
+		<div class="cards">
+			<div class="card"><div class="card-label">Total efectivo</div><div class="card-value">${formatCurrency(totals.efectivo)}</div></div>
+			<div class="card"><div class="card-label">Total bancos</div><div class="card-value">${formatCurrency(totals.bancos)}</div><div class="card-detail">Tarjeta y transferencia</div></div>
+			<div class="card card-accent"><div class="card-label">Total general</div><div class="card-value">${formatCurrency(totals.total)}</div></div>
+		</div>`;
+
+		let servicioHtml = "";
+		if (reportePorServicio.length > 0) {
+			servicioHtml = `<div class="section-title">Resumen por servicio</div><div class="cards">${
+				reportePorServicio.map(({ concepto, total, cantidad }) =>
+					`<div class="card"><div class="card-label">${esc(concepto)}</div><div class="card-value">${formatCurrency(total)}</div><div class="card-detail">${cantidad} ingreso${cantidad === 1 ? "" : "s"}</div></div>`
+				).join("")
+			}</div>`;
+		}
+
+		const tableRows = ingresos.map((r) =>
+			`<tr>
+				<td class="num">${esc(fechaIngresoLocalISODate(r.fechaPago))}</td>
+				<td class="num">${esc(formatHoraPago(r.fechaPago))}</td>
+				<td>${esc(r.pacienteNombre || "—")}</td>
+				<td>${esc(r.pacienteDocumento)}</td>
+				<td>${esc(r.concepto)}</td>
+				<td>${esc(r.metodoPago)}</td>
+				<td class="num bold">${formatCurrency(r.monto)}</td>
+			</tr>`
+		).join("");
+
+		const body = `
+		<h1>Cierre de caja / Ingresos</h1>
+		<p class="subtitle">${esc(rangeLabel)} &mdash; ${ingresos.length} movimiento${ingresos.length === 1 ? "" : "s"}</p>
+		${cardsHtml}
+		${servicioHtml}
+		<div class="section-title">Detalle del per\u00edodo</div>
+		<table>
+			<thead><tr>
+				<th>Fecha</th><th>Hora</th><th>Paciente</th><th>Documento</th><th>Concepto</th><th>M\u00e9todo</th><th class="num">Monto</th>
+			</tr></thead>
+			<tbody>${tableRows}</tbody>
+		</table>
+		<p class="footer">Generado el ${new Date().toLocaleString("es-CO")} &mdash; Consultorio Renew Lab</p>`;
+
+		openPrintWindow(`Cierre de caja ${rangeLabel}`, body);
+	}, [ingresos, dateFrom, dateTo, totals, reportePorServicio]);
 
 	function setHoy() {
 		const t = toISODateLocal(new Date());
@@ -203,6 +290,14 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 								className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 shadow-sm disabled:opacity-40"
 							>
 								Exportar CSV
+							</button>
+							<button
+								type="button"
+								onClick={handleExportPDF}
+								disabled={ingresos.length === 0 || loading}
+								className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 shadow-sm disabled:opacity-40"
+							>
+								Exportar PDF
 							</button>
 						</div>
 						{/* Inputs de rango */}
@@ -299,6 +394,15 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 					</section>
 				) : null}
 
+				{/* Gráfico de ingresos por día */}
+				{!loading && chartData.length > 0 && (
+					<IncomeBarChart
+						data={chartData}
+						title="Ingresos por día"
+						accentColor="emerald"
+					/>
+				)}
+
 				{/* Tabla de detalle */}
 				<section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
 					<div className="border-b border-slate-200 px-4 py-3">
@@ -386,6 +490,12 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 					</div>
 				</section>
 			</div>
+
+			{csvToast ? (
+				<div className="fixed bottom-6 right-6 z-50 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg animate-fade-in">
+					Reporte CSV exportado correctamente
+				</div>
+			) : null}
 		</div>
 	);
 }
