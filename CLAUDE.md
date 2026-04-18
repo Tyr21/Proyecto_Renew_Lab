@@ -42,10 +42,4 @@
 - Si necesitas leer 3 archivos independientes, léelos en un solo mensaje, no uno por uno.
 - Menos roundtrips = menos tokens de contexto acumulado.
 
-## 11. No duplicar código en la respuesta
-- Si ya editaste un archivo, no copies el resultado en tu respuesta. El usuario lo ve en el diff.
-- Si creaste un archivo, no lo muestres entero en texto también.
 
-## 12. No usar Agent cuando Grep/Read basta
-- Agent duplica todo el contexto en un subproceso. Solo úsalo para búsquedas amplias o tareas complejas.
-- Para buscar una función o archivo específico, usa Grep o Glob directo.
