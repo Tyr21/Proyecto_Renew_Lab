@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	APPOINTMENT_BLOCK_WIDTH_FRACTION,
+	CALENDAR_NOW_LINE_TICK_MS,
 	MAX_GRACE_PERIOD_MINUTES,
 	SLOT_HEIGHT_PX,
 	dayStartMinutes,
@@ -27,6 +28,7 @@ import {
 	eventoBadgeClasses,
 	type LayoutBlock,
 } from "./overlapLayout";
+import { calendarNowLineTopPx } from "../../core/calendarNowLine";
 
 interface WeekCalendarViewProps {
 	weekStartMonday: Date;
@@ -72,8 +74,18 @@ export function WeekCalendarView({
 	onGoToToday,
 }: WeekCalendarViewProps) {
 	const [ctxMenu, setCtxMenu] = useState<CtxState>(null);
+	const [nowForTimeLine, setNowForTimeLine] = useState(() => new Date());
 	const days = getWeekDates(weekStartMonday, settings.showSundays);
 	const todayIso = toISODateLocal(new Date());
+
+	useEffect(() => {
+		setNowForTimeLine(new Date());
+		const id = window.setInterval(
+			() => setNowForTimeLine(new Date()),
+			CALENDAR_NOW_LINE_TICK_MS,
+		);
+		return () => window.clearInterval(id);
+	}, []);
 	const isCurrentWeek = days.some((d) => toISODateLocal(d) === todayIso);
 	const labels = weekDayLabels();
 
@@ -217,6 +229,8 @@ export function WeekCalendarView({
 						const layouts = layoutsForDate(iso);
 						const dayAllDay = allDayByDate.get(iso) ?? [];
 						const dayTimed = timedByDate.get(iso) ?? [];
+						const nowLineTopPx =
+							iso === todayIso ? calendarNowLineTopPx(nowForTimeLine) : null;
 
 						return (
 							<div
@@ -397,6 +411,13 @@ export function WeekCalendarView({
 											);
 										})}
 									</div>
+									{nowLineTopPx !== null ? (
+										<div
+											className="pointer-events-none absolute inset-x-0 z-20 h-px bg-red-600"
+											style={{ top: nowLineTopPx }}
+											aria-hidden
+										/>
+									) : null}
 								</div>
 							</div>
 						);
