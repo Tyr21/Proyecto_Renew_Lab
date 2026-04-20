@@ -17,6 +17,8 @@ pub struct AppointmentRow {
 	pub status: String,
 	pub created_at: String,
 	pub updated_at: String,
+	#[serde(default)]
+	pub paquete_id: Option<String>,
 	/// `true` si existe al menos un registro en `ingresos` con este `cita_id`.
 	#[serde(default)]
 	pub is_paid: bool,
@@ -36,4 +38,6 @@ pub struct AppointmentInput {
 	pub end_time: String,
 	pub service_type: String,
 	pub status: Option<String>,
+	#[serde(default)]
+	pub paquete_id: Option<String>,
 }

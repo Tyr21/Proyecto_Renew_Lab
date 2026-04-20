@@ -29,6 +29,12 @@ export const ADMIN_PASSWORD_MAX_LENGTH = STARTUP_PASSWORD_MAX_LENGTH;
 /** Evento nativo en `window` tras persistir un ingreso (refresco de citas / `isPaid`). */
 export const INGRESO_REGISTRADO_EVENT = "ingreso_registrado";
 
+/**
+ * Apellido sustituto cuando el nombre completo tiene una sola palabra.
+ * El backend exige apellidos no vacíos; este marcador es explícito y editable luego en la ficha.
+ */
+export const CLIENTE_APELLIDO_PLACEHOLDER = ".";
+
 export const TAURI_COMMANDS = {
 	getSettings: "get_settings",
 	saveSettings: "save_settings",
@@ -49,7 +55,11 @@ export const TAURI_COMMANDS = {
 	actualizarCliente: "actualizar_cliente",
 	buscarClientes: "buscar_clientes",
 	obtenerCliente: "obtener_cliente",
+	obtenerResumenClienteDashboard: "obtener_resumen_cliente_dashboard",
 	eliminarCliente: "eliminar_cliente",
+	crearPaquete: "crear_paquete",
+	crearClienteYPaquete: "crear_cliente_y_paquete",
+	listarPaquetesCliente: "listar_paquetes_cliente",
 	listarFacturas: "listar_facturas",
 	obtenerFactura: "obtener_factura",
 	guardarBorradorFactura: "guardar_borrador_factura",

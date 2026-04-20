@@ -23,6 +23,10 @@ function etiquetaRecibo(row: MovimientoFinancieroDetalle): string {
 	if (row.facturaNumero != null) {
 		return String(row.facturaNumero);
 	}
+	const pkg = row.paqueteId?.trim();
+	if (pkg) {
+		return `Paquete ${pkg.slice(0, 8)}…`;
+	}
 	return "—";
 }
 
@@ -184,8 +188,9 @@ export function MovimientosDetalleDashboard({
 						</h1>
 						<p className="mt-1 text-sm text-slate-600">
 							Ingresos del rango: cliente, documento, servicio, medio de pago, recibo
-							(serie-número si hay factura emitida) y valor factura (total de la
-							factura vinculada; si no hay factura, el monto del ingreso).
+							(serie-número de factura si existe; en ventas de paquete sin factura,
+							referencia al paquete) y valor factura (total de la factura vinculada;
+							si no hay factura, el monto del ingreso).
 						</p>
 					</div>
 					<div className="flex flex-col gap-2">
@@ -235,7 +240,7 @@ export function MovimientosDetalleDashboard({
 								Imprimir / PDF
 							</button>
 						</div>
-						<div className="flex gap-2 items-end">
+						<div className="flex flex-wrap gap-2 items-end">
 							<label className="flex flex-col gap-1 text-sm">
 								<span className="font-medium text-slate-700">Desde</span>
 								<input
@@ -254,14 +259,6 @@ export function MovimientosDetalleDashboard({
 									onChange={(e) => setDateTo(e.target.value)}
 								/>
 							</label>
-							<button
-								type="button"
-								onClick={() => void load()}
-								disabled={loading}
-								className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
-							>
-								{loading ? "Cargando…" : "Actualizar"}
-							</button>
 						</div>
 					</div>
 				</header>

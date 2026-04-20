@@ -357,6 +357,14 @@ export function WeekCalendarView({
 																	aria-label="Cita pagada"
 																/>
 															) : null}
+															{a.paqueteId ? (
+																<span
+																	className="shrink-0 rounded bg-violet-200/90 px-0.5 text-[0.55rem] font-semibold text-violet-900"
+																	title="Sesión por paquete prepago"
+																>
+																	Paq.
+																</span>
+															) : null}
 														</div>
 														<div className="truncate tabular-nums opacity-90">
 															{formatTimeLabel(

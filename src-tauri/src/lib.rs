@@ -8,6 +8,7 @@ mod error;
 mod eventos;
 mod facturacion;
 mod finance;
+mod paquetes;
 mod reports;
 mod settings_model;
 mod startup_auth;
@@ -91,7 +92,11 @@ pub fn run() {
 			clientes::actualizar_cliente,
 			clientes::buscar_clientes,
 			clientes::obtener_cliente,
+			clientes::obtener_resumen_cliente_dashboard,
 			clientes::eliminar_cliente,
+			paquetes::crear_paquete,
+			paquetes::crear_cliente_y_paquete,
+			paquetes::listar_paquetes_cliente,
 			facturacion::listar_facturas,
 			facturacion::obtener_factura,
 			facturacion::guardar_borrador_factura,

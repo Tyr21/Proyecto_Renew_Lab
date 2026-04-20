@@ -6,7 +6,9 @@ use tauri::{AppHandle, Emitter};
 use uuid::Uuid;
 
 use crate::appointment_model::{AppointmentInput, AppointmentRow};
+use crate::clientes;
 use crate::error;
+use crate::paquetes;
 use crate::settings_model::AppSettings;
 use crate::time_rules::{
 	is_duration_multiple_30, is_half_hour_aligned, is_appointment_past, minutes_since_midnight,
@@ -18,12 +20,19 @@ pub type DbConn = Mutex<rusqlite::Connection>;
 
 /// Payload JSON con snake_case para consumidores del bus local (ver docs/ARQUITECTURA.md).
 fn cita_event_payload(row: &AppointmentRow) -> serde_json::Value {
+	let paquete_id = row
+		.paquete_id
+		.as_deref()
+		.map(str::trim)
+		.filter(|s| !s.is_empty())
+		.unwrap_or("");
 	serde_json::json!({
 		"cita_id": row.id,
 		"paciente_nombre": row.patient_full_name,
 		"paciente_documento": row.document_number,
 		"tipo_servicio": row.service_type,
 		"estado": row.status,
+		"paquete_id": paquete_id,
 		"timestamp": Utc::now().to_rfc3339(),
 	})
 }
@@ -119,7 +128,16 @@ pub fn save_settings(db: tauri::State<'_, DbConn>, settings: AppSettings) -> Res
 }
 
 fn row_to_appointment(row: &rusqlite::Row<'_>) -> rusqlite::Result<AppointmentRow> {
-	let paid_int: i64 = row.get(14)?;
+	let paid_int: i64 = row.get(15)?;
+	let paquete_raw: Option<String> = row.get(14)?;
+	let paquete_id = paquete_raw.and_then(|s| {
+		let t = s.trim().to_string();
+		if t.is_empty() {
+			None
+		} else {
+			Some(t)
+		}
+	});
 	Ok(AppointmentRow {
 		id: row.get(0)?,
 		patient_full_name: row.get(1)?,
@@ -135,6 +153,7 @@ fn row_to_appointment(row: &rusqlite::Row<'_>) -> rusqlite::Result<AppointmentRo
 		status: row.get(11)?,
 		created_at: row.get(12)?,
 		updated_at: row.get(13)?,
+		paquete_id,
 		is_paid: paid_int != 0,
 	})
 }
@@ -150,6 +169,17 @@ fn has_ingreso_for_cita(conn: &rusqlite::Connection, cita_id: &str) -> Result<bo
 	Ok(n != 0)
 }
 
+fn normalized_paquete_id_from_input(input: &AppointmentInput) -> Option<String> {
+	input.paquete_id.as_ref().and_then(|s| {
+		let t = s.trim();
+		if t.is_empty() {
+			None
+		} else {
+			Some(t.to_string())
+		}
+	})
+}
+
 #[tauri::command]
 pub fn list_appointments_range(
 	db: tauri::State<'_, DbConn>,
@@ -163,7 +193,7 @@ pub fn list_appointments_range(
 			SELECT a.id, a.patient_full_name, a.document_type, a.document_number,
 				a.phone_dial_code, a.phone_national_number, a.birthday_month,
 				a.appointment_date, a.start_time, a.end_time, a.service_type, a.status,
-				a.created_at, a.updated_at,
+				a.created_at, a.updated_at, a.paquete_id,
 				EXISTS(SELECT 1 FROM ingresos i WHERE i.cita_id = a.id) AS is_paid
 			FROM appointments a
 			WHERE a.appointment_date >= ?1 AND a.appointment_date <= ?2
@@ -307,10 +337,30 @@ pub(crate) fn create_appointment_core(
 		));
 	}
 
+	let paquete_id_norm = input.paquete_id.as_ref().and_then(|s| {
+		let t = s.trim();
+		if t.is_empty() {
+			None
+		} else {
+			Some(t.to_string())
+		}
+	});
+	if let Some(ref pid) = paquete_id_norm {
+		paquetes::validar_paquete_para_reserva(
+			conn,
+			pid,
+			&input.document_type,
+			input.document_number.trim(),
+			&input.service_type,
+			None,
+		)?;
+	}
+
 	let id = Uuid::new_v4().to_string();
 	let now: DateTime<Utc> = Utc::now();
 	let now_s = now.to_rfc3339();
 	let status = "pendiente".to_string();
+	let patient_full_name = clientes::format_nombre_propio(input.patient_full_name.trim());
 
 	conn.execute(
 		r#"
@@ -318,12 +368,12 @@ pub(crate) fn create_appointment_core(
 			id, patient_full_name, document_type, document_number,
 			phone_dial_code, phone_national_number, birthday_month,
 			appointment_date, start_time, end_time, service_type, status,
-			created_at, updated_at
-		) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
+			created_at, updated_at, paquete_id
+		) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)
 	"#,
 		params![
 			id,
-			input.patient_full_name.trim(),
+			patient_full_name,
 			input.document_type,
 			input.document_number.trim(),
 			input.phone_dial_code,
@@ -336,9 +386,14 @@ pub(crate) fn create_appointment_core(
 			status,
 			now_s,
 			now_s,
+			paquete_id_norm,
 		],
 	)
 	.map_err(error::db)?;
+
+	if let Some(ref pid) = paquete_id_norm {
+		paquetes::sync_paquete_status(conn, pid)?;
+	}
 
 	load_appointment_by_id(conn, &id)
 }
@@ -362,7 +417,7 @@ fn load_appointment_by_id(conn: &rusqlite::Connection, id: &str) -> Result<Appoi
 			SELECT a.id, a.patient_full_name, a.document_type, a.document_number,
 				a.phone_dial_code, a.phone_national_number, a.birthday_month,
 				a.appointment_date, a.start_time, a.end_time, a.service_type, a.status,
-				a.created_at, a.updated_at,
+				a.created_at, a.updated_at, a.paquete_id,
 				EXISTS(SELECT 1 FROM ingresos i WHERE i.cita_id = a.id) AS is_paid
 			FROM appointments a WHERE a.id = ?1
 		"#,
@@ -393,7 +448,9 @@ pub fn update_appointment(
 			|| input.start_time != existing.start_time
 			|| input.end_time != existing.end_time;
 		let service_changed = input.service_type != existing.service_type;
-		if status_changed || schedule_changed || service_changed {
+		let next_pkg = normalized_paquete_id_from_input(&input);
+		let paquete_changed = next_pkg != existing.paquete_id;
+		if status_changed || schedule_changed || service_changed || paquete_changed {
 			return Err(
 				"No se puede modificar una cita que ya tiene un pago registrado.".into(),
 			);
@@ -405,7 +462,8 @@ pub fn update_appointment(
 		if status != "asistio" && status != "no_asistio" {
 			return Err("Solo puede marcarse asistencia (asistió / no asistió) en citas pasadas".into());
 		}
-		if input.patient_full_name != existing.patient_full_name
+		if clientes::format_nombre_propio(input.patient_full_name.trim())
+			!= clientes::format_nombre_propio(existing.patient_full_name.trim())
 			|| input.document_type != existing.document_type
 			|| input.document_number != existing.document_number
 			|| input.phone_dial_code != existing.phone_dial_code
@@ -424,6 +482,9 @@ pub fn update_appointment(
 			params![status, now_s, id],
 		)
 		.map_err(error::db)?;
+		if let Some(ref p) = existing.paquete_id {
+			paquetes::sync_paquete_status(&conn, p)?;
+		}
 		let updated = load_appointment_by_id(&conn, &id)?;
 		emit_after_update(&app, &existing, &updated);
 		return Ok(updated);
@@ -465,7 +526,30 @@ pub fn update_appointment(
 		return Err("Estado de cita inválido".into());
 	}
 
+	let next_paquete = normalized_paquete_id_from_input(&input);
+	if let Some(ref pid) = next_paquete {
+		paquetes::validar_paquete_para_reserva(
+			&conn,
+			pid,
+			&input.document_type,
+			input.document_number.trim(),
+			&input.service_type,
+			Some(&id),
+		)?;
+	}
+
+	let mut sync_pkg_ids: Vec<String> = Vec::new();
+	if let Some(ref o) = existing.paquete_id {
+		sync_pkg_ids.push(o.clone());
+	}
+	if let Some(ref n) = next_paquete {
+		if !sync_pkg_ids.iter().any(|x| x == n) {
+			sync_pkg_ids.push(n.clone());
+		}
+	}
+
 	let now_s = Utc::now().to_rfc3339();
+	let patient_full_name = clientes::format_nombre_propio(input.patient_full_name.trim());
 	conn.execute(
 		r#"
 		UPDATE appointments SET
@@ -480,11 +564,12 @@ pub fn update_appointment(
 			end_time = ?9,
 			service_type = ?10,
 			status = ?11,
-			updated_at = ?12
-		WHERE id = ?13
+			updated_at = ?12,
+			paquete_id = ?13
+		WHERE id = ?14
 	"#,
 		params![
-			input.patient_full_name.trim(),
+			patient_full_name,
 			input.document_type,
 			input.document_number.trim(),
 			input.phone_dial_code,
@@ -496,10 +581,13 @@ pub fn update_appointment(
 			input.service_type,
 			status,
 			now_s,
+			next_paquete,
 			id,
 		],
 	)
 	.map_err(error::db)?;
+
+	paquetes::sync_paquetes_status_for_ids(&conn, &sync_pkg_ids)?;
 
 	let updated = load_appointment_by_id(&conn, &id)?;
 	emit_after_update(&app, &existing, &updated);
@@ -518,9 +606,13 @@ pub fn delete_appointment(
 	if !settings.admin_mode && is_appointment_past(&existing.appointment_date, &existing.end_time)? {
 		return Err("No se pueden eliminar citas pasadas".into());
 	}
+	let pkg_sync = existing.paquete_id.clone();
 	conn
 		.execute("DELETE FROM appointments WHERE id = ?1", params![id])
 		.map_err(error::db)?;
+	if let Some(ref p) = pkg_sync {
+		paquetes::sync_paquete_status(&conn, p)?;
+	}
 	emit_cita_event(&app, "cita_cancelada", &existing);
 	Ok(())
 }
@@ -557,6 +649,7 @@ mod integration_tests {
 			end_time: end.into(),
 			service_type: service.into(),
 			status: None,
+			paquete_id: None,
 		}
 	}
 
@@ -582,5 +675,46 @@ mod integration_tests {
 		)
 		.unwrap_err();
 		assert!(err.contains("Capacidad"));
+	}
+
+	#[test]
+	fn package_blocks_booking_beyond_total_sessions() {
+		let conn = open_in_memory_test_database().unwrap();
+		let cli = uuid::Uuid::new_v4().to_string();
+		let pkg = "paquete-cap-test".to_string();
+		let now = chrono::Utc::now().to_rfc3339();
+		conn.execute(
+			r#"INSERT INTO clientes (id, nombres, apellidos, document_type, document_number,
+				phone_dial_code, phone_national_number, email, notas, created_at, updated_at)
+				VALUES (?1, 'Ana', 'Lopez', 'CC', '9001', '+57', '300', '', '', ?2, ?2)"#,
+			params![cli, now],
+		)
+		.unwrap();
+		conn.execute(
+			r#"INSERT INTO paquetes (id, cliente_id, service_type, total_sesiones, precio_total,
+				status, expires_at, created_at, updated_at)
+				VALUES (?1, ?2, 'camara_hiperbarica', 2, 100.0, 'activo', NULL, ?3, ?3)"#,
+			params![pkg, cli, now],
+		)
+		.unwrap();
+
+		for day in 1..=2 {
+			let mut inp = sample_input(
+				&format!("2099-03-{day:02}"),
+				"08:00",
+				"09:00",
+				"camara_hiperbarica",
+				"P",
+			);
+			inp.document_number = "9001".into();
+			inp.paquete_id = Some(pkg.clone());
+			create_appointment_core(&conn, inp).unwrap();
+		}
+
+		let mut inp3 = sample_input("2099-03-10", "08:00", "09:00", "camara_hiperbarica", "P");
+		inp3.document_number = "9001".into();
+		inp3.paquete_id = Some(pkg.clone());
+		let err = create_appointment_core(&conn, inp3).unwrap_err();
+		assert!(err.contains("No hay sesiones"));
 	}
 }

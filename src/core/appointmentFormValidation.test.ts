@@ -36,7 +36,7 @@ const baseInput: AppointmentInput = {
 	patientFullName: "Ana Pérez",
 	documentType: "CC",
 	documentNumber: "12345",
-	phoneDialCode: "57",
+	phoneDialCode: "+57",
 	phoneNationalNumber: "3001234567",
 	birthdayMonth: null,
 	appointmentDate: "2025-03-10",

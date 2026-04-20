@@ -141,4 +141,11 @@ impl AppSettings {
 			.find(|s| s.id == service_id)
 			.map(|s| s.concurrent_capacity)
 	}
+
+	pub fn label_for_service(&self, service_id: &str) -> Option<&str> {
+		self.service_types
+			.iter()
+			.find(|s| s.id == service_id)
+			.map(|s| s.label.as_str())
+	}
 }

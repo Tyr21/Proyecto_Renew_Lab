@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
 	COUNTRY_DIAL_OPTIONS,
 	DEFAULT_COUNTRY_DIAL,
+	normalizePhoneDialCode,
 } from "../../core/countries";
 import { validateAppointmentFormFields } from "../../core/appointmentFormValidation";
 import { countOverlappingSameService } from "../../core/appointmentOverlap";
@@ -11,8 +12,10 @@ import {
 	crearCliente,
 	createAppointment,
 	deleteAppointment,
+	listarPaquetesCliente,
 	updateAppointment,
 } from "../../core/api";
+import { CLIENTE_APELLIDO_PLACEHOLDER } from "../../core/constants";
 import { formatInvokeError } from "../../core/errors";
 import { gracePeriodBookingErrorMessage } from "../../core/leadTime";
 import { serviceLabelFromSettings } from "../../core/serviceLabels";
@@ -29,8 +32,11 @@ import type {
 	AppointmentInput,
 	AppointmentStatus,
 	Cliente,
+	ClienteInput,
+	PaqueteCliente,
 } from "../../core/types";
 import { isAppointmentPastEnd } from "../../core/weekUtils";
+import { PaqueteVentaModal } from "../clientes/PaqueteVentaModal";
 
 interface PresetSlot {
 	date: string;
@@ -52,6 +58,37 @@ interface AppointmentModalProps {
 }
 
 const SLOT_OPTIONS = generateSlotStarts();
+
+const MESES = [
+	"Enero",
+	"Febrero",
+	"Marzo",
+	"Abril",
+	"Mayo",
+	"Junio",
+	"Julio",
+	"Agosto",
+	"Septiembre",
+	"Octubre",
+	"Noviembre",
+	"Diciembre",
+];
+
+/** Estado del plan en lenguaje claro para selects y listas. */
+function textoEstadoPlanParaUsuario(status: string): string {
+	switch (status.trim().toLowerCase()) {
+		case "activo":
+			return "Vigente";
+		case "agotado":
+			return "Sin sesiones";
+		case "vencido":
+			return "Vencido";
+		case "anulado":
+			return "Anulado";
+		default:
+			return status;
+	}
+}
 
 function endOptionsForStart(start: string): string[] {
 	const sm = minutesFromHHMM(start);
@@ -99,11 +136,38 @@ export function AppointmentModal({
 	// Autocomplete de clientes
 	const [sugerencias, setSugerencias] = useState<Cliente[]>([]);
 	const [mostrarSugerencias, setMostrarSugerencias] = useState(false);
+	const [sugerenciaActivaIndex, setSugerenciaActivaIndex] = useState(-1);
 	const [clienteYaExistia, setClienteYaExistia] = useState(false);
 	const [clienteOriginal, setClienteOriginal] = useState<Cliente | null>(null);
 	const [mostrarConfirmacionCliente, setMostrarConfirmacionCliente] = useState(false);
 	const [guardandoCliente, setGuardandoCliente] = useState(false);
 	const debounceNombreRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	const [paquetesElegibles, setPaquetesElegibles] = useState<PaqueteCliente[]>(
+		[],
+	);
+	const [selectedPaqueteId, setSelectedPaqueteId] = useState<string | null>(
+		null,
+	);
+	const [resolvedClienteId, setResolvedClienteId] = useState<string | null>(
+		null,
+	);
+	const [paquetesRefreshTick, setPaquetesRefreshTick] = useState(0);
+	const [ventaPaqueteOpen, setVentaPaqueteOpen] = useState(false);
+	const [paqueteNuevoCliente, setPaqueteNuevoCliente] =
+		useState<ClienteInput | null>(null);
+
+	useEffect(() => {
+		setSugerenciaActivaIndex(-1);
+	}, [sugerencias]);
+
+	const conteoPlanesPorServicio = useMemo(() => {
+		const m = new Map<string, number>();
+		for (const p of paquetesElegibles) {
+			m.set(p.serviceType, (m.get(p.serviceType) ?? 0) + 1);
+		}
+		return m;
+	}, [paquetesElegibles]);
 
 	const ends = useMemo(() => endOptionsForStart(startTime), [startTime]);
 
@@ -159,9 +223,12 @@ export function AppointmentModal({
 		if (!open) return;
 		setSugerencias([]);
 		setMostrarSugerencias(false);
+		setSugerenciaActivaIndex(-1);
 		setClienteYaExistia(false);
 		setClienteOriginal(null);
 		setMostrarConfirmacionCliente(false);
+		setPaqueteNuevoCliente(null);
+		setVentaPaqueteOpen(false);
 	}, [open]);
 
 	useEffect(() => {
@@ -171,7 +238,7 @@ export function AppointmentModal({
 			setPatientFullName(initial.patientFullName);
 			setDocumentType(initial.documentType);
 			setDocumentNumber(initial.documentNumber);
-			setPhoneDial(initial.phoneDialCode);
+			setPhoneDial(normalizePhoneDialCode(initial.phoneDialCode));
 			setPhoneNational(initial.phoneNationalNumber);
 			setBirthdayMonth(
 				initial.birthdayMonth != null ? String(initial.birthdayMonth) : "",
@@ -212,6 +279,80 @@ export function AppointmentModal({
 	}, [open, mode, initial, preset, settings]);
 
 	useEffect(() => {
+		if (!open) return;
+		if (mode === "edit" && initial) {
+			const pid = initial.paqueteId?.trim();
+			setSelectedPaqueteId(pid && pid.length > 0 ? pid : null);
+		} else {
+			setSelectedPaqueteId(null);
+		}
+	}, [open, mode, initial?.id, initial?.paqueteId]);
+
+	useEffect(() => {
+		if (!open) {
+			setResolvedClienteId(null);
+			return;
+		}
+		if (readOnlyPast) {
+			setResolvedClienteId(null);
+			return;
+		}
+		let cancelled = false;
+		(async () => {
+			let cid: string | null = clienteOriginal?.id ?? null;
+			if (!cid && documentNumber.trim()) {
+				try {
+					const found = await buscarClientes(documentNumber.trim());
+					const ex = found.find(
+						(c) =>
+							c.documentNumber.trim() === documentNumber.trim() &&
+							c.documentType === documentType,
+					);
+					cid = ex?.id ?? null;
+				} catch {
+					cid = null;
+				}
+			}
+			if (!cancelled) {
+				setResolvedClienteId(cid);
+			}
+			if (!cid) {
+				if (!cancelled) setPaquetesElegibles([]);
+				return;
+			}
+			try {
+				const all = await listarPaquetesCliente(cid);
+				if (cancelled) return;
+				const filtered = all.filter((p) => {
+					if (p.serviceType !== serviceType) return false;
+					const isCurrent =
+						mode === "edit" && initial?.paqueteId === p.id;
+					if (isCurrent) return true;
+					if (p.status !== "activo") return false;
+					if (p.restantes < 1) return false;
+					return true;
+				});
+				setPaquetesElegibles(filtered);
+			} catch {
+				if (!cancelled) setPaquetesElegibles([]);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [
+		open,
+		readOnlyPast,
+		clienteOriginal?.id,
+		documentNumber,
+		documentType,
+		serviceType,
+		mode,
+		initial?.paqueteId,
+		paquetesRefreshTick,
+	]);
+
+	useEffect(() => {
 		if (!ends.includes(endTime) && ends.length) {
 			setEndTime(ends[0]!);
 		}
@@ -234,6 +375,71 @@ export function AppointmentModal({
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [open, onClose]);
 
+	const clienteDraftForPaquete = useMemo((): ClienteInput | null => {
+		if (!open || readOnlyPast || isPaidLocked || resolvedClienteId) {
+			return null;
+		}
+		const bm =
+			birthdayMonth.trim() === ""
+				? null
+				: Number.parseInt(birthdayMonth, 10);
+		const birthdayMonthVal =
+			bm != null && !Number.isNaN(bm) && bm >= 1 && bm <= 12 ? bm : null;
+		const appointmentLike: AppointmentInput = {
+			patientFullName: patientFullName.trim(),
+			documentType,
+			documentNumber: documentNumber.trim(),
+			phoneDialCode: normalizePhoneDialCode(phoneDial),
+			phoneNationalNumber: phoneNational.trim(),
+			birthdayMonth: birthdayMonthVal,
+			appointmentDate: appointmentDate || "1970-01-01",
+			startTime,
+			endTime,
+			serviceType,
+			status,
+			paqueteId: null,
+		};
+		if (validateAppointmentFormFields(appointmentLike, settings) !== null) {
+			return null;
+		}
+		const partes = appointmentLike.patientFullName.split(/\s+/).filter(Boolean);
+		if (partes.length === 0) {
+			return null;
+		}
+		const apellidos =
+			partes.length > 1 ? partes[partes.length - 1]! : CLIENTE_APELLIDO_PLACEHOLDER;
+		const nombres =
+			partes.length > 1 ? partes.slice(0, -1).join(" ") : partes[0]!;
+		return {
+			nombres,
+			apellidos,
+			documentType: appointmentLike.documentType,
+			documentNumber: appointmentLike.documentNumber,
+			phoneDialCode: appointmentLike.phoneDialCode,
+			phoneNationalNumber: appointmentLike.phoneNationalNumber,
+			email: "",
+			birthdayMonth: appointmentLike.birthdayMonth,
+			notas: "",
+		};
+	}, [
+		open,
+		readOnlyPast,
+		isPaidLocked,
+		resolvedClienteId,
+		patientFullName,
+		documentType,
+		documentNumber,
+		phoneDial,
+		phoneNational,
+		birthdayMonth,
+		appointmentDate,
+		startTime,
+		endTime,
+		serviceType,
+		status,
+		settings,
+	]);
+
 	async function handleActualizarCliente() {
 		if (!clienteOriginal) { onSaved(); onClose(); return; }
 		setGuardandoCliente(true);
@@ -247,7 +453,7 @@ export function AppointmentModal({
 				apellidos,
 				documentType,
 				documentNumber: documentNumber.trim(),
-				phoneDialCode: phoneDial,
+				phoneDialCode: normalizePhoneDialCode(phoneDial),
 				phoneNationalNumber: phoneNational.trim(),
 				email: clienteOriginal.email,
 				birthdayMonth: bm != null && !Number.isNaN(bm) ? bm : null,
@@ -262,6 +468,92 @@ export function AppointmentModal({
 		}
 	}
 
+	function aplicarClienteSugerido(c: Cliente) {
+		setPatientFullName(`${c.nombres} ${c.apellidos}`);
+		setDocumentType(c.documentType);
+		setDocumentNumber(c.documentNumber);
+		setPhoneDial(
+			normalizePhoneDialCode(
+				c.phoneDialCode || DEFAULT_COUNTRY_DIAL.dial,
+			),
+		);
+		setPhoneNational(c.phoneNationalNumber);
+		setBirthdayMonth(c.birthdayMonth != null ? String(c.birthdayMonth) : "");
+		setClienteYaExistia(true);
+		setClienteOriginal(c);
+		setSugerencias([]);
+		setMostrarSugerencias(false);
+		setSugerenciaActivaIndex(-1);
+	}
+
+	function focusNextControlAfter(el: HTMLInputElement) {
+		const form = el.form;
+		if (!form) return;
+		const elements = Array.from(form.elements);
+		let found = false;
+		for (const node of elements) {
+			if (node === el) {
+				found = true;
+				continue;
+			}
+			if (!found) continue;
+			if (
+				!(
+					node instanceof HTMLInputElement ||
+					node instanceof HTMLSelectElement ||
+					node instanceof HTMLTextAreaElement
+				)
+			) {
+				continue;
+			}
+			if ("disabled" in node && node.disabled) continue;
+			if (node instanceof HTMLInputElement && node.type === "hidden") continue;
+			node.focus();
+			return;
+		}
+	}
+
+	function handleNombreKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+		if (!mostrarSugerencias || sugerencias.length === 0) {
+			return;
+		}
+		if (e.key === "ArrowDown") {
+			e.preventDefault();
+			setSugerenciaActivaIndex((i) =>
+				i < sugerencias.length - 1 ? i + 1 : 0,
+			);
+			return;
+		}
+		if (e.key === "ArrowUp") {
+			e.preventDefault();
+			setSugerenciaActivaIndex((i) =>
+				i <= 0 ? sugerencias.length - 1 : i - 1,
+			);
+			return;
+		}
+		if (e.key === "Escape") {
+			e.preventDefault();
+			setMostrarSugerencias(false);
+			setSugerenciaActivaIndex(-1);
+			return;
+		}
+		const pickIndex =
+			sugerenciaActivaIndex >= 0 ? sugerenciaActivaIndex : 0;
+		const c = sugerencias[pickIndex];
+		if (!c) return;
+		if (e.key === "Enter") {
+			e.preventDefault();
+			aplicarClienteSugerido(c);
+			return;
+		}
+		if (e.key === "Tab" && !e.shiftKey) {
+			e.preventDefault();
+			aplicarClienteSugerido(c);
+			focusNextControlAfter(e.currentTarget);
+			return;
+		}
+	}
+
 	if (!open) return null;
 
 	function buildInput(): AppointmentInput {
@@ -272,11 +564,15 @@ export function AppointmentModal({
 		const birthdayMonthVal =
 			bm != null && !Number.isNaN(bm) && bm >= 1 && bm <= 12 ? bm : null;
 
+		const pkg =
+			selectedPaqueteId && selectedPaqueteId.trim().length > 0
+				? selectedPaqueteId.trim()
+				: null;
 		return {
 			patientFullName: patientFullName.trim(),
 			documentType,
 			documentNumber: documentNumber.trim(),
-			phoneDialCode: phoneDial,
+			phoneDialCode: normalizePhoneDialCode(phoneDial),
 			phoneNationalNumber: phoneNational.trim(),
 			birthdayMonth: birthdayMonthVal,
 			appointmentDate,
@@ -284,6 +580,7 @@ export function AppointmentModal({
 			endTime,
 			serviceType,
 			status,
+			paqueteId: pkg,
 		};
 	}
 
@@ -362,7 +659,10 @@ export function AppointmentModal({
 						const exacto = found.find((c) => c.documentNumber === input.documentNumber);
 						if (!exacto) {
 							const partes = input.patientFullName.trim().split(/\s+/);
-							const apellidos = partes.length > 1 ? partes[partes.length - 1]! : "";
+							const apellidos =
+								partes.length > 1
+									? partes[partes.length - 1]!
+									: CLIENTE_APELLIDO_PLACEHOLDER;
 							const nombres = partes.length > 1 ? partes.slice(0, -1).join(" ") : partes[0] ?? input.patientFullName;
 							await crearCliente({
 								nombres,
@@ -414,6 +714,7 @@ export function AppointmentModal({
 	}
 
 	return (
+		<>
 		<div
 			className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
 			role="dialog"
@@ -523,32 +824,37 @@ export function AppointmentModal({
 												}).catch(() => {});
 											}, 200);
 										}}
+										onKeyDown={handleNombreKeyDown}
 										onBlur={() => setTimeout(() => setMostrarSugerencias(false), 150)}
 										required
 										autoComplete="off"
+										aria-autocomplete="list"
+										aria-expanded={mostrarSugerencias && sugerencias.length > 0}
 									/>
 									{mostrarSugerencias && sugerencias.length > 0 && (
-										<div className="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
-											{sugerencias.map((c) => (
+										<div
+											className="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg"
+											role="listbox"
+										>
+											{sugerencias.map((c, i) => (
 												<button
 													key={c.id}
 													type="button"
-													className="w-full px-3 py-2 text-left text-sm hover:bg-sky-50 border-b border-slate-100 last:border-0"
-													onMouseDown={() => {
-														setPatientFullName(`${c.nombres} ${c.apellidos}`);
-														setDocumentType(c.documentType);
-														setDocumentNumber(c.documentNumber);
-														setPhoneDial(c.phoneDialCode || DEFAULT_COUNTRY_DIAL.dial);
-														setPhoneNational(c.phoneNationalNumber);
-														setBirthdayMonth(c.birthdayMonth != null ? String(c.birthdayMonth) : "");
-														setClienteYaExistia(true);
-														setClienteOriginal(c);
-														setSugerencias([]);
-														setMostrarSugerencias(false);
+													role="option"
+													aria-selected={i === sugerenciaActivaIndex}
+													className={`w-full px-3 py-2 text-left text-sm border-b border-slate-100 last:border-0 ${
+														i === sugerenciaActivaIndex
+															? "bg-sky-100"
+															: "hover:bg-sky-50"
+													}`}
+													onMouseEnter={() => setSugerenciaActivaIndex(i)}
+													onMouseDown={(ev) => {
+														ev.preventDefault();
+														aplicarClienteSugerido(c);
 													}}
 												>
 													<span className="font-medium text-slate-800">
-														{c.apellidos}, {c.nombres}
+														{c.nombres} {c.apellidos}
 													</span>
 													<span className="ml-2 text-xs text-slate-500">
 														{c.documentType} {c.documentNumber}
@@ -596,32 +902,42 @@ export function AppointmentModal({
 									>
 										{COUNTRY_DIAL_OPTIONS.map((c) => (
 											<option key={c.code} value={c.dial}>
-												{c.name} (+{c.dial})
+												{c.name} ({c.dial})
 											</option>
 										))}
 									</select>
 								</label>
 								<label className="block text-sm font-medium text-slate-700">
-									Teléfono
+									Teléfono (solo número local)
 									<input
 										className="mt-1 w-full rounded border border-slate-300 px-2 py-2"
 										inputMode="numeric"
+										placeholder="Ej. 3001234567"
 										value={phoneNational}
 										onChange={(e) => setPhoneNational(e.target.value)}
 										required
 									/>
+									<span className="mt-0.5 block text-[0.7rem] font-normal text-slate-500">
+										Sin prefijo del país: el prefijo va en la lista de al lado (
+										{phoneDial}).
+									</span>
 								</label>
 							</div>
 
 							<label className="block text-sm font-medium text-slate-700">
-								Mes de cumpleaños (opcional, 1–12)
-								<input
+								Mes de cumpleaños (opcional)
+								<select
 									className="mt-1 w-full rounded border border-slate-300 px-2 py-2"
-									inputMode="numeric"
-									placeholder="Ej. 3"
 									value={birthdayMonth}
 									onChange={(e) => setBirthdayMonth(e.target.value)}
-								/>
+								>
+									<option value="">— Sin especificar —</option>
+									{MESES.map((mes, i) => (
+										<option key={i + 1} value={String(i + 1)}>
+											{mes}
+										</option>
+									))}
+								</select>
 							</label>
 
 							<label className="block text-sm font-medium text-slate-700">
@@ -684,6 +1000,107 @@ export function AppointmentModal({
 									))}
 								</select>
 							</label>
+
+							{resolvedClienteId && !isPaidLocked ? (
+								<div className="rounded-lg border border-violet-100 bg-violet-50/40 px-3 py-2 space-y-2">
+									<div className="flex flex-wrap items-center gap-2">
+										<button
+											type="button"
+											onClick={() => {
+												setPaqueteNuevoCliente(null);
+												setVentaPaqueteOpen(true);
+											}}
+											className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700"
+										>
+											Vender plan de sesiones
+										</button>
+										<span className="text-[0.7rem] text-slate-600">
+											Cobra varias sesiones por adelantado; luego podrá enlazar cada
+											cita a este plan y descontar del saldo.
+										</span>
+									</div>
+								</div>
+							) : null}
+							{!resolvedClienteId && clienteDraftForPaquete && !isPaidLocked ? (
+								<div className="rounded-lg border border-violet-100 bg-violet-50/40 px-3 py-2 space-y-2">
+									<div className="flex flex-wrap items-center gap-2">
+										<button
+											type="button"
+											onClick={() => {
+												setPaqueteNuevoCliente(clienteDraftForPaquete);
+												setVentaPaqueteOpen(true);
+											}}
+											className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700"
+										>
+											Registrar paciente y vender plan
+										</button>
+										<span className="text-[0.7rem] text-slate-600">
+											Guarda al paciente en la agenda, crea su ficha y registra el
+											pago del plan en un solo paso.
+										</span>
+									</div>
+								</div>
+							) : null}
+
+							{paquetesElegibles.length > 0 ? (
+								<div className="rounded-lg border border-violet-200 bg-violet-50/40 px-3 py-3 space-y-2">
+									<div>
+										<p className="text-sm font-semibold text-slate-800">
+											¿Esta cita usa una sesión de un plan ya pagado?
+										</p>
+										<p className="mt-1 text-xs text-slate-600 leading-relaxed">
+											Si el paciente compró un <strong>plan de sesiones</strong> de{" "}
+											<strong>este mismo tratamiento</strong>, elija el plan para
+											<strong>descontar una sesión del saldo</strong> al guardar la
+											cita (no es un cobro nuevo de esa visita). Si no aplica, deje
+											«Cobrar esta visita aparte».
+										</p>
+									</div>
+									<label className="block text-sm font-medium text-slate-700">
+										<span className="sr-only">
+											Enlazar cita con plan del paciente
+										</span>
+										<select
+											className="mt-1 w-full rounded border border-violet-200 bg-white px-2 py-2 text-slate-800 disabled:cursor-not-allowed disabled:bg-slate-100"
+											value={selectedPaqueteId ?? ""}
+											onChange={(e) =>
+												setSelectedPaqueteId(
+													e.target.value.length > 0
+														? e.target.value
+														: null,
+												)
+											}
+											disabled={isPaidLocked}
+										>
+											<option value="">
+												Cobrar esta visita aparte (sin usar un plan)
+											</option>
+											{paquetesElegibles.map((p) => {
+												const nombre = serviceLabelFromSettings(
+													settings,
+													p.serviceType,
+												);
+												const sesTexto =
+													p.restantes === 1
+														? "1 sesión disponible"
+														: `${p.restantes} sesiones disponibles`;
+												const estado = textoEstadoPlanParaUsuario(p.status);
+												const variosPlanesMismoServicio =
+													(conteoPlanesPorServicio.get(p.serviceType) ?? 0) >
+													1;
+												const etiqueta = variosPlanesMismoServicio
+													? `Usar plan: ${nombre} — ${sesTexto} · ${estado} · ref. ${p.id.slice(0, 8)}`
+													: `Usar plan: ${nombre} — ${sesTexto} · ${estado}`;
+												return (
+													<option key={p.id} value={p.id}>
+														{etiqueta}
+													</option>
+												);
+											})}
+										</select>
+									</label>
+								</div>
+							) : null}
 
 							{appointmentDate && capacityPreview.cap != null && (
 								<p
@@ -781,5 +1198,26 @@ export function AppointmentModal({
 				</form>
 			</div>
 		</div>
+		<PaqueteVentaModal
+			open={ventaPaqueteOpen}
+			settings={settings}
+			clienteId={
+				paqueteNuevoCliente ? undefined : resolvedClienteId ?? undefined
+			}
+			nuevoCliente={paqueteNuevoCliente ?? undefined}
+			preferredServiceType={serviceType}
+			onClose={() => {
+				setVentaPaqueteOpen(false);
+				setPaqueteNuevoCliente(null);
+			}}
+			onCreated={() => setPaquetesRefreshTick((t) => t + 1)}
+			onCreatedWithCliente={(res) => {
+				setClienteOriginal(res.cliente);
+				setClienteYaExistia(true);
+				setResolvedClienteId(res.cliente.id);
+				setSelectedPaqueteId(res.paquete.id);
+			}}
+		/>
+		</>
 	);
 }

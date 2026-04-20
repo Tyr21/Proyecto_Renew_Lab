@@ -52,14 +52,16 @@ export function SettingsPanel({
 	const [activeSection, setActiveSection] = useState<SettingsSectionId>("calendario");
 
 	const [adminModeModalOpen, setAdminModeModalOpen] = useState(false);
-	const [adminModeTarget, setAdminModeTarget] = useState(false);
 	const [adminModePwd, setAdminModePwd] = useState("");
 	const [adminModeErr, setAdminModeErr] = useState<string | null>(null);
 	const [adminModeBusy, setAdminModeBusy] = useState(false);
 
 	function openAdminModeToggle(target: boolean) {
 		if (target === (draft.adminMode ?? false)) return;
-		setAdminModeTarget(target);
+		if (!target) {
+			setDraft((d) => ({ ...d, adminMode: false }));
+			return;
+		}
 		setAdminModePwd("");
 		setAdminModeErr(null);
 		setAdminModeModalOpen(true);
@@ -74,7 +76,7 @@ export function SettingsPanel({
 		setAdminModeBusy(true);
 		try {
 			await verifyAdminPassword(adminModePwd);
-			setDraft((d) => ({ ...d, adminMode: adminModeTarget }));
+			setDraft((d) => ({ ...d, adminMode: true }));
 			setAdminModeModalOpen(false);
 			setAdminModePwd("");
 		} catch (e) {
@@ -661,7 +663,7 @@ export function SettingsPanel({
 									<span>
 										<span className="font-medium">Activar modo administrador</span>
 										<span className="mt-1 block text-amber-800/95">
-											Permite eliminar citas pasadas, ingresos, clientes y anular facturas según las reglas de la aplicación. Al activar o desactivar se solicita la contraseña de administrador.
+											Permite eliminar citas pasadas, ingresos, clientes y anular facturas según las reglas de la aplicación. Al marcar la casilla se pide la contraseña de administrador; al desmarcarla no.
 										</span>
 									</span>
 								</label>
@@ -710,9 +712,8 @@ export function SettingsPanel({
 							Contraseña de administrador
 						</h2>
 						<p className="mt-2 text-sm text-slate-600">
-							{adminModeTarget
-								? "Introduzca la contraseña de administrador para activar el modo administrador."
-								: "Introduzca la contraseña de administrador para desactivar el modo administrador."}
+							Introduzca la contraseña de administrador para activar el modo
+							administrador.
 						</p>
 						{adminModeErr ? (
 							<div className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{adminModeErr}</div>

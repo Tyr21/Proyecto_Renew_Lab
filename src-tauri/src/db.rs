@@ -132,6 +132,42 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
 	run_eventos_migrations(conn)?;
 	run_startup_auth_migration(conn)?;
 	run_admin_auth_migration(conn)?;
+	run_paquetes_migrations(conn)?;
+
+	Ok(())
+}
+
+fn run_paquetes_migrations(conn: &Connection) -> Result<(), String> {
+	conn
+		.execute_batch(
+			r#"
+			CREATE TABLE IF NOT EXISTS paquetes (
+				id TEXT PRIMARY KEY,
+				cliente_id TEXT NOT NULL,
+				service_type TEXT NOT NULL,
+				total_sesiones INTEGER NOT NULL CHECK (total_sesiones > 0),
+				precio_total REAL NOT NULL CHECK (precio_total > 0),
+				status TEXT NOT NULL,
+				expires_at TEXT,
+				created_at TEXT NOT NULL,
+				updated_at TEXT NOT NULL
+			);
+
+			CREATE INDEX IF NOT EXISTS idx_paquetes_cliente ON paquetes(cliente_id);
+			CREATE INDEX IF NOT EXISTS idx_paquetes_status ON paquetes(status);
+		"#,
+		)
+		.map_err(|e| e.to_string())?;
+
+	let _ = conn.execute(
+		"ALTER TABLE appointments ADD COLUMN paquete_id TEXT",
+		[],
+	);
+	let _ = conn.execute_batch(
+		"CREATE INDEX IF NOT EXISTS idx_appointments_paquete ON appointments(paquete_id);",
+	);
+
+	let _ = conn.execute("ALTER TABLE ingresos ADD COLUMN paquete_id TEXT", []);
 
 	Ok(())
 }

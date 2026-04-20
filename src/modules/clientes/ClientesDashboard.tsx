@@ -3,15 +3,11 @@ import { buscarClientes, eliminarCliente } from "../../core/api";
 import { formatInvokeError } from "../../core/errors";
 import type { AppSettings, Cliente } from "../../core/types";
 import { ClienteModal } from "./ClienteModal";
+import { ClienteResumenModal } from "./ClienteResumenModal";
 
 interface ClientesDashboardProps {
 	settings: AppSettings;
 }
-
-const MESES = [
-	"Ene", "Feb", "Mar", "Abr", "May", "Jun",
-	"Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
-];
 
 export function ClientesDashboard({ settings }: ClientesDashboardProps) {
 	const [query, setQuery] = useState("");
@@ -21,7 +17,8 @@ export function ClientesDashboard({ settings }: ClientesDashboardProps) {
 	const [modalOpen, setModalOpen] = useState(false);
 	const [modalMode, setModalMode] = useState<"create" | "edit">("create");
 	const [clienteEditando, setClienteEditando] = useState<Cliente | null>(null);
-	const [deletingId, setDeletingId] = useState<string | null>(null);
+	const [resumenClienteId, setResumenClienteId] = useState<string | null>(null);
+	const [activeIndex, setActiveIndex] = useState(-1);
 	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	const ejecutarBusqueda = useCallback(async (q: string) => {
@@ -57,6 +54,10 @@ export function ClientesDashboard({ settings }: ClientesDashboardProps) {
 		};
 	}, []);
 
+	useEffect(() => {
+		setActiveIndex(-1);
+	}, [resultados]);
+
 	function abrirCrear() {
 		setClienteEditando(null);
 		setModalMode("create");
@@ -64,9 +65,45 @@ export function ClientesDashboard({ settings }: ClientesDashboardProps) {
 	}
 
 	function abrirEditar(cliente: Cliente) {
+		setResumenClienteId(null);
 		setClienteEditando(cliente);
 		setModalMode("edit");
 		setModalOpen(true);
+	}
+
+	function abrirResumen(cliente: Cliente) {
+		setResumenClienteId(cliente.id);
+	}
+
+	function abrirResumenPorIndice(index: number) {
+		const c = resultados[index];
+		if (c) abrirResumen(c);
+	}
+
+	function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+		if (resultados.length === 0) return;
+
+		if (e.key === "ArrowDown") {
+			e.preventDefault();
+			setActiveIndex((i) => {
+				if (i < 0) return 0;
+				return i < resultados.length - 1 ? i + 1 : 0;
+			});
+			return;
+		}
+		if (e.key === "ArrowUp") {
+			e.preventDefault();
+			setActiveIndex((i) => {
+				if (i < 0) return resultados.length - 1;
+				return i > 0 ? i - 1 : resultados.length - 1;
+			});
+			return;
+		}
+		if (e.key === "Enter" || (e.key === "Tab" && !e.shiftKey)) {
+			e.preventDefault();
+			const idx = activeIndex >= 0 ? activeIndex : 0;
+			abrirResumenPorIndice(idx);
+		}
 	}
 
 	function handleSaved(cliente: Cliente) {
@@ -80,16 +117,15 @@ export function ClientesDashboard({ settings }: ClientesDashboardProps) {
 		}
 	}
 
-	async function handleEliminar(id: string) {
-		if (!window.confirm("¿Confirmar eliminación del cliente?")) return;
-		setDeletingId(id);
+	async function handleEliminar(id: string): Promise<boolean> {
+		if (!window.confirm("¿Confirmar eliminación del cliente?")) return false;
 		try {
 			await eliminarCliente(id);
 			setResultados((prev) => prev.filter((c) => c.id !== id));
+			return true;
 		} catch (e) {
 			setSearchError(formatInvokeError(e) || "No se pudo eliminar el cliente");
-		} finally {
-			setDeletingId(null);
+			return false;
 		}
 	}
 
@@ -103,7 +139,8 @@ export function ClientesDashboard({ settings }: ClientesDashboardProps) {
 							👥 Clientes
 						</h1>
 						<p className="mt-0.5 text-sm text-slate-500">
-							Busca por nombre, apellido o número de documento
+							Busca por nombre, apellido o número de documento. Con resultados: flechas
+							para resaltar, Enter o Tab para abrir la ficha.
 						</p>
 					</div>
 					<button
@@ -124,8 +161,15 @@ export function ClientesDashboard({ settings }: ClientesDashboardProps) {
 						type="search"
 						value={query}
 						onChange={handleQueryChange}
+						onKeyDown={handleSearchKeyDown}
 						placeholder="Buscar por nombre, apellido o documento…"
 						className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-9 pr-4 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+						aria-controls="clientes-resultados-lista"
+						aria-activedescendant={
+							activeIndex >= 0 && resultados[activeIndex]
+								? `cliente-resultado-${resultados[activeIndex].id}`
+								: undefined
+						}
 					/>
 					{searching ? (
 						<span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">
@@ -151,69 +195,36 @@ export function ClientesDashboard({ settings }: ClientesDashboardProps) {
 						No se encontraron clientes para <strong>"{query}"</strong>
 					</div>
 				) : (
-					<div className="space-y-3">
-						{resultados.map((c) => (
-							<div
+					<div
+						id="clientes-resultados-lista"
+						className="space-y-2"
+						role="listbox"
+						aria-label="Coincidencias de búsqueda"
+					>
+						{resultados.map((c, i) => (
+							<button
 								key={c.id}
-								className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+								id={`cliente-resultado-${c.id}`}
+								type="button"
+								role="option"
+								aria-selected={i === activeIndex}
+								onClick={() => abrirResumen(c)}
+								onMouseEnter={() => setActiveIndex(i)}
+								className={`flex w-full rounded-xl border px-4 py-3 text-left shadow-sm transition-colors ${
+									i === activeIndex
+										? "border-sky-400 bg-sky-50 ring-1 ring-sky-300"
+										: "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+								}`}
 							>
-								<div className="flex items-start justify-between gap-3">
-									<div className="min-w-0 flex-1">
-										{/* Nombre completo */}
-										<p className="font-semibold text-slate-900 truncate">
-											{c.apellidos}, {c.nombres}
-										</p>
-
-										{/* Documento */}
-										<p className="mt-1 text-sm text-slate-600">
-											{c.documentType} {c.documentNumber}
-										</p>
-
-										{/* Datos de contacto */}
-										<div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-											{c.phoneNationalNumber ? (
-												<span>
-													📞 {c.phoneDialCode} {c.phoneNationalNumber}
-												</span>
-											) : null}
-											{c.email ? (
-												<span>✉️ {c.email}</span>
-											) : null}
-											{c.birthdayMonth ? (
-												<span>🎂 {MESES[c.birthdayMonth - 1]}</span>
-											) : null}
-										</div>
-
-										{/* Notas */}
-										{c.notas ? (
-											<p className="mt-2 text-xs text-slate-400 italic truncate">
-												{c.notas}
-											</p>
-										) : null}
-									</div>
-
-									{/* Acciones */}
-									<div className="flex shrink-0 gap-2">
-										<button
-											type="button"
-											onClick={() => abrirEditar(c)}
-											className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-										>
-											Editar
-										</button>
-										{settings.adminMode ? (
-											<button
-												type="button"
-												disabled={deletingId === c.id}
-												onClick={() => void handleEliminar(c.id)}
-												className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-40"
-											>
-												{deletingId === c.id ? "…" : "Eliminar"}
-											</button>
-										) : null}
-									</div>
+								<div className="min-w-0 flex-1">
+									<p className="font-semibold text-slate-900 truncate">
+										{c.nombres} {c.apellidos}
+									</p>
+									<p className="mt-0.5 text-sm text-slate-600">
+										{c.documentType} {c.documentNumber}
+									</p>
 								</div>
-							</div>
+							</button>
 						))}
 
 						{resultados.length === 5 ? (
@@ -232,6 +243,23 @@ export function ClientesDashboard({ settings }: ClientesDashboardProps) {
 				initial={clienteEditando}
 				onClose={() => setModalOpen(false)}
 				onSaved={handleSaved}
+			/>
+
+			<ClienteResumenModal
+				open={resumenClienteId !== null}
+				clienteId={resumenClienteId}
+				settings={settings}
+				adminMode={settings.adminMode}
+				onClose={() => setResumenClienteId(null)}
+				onEditar={(cl) => abrirEditar(cl)}
+				onEliminar={
+					settings.adminMode
+						? async (id) => {
+								const ok = await handleEliminar(id);
+								if (ok) setResumenClienteId(null);
+						  }
+						: undefined
+				}
 			/>
 		</div>
 	);

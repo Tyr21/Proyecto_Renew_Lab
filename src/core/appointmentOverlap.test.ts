@@ -26,7 +26,7 @@ function apt(
 		patientFullName: "X",
 		documentType: "CC",
 		documentNumber: "1",
-		phoneDialCode: "57",
+		phoneDialCode: "+57",
 		phoneNationalNumber: "300",
 		birthdayMonth: null,
 		appointmentDate: date,

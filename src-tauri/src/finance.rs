@@ -80,6 +80,8 @@ pub struct MovimientoFinancieroDetalle {
 	pub factura_serie: Option<String>,
 	pub factura_numero: Option<i64>,
 	pub factura_total: Option<f64>,
+	/// Ingreso ligado a venta de paquete (`ingresos.paquete_id`); no es número de factura.
+	pub paquete_id: Option<String>,
 }
 
 fn row_to_movimiento_detalle(row: &rusqlite::Row<'_>) -> rusqlite::Result<MovimientoFinancieroDetalle> {
@@ -95,6 +97,7 @@ fn row_to_movimiento_detalle(row: &rusqlite::Row<'_>) -> rusqlite::Result<Movimi
 		factura_serie: row.get(8)?,
 		factura_numero: row.get(9)?,
 		factura_total: row.get(10)?,
+		paquete_id: row.get(11)?,
 	})
 }
 
@@ -109,7 +112,7 @@ pub fn listar_movimientos_financieros_detalle(
 		.prepare(
 			r#"
 			SELECT i.id, i.fecha_pago, i.paciente_nombre, i.paciente_documento, i.concepto, i.monto, i.metodo_pago,
-			       i.factura_id, f.serie, f.numero, f.total
+			       i.factura_id, f.serie, f.numero, f.total, i.paquete_id
 			FROM ingresos i
 			LEFT JOIN facturas f ON i.factura_id = f.id
 			WHERE date(i.fecha_pago, 'localtime') >= ?1

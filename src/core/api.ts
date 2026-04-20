@@ -7,7 +7,12 @@ import type {
 	CitasPorMes,
 	Cliente,
 	ClienteInput,
+	ClienteResumenDashboard,
 	CrearIngresoInput,
+	CrearPaqueteInput,
+	CrearClienteYPaqueteInput,
+	ClienteYPaqueteCreado,
+	PaqueteCliente,
 	EmitirFacturaInput,
 	Evento,
 	EventoInput,
@@ -210,8 +215,40 @@ export async function obtenerCliente(id: string): Promise<Cliente> {
 	return invoke<Cliente>(TAURI_COMMANDS.obtenerCliente, { id });
 }
 
+export async function obtenerResumenClienteDashboard(
+	clienteId: string,
+): Promise<ClienteResumenDashboard> {
+	return invoke<ClienteResumenDashboard>(
+		TAURI_COMMANDS.obtenerResumenClienteDashboard,
+		{ clienteId },
+	);
+}
+
 export async function eliminarCliente(id: string): Promise<void> {
 	return invoke(TAURI_COMMANDS.eliminarCliente, { id });
+}
+
+export async function listarPaquetesCliente(
+	clienteId: string,
+): Promise<PaqueteCliente[]> {
+	return invoke<PaqueteCliente[]>(TAURI_COMMANDS.listarPaquetesCliente, {
+		clienteId,
+	});
+}
+
+export async function crearPaquete(
+	input: CrearPaqueteInput,
+): Promise<PaqueteCliente> {
+	return invoke<PaqueteCliente>(TAURI_COMMANDS.crearPaquete, { input });
+}
+
+export async function crearClienteYPaquete(
+	input: CrearClienteYPaqueteInput,
+): Promise<ClienteYPaqueteCreado> {
+	return invoke<ClienteYPaqueteCreado>(
+		TAURI_COMMANDS.crearClienteYPaquete,
+		{ input },
+	);
 }
 
 export async function listarFacturas(

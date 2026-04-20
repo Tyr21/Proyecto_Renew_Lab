@@ -37,6 +37,11 @@ export function FinanceEventListener({ settings }: FinanceEventListenerProps) {
 						if (estado !== "asistio") {
 							return;
 						}
+						const paqueteId =
+							typeof p?.paquete_id === "string" ? p.paquete_id.trim() : "";
+						if (paqueteId.length > 0) {
+							return;
+						}
 						const tipoServicio =
 							typeof p?.tipo_servicio === "string"
 								? p.tipo_servicio

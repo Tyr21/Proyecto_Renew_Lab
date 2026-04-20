@@ -1,3 +1,4 @@
+import { normalizePhoneDialCode } from "./countries";
 import type { AppSettings, AppointmentInput } from "./types";
 
 /** Replica reglas de `validate_against_settings` en Rust para feedback inmediato en la UI */
@@ -19,9 +20,17 @@ export function validateAppointmentFormFields(
 	) {
 		return "El documento debe ser alfanumérico";
 	}
+	const dial = normalizePhoneDialCode(input.phoneDialCode);
+	if (
+		dial.length > 5 ||
+		!dial.startsWith("+") ||
+		!/^\+[0-9]+$/.test(dial)
+	) {
+		return "El prefijo del país debe ser como +57 (elija en la lista o use formato + y dígitos)";
+	}
 	const phone = input.phoneNationalNumber.trim();
 	if (phone.length === 0 || !/^\d+$/.test(phone)) {
-		return "El teléfono (nacional) es obligatorio y solo dígitos";
+		return "En «Teléfono» use solo dígitos del número local (sin + ni prefijo); el prefijo va en «País / prefijo».";
 	}
 	if (!settings.serviceTypes.some((s) => s.id === input.serviceType)) {
 		return "Tipo de servicio no configurado";

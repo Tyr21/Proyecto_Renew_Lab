@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
-import { actualizarCliente, crearCliente } from "../../core/api";
+import { useCallback, useEffect, useState } from "react";
+import { actualizarCliente, crearCliente, listarPaquetesCliente } from "../../core/api";
 import { formatInvokeError } from "../../core/errors";
-import type { AppSettings, Cliente, ClienteInput } from "../../core/types";
+import { serviceLabelFromSettings } from "../../core/serviceLabels";
+import type { AppSettings, Cliente, ClienteInput, PaqueteCliente } from "../../core/types";
+import { PaqueteVentaModal } from "./PaqueteVentaModal";
 
 interface ClienteModalProps {
 	open: boolean;
@@ -36,6 +38,24 @@ export function ClienteModal({
 	const [notas, setNotas] = useState("");
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [paquetes, setPaquetes] = useState<PaqueteCliente[]>([]);
+	const [paquetesLoading, setPaquetesLoading] = useState(false);
+	const [paquetesError, setPaquetesError] = useState<string | null>(null);
+	const [ventaPaqueteOpen, setVentaPaqueteOpen] = useState(false);
+
+	const cargarPaquetes = useCallback(async (clienteId: string) => {
+		setPaquetesLoading(true);
+		setPaquetesError(null);
+		try {
+			const list = await listarPaquetesCliente(clienteId);
+			setPaquetes(list);
+		} catch (e) {
+			setPaquetesError(formatInvokeError(e) || "No se pudieron cargar los planes");
+			setPaquetes([]);
+		} finally {
+			setPaquetesLoading(false);
+		}
+	}, []);
 
 	useEffect(() => {
 		if (!open) return;
@@ -62,6 +82,14 @@ export function ClienteModal({
 		}
 		setError(null);
 	}, [open, mode, initial, settings.defaultDocumentType]);
+
+	useEffect(() => {
+		if (!open || mode !== "edit" || !initial) {
+			setPaquetes([]);
+			return;
+		}
+		void cargarPaquetes(initial.id);
+	}, [open, mode, initial?.id, cargarPaquetes]);
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -250,6 +278,66 @@ export function ClienteModal({
 						/>
 					</label>
 
+					{mode === "edit" && initial ? (
+						<div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 space-y-3">
+							<div className="flex items-center justify-between gap-2">
+								<h3 className="text-sm font-semibold text-slate-800">
+									Planes de sesiones (prepago)
+								</h3>
+								<button
+									type="button"
+									onClick={() => setVentaPaqueteOpen(true)}
+									className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700"
+								>
+									+ Vender plan
+								</button>
+							</div>
+							<p className="text-xs text-slate-600">
+								Los planes ligados a este paciente aparecen al crear o editar una
+								cita del mismo tratamiento, para descontar sesiones sin cobrar de
+								nuevo cada visita.
+							</p>
+							{paquetesError ? (
+								<p className="text-xs text-red-600">{paquetesError}</p>
+							) : null}
+							{paquetesLoading ? (
+								<p className="text-xs text-slate-500">Cargando…</p>
+							) : paquetes.length === 0 ? (
+								<p className="text-xs text-slate-500">
+									Aún no hay planes. Use «Vender plan» para registrar un prepago;
+									luego podrá enlazarlo en las citas de ese tratamiento.
+								</p>
+							) : (
+								<ul className="space-y-2 max-h-40 overflow-y-auto">
+									{paquetes.map((p) => (
+										<li
+											key={p.id}
+											className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700"
+										>
+											<div className="font-medium text-slate-900">
+												{serviceLabelFromSettings(settings, p.serviceType)}
+											</div>
+											<div className="mt-0.5 tabular-nums">
+												Progreso: {p.consumidas}/{p.totalSesiones} consumidas
+												{p.reservadas > 0
+													? ` · ${p.reservadas} reservada(s)`
+													: ""}
+												{" · "}
+												<span className="font-medium">{p.restantes}</span> disponibles
+											</div>
+											<div className="mt-0.5 flex flex-wrap gap-x-2 text-slate-500">
+												<span>Estado: {p.status}</span>
+												{p.expiresAt ? (
+													<span>Vence: {p.expiresAt}</span>
+												) : null}
+											</div>
+										</li>
+									))}
+								</ul>
+							)}
+						</div>
+					) : null}
+
 					{/* Botones */}
 					<div className="flex justify-end gap-2 pt-2">
 						<button
@@ -270,6 +358,15 @@ export function ClienteModal({
 					</div>
 				</form>
 			</div>
+			{mode === "edit" && initial ? (
+				<PaqueteVentaModal
+					open={ventaPaqueteOpen}
+					settings={settings}
+					clienteId={initial.id}
+					onClose={() => setVentaPaqueteOpen(false)}
+					onCreated={() => void cargarPaquetes(initial.id)}
+				/>
+			) : null}
 		</div>
 	);
 }

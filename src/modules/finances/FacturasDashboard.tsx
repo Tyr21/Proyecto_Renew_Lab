@@ -110,6 +110,13 @@ export function FacturasDashboard({ settings }: FacturasDashboardProps) {
 									? "Facturas del día seleccionado."
 									: `Facturas del ${dateFrom} al ${dateTo}.`}
 							</p>
+							<p className="mt-2 max-w-2xl text-xs leading-relaxed text-slate-500">
+								<strong className="font-medium text-slate-600">Planes de sesiones:</strong> el cobro del plan
+								se registra como <strong className="font-medium text-slate-600">ingreso</strong> al venderlo
+								(desde el cliente, «Vender plan»). Ese movimiento aparece en Movimientos detallados y en el
+								cierre, con o sin factura. Si emite aquí una factura por la misma venta ya cobrada, desmarque
+								«Registrar pago al emitir» para no duplicar el ingreso.
+							</p>
 						</div>
 						<div className="flex flex-col gap-2">
 							<div className="flex gap-1 flex-wrap">

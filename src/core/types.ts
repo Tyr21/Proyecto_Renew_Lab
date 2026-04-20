@@ -65,6 +65,8 @@ export interface Appointment {
 	updatedAt: string;
 	/** Indica si existe un ingreso vinculado a esta cita (`ingresos.cita_id`). */
 	isPaid: boolean;
+	/** Paquete prepagado del que descuenta la sesión, si aplica. */
+	paqueteId?: string | null;
 }
 
 export interface AppointmentInput {
@@ -79,6 +81,8 @@ export interface AppointmentInput {
 	endTime: string;
 	serviceType: string;
 	status?: AppointmentStatus;
+	/** UUID del paquete o `null` para quitar vínculo al editar. */
+	paqueteId?: string | null;
 }
 
 export interface DomainEventPayload {
@@ -88,6 +92,7 @@ export interface DomainEventPayload {
 	tipo_servicio: string;
 	estado: string;
 	timestamp: string;
+	paquete_id?: string;
 }
 
 /** Eventos de dominio emitidos por el backend (Tauri `emit`) tras persistir en SQLite. */
@@ -121,6 +126,8 @@ export interface MovimientoFinancieroDetalle {
 	facturaSerie: string | null;
 	facturaNumero: number | null;
 	facturaTotal: number | null;
+	/** Venta de paquete (sin factura); referencia al paquete en BD. */
+	paqueteId?: string | null;
 }
 
 export interface CrearIngresoInput {
@@ -186,6 +193,62 @@ export interface ClienteInput {
 	email: string;
 	birthdayMonth: number | null;
 	notas: string;
+}
+
+/** Cita resumida para la ficha del cliente (historial / próximas). */
+export interface CitaResumenCliente {
+	id: string;
+	appointmentDate: string;
+	startTime: string;
+	endTime: string;
+	serviceType: string;
+	status: string;
+	isPaid: boolean;
+	paqueteId?: string | null;
+}
+
+export interface ClienteResumenDashboard {
+	cliente: Cliente;
+	ultimosServicios: CitaResumenCliente[];
+	proximasCitas: CitaResumenCliente[];
+}
+
+export interface PaqueteCliente {
+	id: string;
+	clienteId: string;
+	serviceType: string;
+	totalSesiones: number;
+	precioTotal: number;
+	status: string;
+	expiresAt: string | null;
+	createdAt: string;
+	updatedAt: string;
+	consumidas: number;
+	reservadas: number;
+	restantes: number;
+}
+
+export interface CrearPaqueteInput {
+	clienteId: string;
+	serviceType: string;
+	totalSesiones: number;
+	precioTotal: number;
+	metodoPago: string;
+	expiresAt?: string | null;
+}
+
+export interface CrearClienteYPaqueteInput {
+	cliente: ClienteInput;
+	serviceType: string;
+	totalSesiones: number;
+	precioTotal: number;
+	metodoPago: string;
+	expiresAt?: string | null;
+}
+
+export interface ClienteYPaqueteCreado {
+	cliente: Cliente;
+	paquete: PaqueteCliente;
 }
 
 export type FacturaEstado = "borrador" | "emitida" | "anulada";
