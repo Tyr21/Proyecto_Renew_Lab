@@ -2,12 +2,22 @@ export type TimeDisplay = "12h" | "24h";
 
 export type AppointmentStatus = "pendiente" | "asistio" | "no_asistio";
 
+/** Plan de paquete (N sesiones, precio total antes de IVA) configurable por servicio. */
+export interface ServicePackagePlanSetting {
+	id: string;
+	label: string;
+	sessionCount: number;
+	priceBeforeVat: number;
+}
+
 export interface ServiceTypeSetting {
 	id: string;
 	label: string;
 	concurrentCapacity: number;
 	/** Precio sugerido para cobros (misma moneda que ingresos). 0 = sin sugerencia en UI. */
 	suggestedPrice: number;
+	/** Planes de venta por volumen; vacío hasta configurarlos en Ajustes. */
+	packagePlans?: ServicePackagePlanSetting[];
 }
 
 export interface BillingSettings {
@@ -228,6 +238,28 @@ export interface PaqueteCliente {
 	restantes: number;
 }
 
+/** Datos del plan elegido al continuar al modal de cobro (el padre añade nombre/documento si hace falta). */
+export interface PaqueteVentaContinuePayload {
+	clienteId?: string;
+	nuevoCliente?: ClienteInput;
+	serviceType: string;
+	totalSesiones: number;
+	precioTotalConIva: number;
+	ingresoConcepto: string;
+}
+
+/** Contexto para el modal de cobro de un plan (tras elegir el plan configurado). */
+export interface PackagePaymentContext {
+	clienteId?: string;
+	nuevoCliente?: ClienteInput;
+	serviceType: string;
+	totalSesiones: number;
+	expectedPrecioTotalConIva: number;
+	ingresoConcepto: string;
+	pacienteNombre: string;
+	pacienteDocumento: string;
+}
+
 export interface CrearPaqueteInput {
 	clienteId: string;
 	serviceType: string;
@@ -235,6 +267,8 @@ export interface CrearPaqueteInput {
 	precioTotal: number;
 	metodoPago: string;
 	expiresAt?: string | null;
+	/** Concepto del ingreso; si se omite, el backend usa el texto por defecto. */
+	ingresoConcepto?: string | null;
 }
 
 export interface CrearClienteYPaqueteInput {
@@ -244,6 +278,7 @@ export interface CrearClienteYPaqueteInput {
 	precioTotal: number;
 	metodoPago: string;
 	expiresAt?: string | null;
+	ingresoConcepto?: string | null;
 }
 
 export interface ClienteYPaqueteCreado {

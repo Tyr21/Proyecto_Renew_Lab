@@ -16,6 +16,20 @@ fn default_iva_pct() -> f64 {
 	19.0
 }
 
+fn default_package_plans() -> Vec<PackagePlanSetting> {
+	Vec::new()
+}
+
+/// Plan de paquete de sesiones configurable por tipo de servicio (precio total antes de IVA).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PackagePlanSetting {
+	pub id: String,
+	pub label: String,
+	pub session_count: i64,
+	pub price_before_vat: f64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ServiceTypeSetting {
@@ -25,6 +39,8 @@ pub struct ServiceTypeSetting {
 	/// Precio sugerido (misma moneda local que `ingresos.monto`). Ausente en JSON antiguo → default.
 	#[serde(default = "default_suggested_price")]
 	pub suggested_price: f64,
+	#[serde(default = "default_package_plans")]
+	pub package_plans: Vec<PackagePlanSetting>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -119,12 +135,14 @@ impl Default for AppSettings {
 					label: "Cámara Hiperbárica".into(),
 					concurrent_capacity: 2,
 					suggested_price: 180_000.0,
+					package_plans: Vec::new(),
 				},
 				ServiceTypeSetting {
 					id: "sueroterapia".into(),
 					label: "Sueroterapia".into(),
 					concurrent_capacity: 2,
 					suggested_price: 120_000.0,
+					package_plans: Vec::new(),
 				},
 			],
 			admin_mode: false,
@@ -147,5 +165,35 @@ impl AppSettings {
 			.iter()
 			.find(|s| s.id == service_id)
 			.map(|s| s.label.as_str())
+	}
+}
+
+#[cfg(test)]
+mod settings_deser_tests {
+	use super::AppSettings;
+
+	#[test]
+	fn legacy_json_sin_package_plans_deserializa() {
+		let json = r#"{
+			"showSundays": false,
+			"timeDisplay": "24h",
+			"defaultDurationMinutes": 60,
+			"documentTypes": ["CC"],
+			"defaultDocumentType": "CC",
+			"serviceTypes": [
+				{
+					"id": "s1",
+					"label": "Servicio",
+					"concurrentCapacity": 1,
+					"suggestedPrice": 100000
+				}
+			],
+			"adminMode": false,
+			"billing": {},
+			"backup": {}
+		}"#;
+		let s: AppSettings = serde_json::from_str(json).expect("parse");
+		assert_eq!(s.service_types.len(), 1);
+		assert!(s.service_types[0].package_plans.is_empty());
 	}
 }

@@ -1,11 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { saveSettings, verifyAdminPassword } from "../../core/api";
-import { DEFAULT_SUGGESTED_PRICE_COP } from "../../core/constants";
+import {
+	DEFAULT_NEW_PACKAGE_PLAN_SESSION_COUNT,
+	DEFAULT_SUGGESTED_PRICE_COP,
+	defaultPackagePlanLabel,
+} from "../../core/constants";
 import { formatInvokeError } from "../../core/errors";
 import { AdminPasswordAdminSection } from "./AdminPasswordAdminSection";
 import { StartupPasswordAdminSection } from "./StartupPasswordAdminSection";
 import { formatCurrency, parseCurrencyDigits } from "../../core/currencyFormat";
-import type { AppSettings, BackupSettings, BillingSettings, ServiceTypeSetting, TimeDisplay } from "../../core/types";
+import type {
+	AppSettings,
+	BackupSettings,
+	BillingSettings,
+	ServicePackagePlanSetting,
+	ServiceTypeSetting,
+	TimeDisplay,
+} from "../../core/types";
 
 interface SettingsPanelProps {
 	settings: AppSettings;
@@ -146,6 +157,7 @@ export function SettingsPanel({
 			label: "Nuevo servicio",
 			concurrentCapacity: DEFAULT_NEW_SERVICE_CAPACITY,
 			suggestedPrice: DEFAULT_SUGGESTED_PRICE_COP,
+			packagePlans: [],
 		};
 		setDraft((d) => ({ ...d, serviceTypes: [...d.serviceTypes, next] }));
 	}
@@ -163,6 +175,71 @@ export function SettingsPanel({
 			...d,
 			serviceTypes: d.serviceTypes.filter((_, i) => i !== index),
 		}));
+	}
+
+	function addPackagePlan(serviceIndex: number) {
+		const id =
+			typeof crypto !== "undefined" && "randomUUID" in crypto
+				? crypto.randomUUID()
+				: `plan_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+		const sessionCount = DEFAULT_NEW_PACKAGE_PLAN_SESSION_COUNT;
+		const blank: ServicePackagePlanSetting = {
+			id,
+			label: defaultPackagePlanLabel(sessionCount),
+			sessionCount,
+			priceBeforeVat: 0,
+		};
+		setDraft((d) => {
+			const arr = [...d.serviceTypes];
+			const s = arr[serviceIndex]!;
+			const plans = [...(s.packagePlans ?? []), blank];
+			arr[serviceIndex] = { ...s, packagePlans: plans };
+			return { ...d, serviceTypes: arr };
+		});
+	}
+
+	function updatePackagePlan(
+		serviceIndex: number,
+		planIndex: number,
+		patch: Partial<ServicePackagePlanSetting>,
+	) {
+		setDraft((d) => {
+			const arr = [...d.serviceTypes];
+			const s = arr[serviceIndex]!;
+			const plans = [...(s.packagePlans ?? [])];
+			plans[planIndex] = { ...plans[planIndex]!, ...patch };
+			arr[serviceIndex] = { ...s, packagePlans: plans };
+			return { ...d, serviceTypes: arr };
+		});
+	}
+
+	function removePackagePlan(serviceIndex: number, planIndex: number) {
+		setDraft((d) => {
+			const arr = [...d.serviceTypes];
+			const s = arr[serviceIndex]!;
+			const plans = (s.packagePlans ?? []).filter((_, i) => i !== planIndex);
+			arr[serviceIndex] = { ...s, packagePlans: plans };
+			return { ...d, serviceTypes: arr };
+		});
+	}
+
+	function discountVsListPct(
+		suggestedPrice: number,
+		sessionCount: number,
+		priceBeforeVat: number,
+	): number | null {
+		if (
+			suggestedPrice <= 0 ||
+			sessionCount < 1 ||
+			priceBeforeVat <= 0 ||
+			!Number.isFinite(suggestedPrice) ||
+			!Number.isFinite(priceBeforeVat)
+		) {
+			return null;
+		}
+		const lista = suggestedPrice * sessionCount;
+		if (lista <= 0) return null;
+		return 100 * (1 - priceBeforeVat / lista);
 	}
 
 	function updateBilling(patch: Partial<BillingSettings>) {
@@ -389,7 +466,7 @@ export function SettingsPanel({
 										Tipos de servicio
 									</h2>
 									<p className="mt-1 text-xs text-slate-500">
-										<code className="text-xs">id</code> estable para enlazar con citas; capacidad = citas concurrentes del mismo tipo. El precio sugerido se usa al registrar pagos tras completar una cita.
+										<code className="text-xs">id</code> estable para enlazar con citas; capacidad = citas concurrentes del mismo tipo. El precio sugerido se usa al registrar pagos tras completar una cita. Los planes de paquete definen precio total antes de IVA por cantidad de sesiones para la venta de prepagos.
 									</p>
 								</div>
 								<button
@@ -481,6 +558,121 @@ export function SettingsPanel({
 												}
 											/>
 										</label>
+										<div className="rounded-lg border border-slate-200 bg-white/80 p-3 space-y-2">
+											<div className="flex flex-wrap items-center justify-between gap-2">
+												<h4 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+													Planes de paquete (venta por volumen)
+												</h4>
+												<button
+													type="button"
+													onClick={() => addPackagePlan(i)}
+													className="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50"
+												>
+													Añadir plan
+												</button>
+											</div>
+											<p className="text-[0.65rem] text-slate-500 leading-snug">
+												Defina el precio total <strong>antes de IVA</strong> por el número de sesiones. En el modal de venta solo se elegirá el plan; el cobro se confirma después.
+											</p>
+											{(s.packagePlans ?? []).length === 0 ? (
+												<p className="text-xs text-slate-400 italic">
+													Sin planes. Añada uno para ofrecerlo al vender un paquete de este servicio.
+												</p>
+											) : (
+												<ul className="space-y-3">
+													{(s.packagePlans ?? []).map((p, pi) => {
+														const dPct = discountVsListPct(
+															s.suggestedPrice,
+															p.sessionCount,
+															p.priceBeforeVat,
+														);
+														return (
+															<li
+																key={p.id}
+																className="rounded border border-slate-100 bg-slate-50/90 p-2 space-y-2"
+															>
+																<div className="flex flex-wrap items-end gap-2">
+																	<label className="min-w-[8rem] flex-1 text-xs">
+																		<span className="text-slate-600">Etiqueta</span>
+																		<input
+																			className="mt-0.5 w-full rounded border border-slate-300 px-2 py-1 text-sm"
+																			value={p.label}
+																			onChange={(e) =>
+																				updatePackagePlan(i, pi, {
+																					label: e.target.value,
+																				})
+																			}
+																			placeholder="Ej. 10 sesiones · -10%"
+																		/>
+																	</label>
+																	<label className="w-20 text-xs">
+																		<span className="text-slate-600">Sesiones</span>
+																		<input
+																			type="number"
+																			min={1}
+																			className="mt-0.5 w-full rounded border border-slate-300 px-2 py-1 text-sm"
+																			value={p.sessionCount}
+																			onChange={(e) =>
+																				updatePackagePlan(i, pi, {
+																					sessionCount: Math.max(
+																						1,
+																						Number.parseInt(
+																							e.target.value,
+																							10,
+																						) || 1,
+																					),
+																				})
+																			}
+																		/>
+																	</label>
+																	<label className="min-w-[9rem] flex-1 text-xs">
+																		<span className="text-slate-600">
+																			Total antes IVA (COP)
+																		</span>
+																		<input
+																			type="text"
+																			inputMode="numeric"
+																			autoComplete="off"
+																			className="mt-0.5 w-full rounded border border-slate-300 px-2 py-1 text-sm tabular-nums"
+																			value={
+																				p.priceBeforeVat === 0
+																					? ""
+																					: formatCurrency(p.priceBeforeVat)
+																			}
+																			onChange={(e) =>
+																				updatePackagePlan(i, pi, {
+																					priceBeforeVat: parseCurrencyDigits(
+																						e.target.value,
+																					),
+																				})
+																			}
+																		/>
+																	</label>
+																	<button
+																		type="button"
+																		onClick={() => removePackagePlan(i, pi)}
+																		className="rounded border border-red-200 px-2 py-1 text-xs text-red-700 hover:bg-red-50"
+																	>
+																		Quitar
+																	</button>
+																</div>
+																{dPct !== null && dPct > 0.009 ? (
+																	<p className="text-[0.65rem] text-slate-500">
+																		≈ {dPct.toFixed(1)}% menos vs.{" "}
+																		{formatCurrency(s.suggestedPrice)} ×{" "}
+																		{p.sessionCount} sesiones
+																	</p>
+																) : dPct !== null && dPct <= 0.009 ? (
+																	<p className="text-[0.65rem] text-slate-500">
+																		Alineado con precio lista × sesiones
+																	</p>
+																) : null}
+															</li>
+														);
+													})}
+												</ul>
+											)}
+										</div>
 									</li>
 								))}
 							</ul>

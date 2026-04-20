@@ -1,9 +1,21 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { crearIngreso, emitirFactura, guardarBorradorFactura } from "../../core/api";
+import {
+	crearClienteYPaquete,
+	crearIngreso,
+	crearPaquete,
+	emitirFactura,
+	guardarBorradorFactura,
+} from "../../core/api";
 import { FACTURA_CHANGED_EVENT, INGRESO_REGISTRADO_EVENT } from "../../core/constants";
 import { formatCurrency, parseCurrencyDigits } from "../../core/currencyFormat";
 import { formatInvokeError } from "../../core/errors";
-import type { AppSettings, CrearIngresoInput } from "../../core/types";
+import type {
+	AppSettings,
+	CrearIngresoInput,
+	ClienteYPaqueteCreado,
+	PackagePaymentContext,
+	PaqueteCliente,
+} from "../../core/types";
 
 export const PAYMENT_METHODS = ["Efectivo", "Tarjeta", "Transferencia"] as const;
 
@@ -19,11 +31,25 @@ export interface PaymentPrefill {
 interface PaymentModalProps {
 	open: boolean;
 	prefill: PaymentPrefill | null;
+	/** Cobro de plan (mutuamente excluyente con el flujo de cita en la misma apertura). */
+	packageCheckout?: PackagePaymentContext | null;
 	settings?: AppSettings;
 	onClose: () => void;
+	/** Solo flujo paquete: devuelve resultado y el mismo contexto de cobro (p. ej. tipo de servicio del plan). */
+	onPackagePaymentSuccess?: (
+		result: ClienteYPaqueteCreado | PaqueteCliente,
+		ctx: PackagePaymentContext,
+	) => void;
 }
 
-export function PaymentModal({ open, prefill, settings, onClose }: PaymentModalProps) {
+export function PaymentModal({
+	open,
+	prefill,
+	packageCheckout = null,
+	settings,
+	onClose,
+	onPackagePaymentSuccess,
+}: PaymentModalProps) {
 	const [monto, setMonto] = useState(0);
 	const [metodoPago, setMetodoPago] = useState<string>(PAYMENT_METHODS[0]!);
 	const [concepto, setConcepto] = useState("");
@@ -32,22 +58,47 @@ export function PaymentModal({ open, prefill, settings, onClose }: PaymentModalP
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	useEffect(() => {
-		if (!open || !prefill) return;
-		setConcepto(prefill.concepto);
-		setPacienteDocumento(prefill.pacienteDocumento);
-		const sp = prefill.suggestedPrice ?? 0;
-		setMonto(sp > 0 ? Math.round(sp) : 0);
-		setMetodoPago(PAYMENT_METHODS[0]!);
-		setGenerarFactura(false);
-		setError(null);
-	}, [open, prefill]);
+	const isPackage = Boolean(packageCheckout);
 
-	if (!open || !prefill) {
+	useEffect(() => {
+		if (!open) return;
+		if (packageCheckout) {
+			setConcepto(packageCheckout.ingresoConcepto);
+			setPacienteDocumento(packageCheckout.pacienteDocumento.trim());
+			setMonto(
+				Math.round(
+					Number.isFinite(packageCheckout.expectedPrecioTotalConIva)
+						? packageCheckout.expectedPrecioTotalConIva
+						: 0,
+				),
+			);
+			setMetodoPago(PAYMENT_METHODS[0]!);
+			setGenerarFactura(false);
+			setError(null);
+			return;
+		}
+		if (prefill) {
+			setConcepto(prefill.concepto);
+			setPacienteDocumento(prefill.pacienteDocumento);
+			const sp = prefill.suggestedPrice ?? 0;
+			setMonto(sp > 0 ? Math.round(sp) : 0);
+			setMetodoPago(PAYMENT_METHODS[0]!);
+			setGenerarFactura(false);
+			setError(null);
+		}
+	}, [open, prefill, packageCheckout]);
+
+	if (!open) {
+		return null;
+	}
+	if (!packageCheckout && !prefill) {
 		return null;
 	}
 
-	const suggestedRef = prefill.suggestedPrice ?? 0;
+	const suggestedRef = isPackage
+		? (packageCheckout!.expectedPrecioTotalConIva ?? 0)
+		: (prefill!.suggestedPrice ?? 0);
+
 	const showPriceMismatch =
 		suggestedRef > 0 &&
 		monto > 0 &&
@@ -55,7 +106,6 @@ export function PaymentModal({ open, prefill, settings, onClose }: PaymentModalP
 
 	async function handleSubmit(e: FormEvent) {
 		e.preventDefault();
-		if (!prefill) return;
 		if (monto <= 0) {
 			setError("Indique un monto válido mayor que cero.");
 			return;
@@ -63,6 +113,41 @@ export function PaymentModal({ open, prefill, settings, onClose }: PaymentModalP
 		setBusy(true);
 		setError(null);
 		try {
+			if (packageCheckout) {
+				const common = {
+					serviceType: packageCheckout.serviceType,
+					totalSesiones: packageCheckout.totalSesiones,
+					precioTotal: monto,
+					metodoPago,
+					expiresAt: null,
+					ingresoConcepto: concepto.trim() || packageCheckout.ingresoConcepto,
+				};
+				if (packageCheckout.nuevoCliente) {
+					const res = await crearClienteYPaquete({
+						cliente: packageCheckout.nuevoCliente,
+						...common,
+					});
+					onPackagePaymentSuccess?.(res, packageCheckout);
+				} else {
+					const cid = packageCheckout.clienteId?.trim();
+					if (!cid) {
+						setError("Falta el cliente para registrar el plan.");
+						setBusy(false);
+						return;
+					}
+					const paquete = await crearPaquete({
+						clienteId: cid,
+						...common,
+					});
+					onPackagePaymentSuccess?.(paquete, packageCheckout);
+				}
+				window.dispatchEvent(new CustomEvent(INGRESO_REGISTRADO_EVENT));
+				onClose();
+				return;
+			}
+
+			if (!prefill) return;
+
 			if (generarFactura) {
 				const ivaDefault = settings?.billing?.ivaDefaultPct ?? 19;
 				const borrador = await guardarBorradorFactura({
@@ -106,9 +191,13 @@ export function PaymentModal({ open, prefill, settings, onClose }: PaymentModalP
 		}
 	}
 
+	const pacienteNombreMostrar = isPackage
+		? packageCheckout!.pacienteNombre.trim()
+		: prefill!.pacienteNombre.trim();
+
 	return (
 		<div
-			className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 p-4"
+			className="fixed inset-0 z-[125] flex items-center justify-center bg-black/40 p-4"
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="payment-modal-title"
@@ -118,16 +207,17 @@ export function PaymentModal({ open, prefill, settings, onClose }: PaymentModalP
 					id="payment-modal-title"
 					className="text-lg font-semibold text-slate-800"
 				>
-					Registrar pago
+					{isPackage ? "Cobrar plan de sesiones" : "Registrar pago"}
 				</h2>
 				<p className="mt-1 text-xs text-slate-500">
-					Cita completada — complete el ingreso. Puede ajustar concepto o
-					documento si hace falta.
+					{isPackage
+						? "Confirme el monto (con IVA) y el método de pago. Puede ajustar concepto o documento si hace falta."
+						: "Cita completada — complete el ingreso. Puede ajustar concepto o documento si hace falta."}
 				</p>
-				{prefill.pacienteNombre.trim() ? (
+				{pacienteNombreMostrar ? (
 					<p className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
 						<span className="font-medium text-slate-600">Cliente: </span>
-						{prefill.pacienteNombre.trim()}
+						{pacienteNombreMostrar}
 					</p>
 				) : null}
 				<form className="mt-4 space-y-3" onSubmit={handleSubmit}>
@@ -181,8 +271,8 @@ export function PaymentModal({ open, prefill, settings, onClose }: PaymentModalP
 								role="status"
 								aria-live="polite"
 							>
-								⚠️ El valor ingresado difiere del precio sugerido de{" "}
-								{formatCurrency(suggestedRef)}. ¿Confirmas que es correcto?
+								⚠️ El valor ingresado difiere del total esperado de{" "}
+								{formatCurrency(suggestedRef)}. ¿Confirma que es correcto?
 							</p>
 						) : null}
 					</div>
@@ -202,16 +292,18 @@ export function PaymentModal({ open, prefill, settings, onClose }: PaymentModalP
 							))}
 						</select>
 					</div>
-					<label className="flex items-center gap-2 text-sm">
-						<input
-							type="checkbox"
-							checked={generarFactura}
-							onChange={(e) => setGenerarFactura(e.target.checked)}
-						/>
-						<span className="text-slate-700">
-							Generar documento de venta (factura)
-						</span>
-					</label>
+					{!isPackage ? (
+						<label className="flex items-center gap-2 text-sm">
+							<input
+								type="checkbox"
+								checked={generarFactura}
+								onChange={(e) => setGenerarFactura(e.target.checked)}
+							/>
+							<span className="text-slate-700">
+								Generar documento de venta (factura)
+							</span>
+						</label>
+					) : null}
 					{error ? (
 						<p className="text-sm text-red-600" role="alert">
 							{error}
@@ -231,7 +323,11 @@ export function PaymentModal({ open, prefill, settings, onClose }: PaymentModalP
 							className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
 							disabled={busy}
 						>
-							{busy ? "Guardando…" : "Registrar pago"}
+							{busy
+								? "Guardando…"
+								: isPackage
+									? "Confirmar cobro"
+									: "Registrar pago"}
 						</button>
 					</div>
 				</form>

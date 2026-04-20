@@ -1,30 +1,25 @@
-import { useEffect, useState } from "react";
-import { crearClienteYPaquete, crearPaquete } from "../../core/api";
-import { INGRESO_REGISTRADO_EVENT } from "../../core/constants";
-import { formatCurrency, parseCurrencyDigits } from "../../core/currencyFormat";
-import { formatInvokeError } from "../../core/errors";
+import { useEffect, useMemo, useState } from "react";
+import { formatCurrency, totalConIva } from "../../core/currencyFormat";
+import { serviceLabelFromSettings } from "../../core/serviceLabels";
 import type {
 	AppSettings,
 	ClienteInput,
-	ClienteYPaqueteCreado,
-	CrearPaqueteInput,
+	PaqueteVentaContinuePayload,
+	ServicePackagePlanSetting,
 } from "../../core/types";
-
-const METODOS = ["Efectivo", "Tarjeta", "Transferencia"] as const;
 
 interface PaqueteVentaModalProps {
 	open: boolean;
 	settings: AppSettings;
 	/** Cliente ya persistido; omitir si se usa `nuevoCliente`. */
 	clienteId?: string | null;
-	/** Datos para crear cliente y paquete en una sola operación. */
+	/** Datos para crear cliente y paquete en una sola operación (tras el cobro). */
 	nuevoCliente?: ClienteInput | null;
-	/** Si existe en `settings.serviceTypes`, se preselecciona al abrir (p. ej. servicio de la cita). */
+	/** Si existe en `settings.serviceTypes`, se filtran planes de ese servicio. */
 	preferredServiceType?: string | null;
 	onClose: () => void;
-	onCreated: () => void;
-	/** Solo cuando el flujo usó `nuevoCliente`. */
-	onCreatedWithCliente?: (payload: ClienteYPaqueteCreado) => void;
+	/** Tras elegir plan: cierra este modal; el padre abre el modal de cobro. */
+	onContinueToPayment: (payload: PaqueteVentaContinuePayload) => void;
 }
 
 export function PaqueteVentaModal({
@@ -34,21 +29,21 @@ export function PaqueteVentaModal({
 	nuevoCliente = null,
 	preferredServiceType = null,
 	onClose,
-	onCreated,
-	onCreatedWithCliente,
+	onContinueToPayment,
 }: PaqueteVentaModalProps) {
 	const [serviceType, setServiceType] = useState(
 		settings.serviceTypes[0]?.id ?? "",
 	);
-	const [totalSesiones, setTotalSesiones] = useState("10");
-	/** Precio de una sesión, antes de IVA (alineado con «precio sugerido» del tipo de servicio). */
-	const [precioPorSesion, setPrecioPorSesion] = useState(0);
-	const [metodoPago, setMetodoPago] = useState<string>(METODOS[0]!);
-	const [busy, setBusy] = useState(false);
+	const [planId, setPlanId] = useState("");
 	const [error, setError] = useState<string | null>(null);
 
 	const esClienteNuevo = Boolean(nuevoCliente);
 	const cid = clienteId?.trim() ?? "";
+
+	const plansForService = useMemo((): ServicePackagePlanSetting[] => {
+		const st = settings.serviceTypes.find((s) => s.id === serviceType);
+		return st?.packagePlans ?? [];
+	}, [settings.serviceTypes, serviceType]);
 
 	useEffect(() => {
 		if (!open) return;
@@ -57,98 +52,75 @@ export function PaqueteVentaModal({
 			pref && settings.serviceTypes.some((s) => s.id === pref)
 				? settings.serviceTypes.find((s) => s.id === pref)!
 				: settings.serviceTypes[0];
-		setServiceType(st0?.id ?? "");
-		setTotalSesiones("10");
-		setPrecioPorSesion(
-			st0 && st0.suggestedPrice > 0 ? Math.round(st0.suggestedPrice) : 0,
-		);
-		setMetodoPago(METODOS[0]!);
+		const nextSt = st0?.id ?? "";
+		setServiceType(nextSt);
+		const plans = st0?.packagePlans ?? [];
+		setPlanId(plans[0]?.id ?? "");
 		setError(null);
 	}, [open, settings.serviceTypes, preferredServiceType]);
 
-	const nSesiones = Number.parseInt(totalSesiones, 10);
-	const ivaPct = settings.billing?.ivaDefaultPct ?? 19;
-	const nPack =
-		Number.isFinite(nSesiones) && nSesiones >= 1 ? nSesiones : 0;
-	const subtotalSinIva =
-		nPack > 0 && precioPorSesion > 0 ? precioPorSesion * nPack : 0;
-	const montoIva = Math.round(subtotalSinIva * (ivaPct / 100));
-	const totalesPaquete = {
-		n: nPack,
-		base: subtotalSinIva,
-		iva: montoIva,
-		conIva: subtotalSinIva + montoIva,
-	};
+	useEffect(() => {
+		if (!open) return;
+		const plans = plansForService;
+		if (plans.length === 0) {
+			setPlanId("");
+			return;
+		}
+		if (!plans.some((p) => p.id === planId)) {
+			setPlanId(plans[0]!.id);
+		}
+	}, [open, plansForService, planId]);
 
 	if (!open) return null;
 
-	async function handleSubmit(e: React.FormEvent) {
+	const selectedPlan = plansForService.find((p) => p.id === planId);
+	const ivaPct = settings.billing?.ivaDefaultPct ?? 19;
+	const totales = selectedPlan
+		? totalConIva(selectedPlan.priceBeforeVat, ivaPct)
+		: { base: 0, iva: 0, total: 0 };
+
+	function handleContinue(e: React.FormEvent) {
 		e.preventDefault();
 		setError(null);
-		const n = Number.parseInt(totalSesiones, 10);
-		if (!Number.isFinite(n) || n < 1) {
-			setError("Indique un número válido de sesiones (≥ 1).");
-			return;
-		}
-		if (!Number.isFinite(precioPorSesion) || precioPorSesion <= 0) {
-			setError("Indique un precio por sesión válido (antes de IVA).");
-			return;
-		}
-		const precio = totalesPaquete.conIva;
-		if (precio <= 0) {
-			setError("No se pudo calcular el total del plan.");
-			return;
-		}
 		if (esClienteNuevo) {
 			if (!nuevoCliente) {
 				setError("Faltan datos del cliente.");
 				return;
 			}
-			setBusy(true);
-			try {
-				const res = await crearClienteYPaquete({
-					cliente: nuevoCliente,
-					serviceType,
-					totalSesiones: n,
-					precioTotal: precio,
-					metodoPago,
-					expiresAt: null,
-				});
-				window.dispatchEvent(new CustomEvent(INGRESO_REGISTRADO_EVENT));
-				onCreatedWithCliente?.(res);
-				onCreated();
-				onClose();
-			} catch (err) {
-				setError(formatInvokeError(err) || "No se pudo registrar paciente y plan");
-			} finally {
-				setBusy(false);
-			}
-			return;
-		}
-
-		if (!cid) {
+		} else if (!cid) {
 			setError("Faltan datos del cliente.");
 			return;
 		}
-		const input: CrearPaqueteInput = {
-			clienteId: cid,
+		if (!selectedPlan || plansForService.length === 0) {
+			setError(
+				"No hay planes configurados para este servicio. Añádalos en Configuración → Tipos de servicio.",
+			);
+			return;
+		}
+		const n = selectedPlan.sessionCount;
+		if (n < 1) {
+			setError("El plan seleccionado no es válido.");
+			return;
+		}
+		const precio = totales.total;
+		if (precio <= 0) {
+			setError("El total del plan debe ser mayor que cero.");
+			return;
+		}
+		const labelServicio = serviceLabelFromSettings(settings, serviceType);
+		const ingresoConcepto = `Paquete: ${labelServicio} — ${selectedPlan.label} (${n} sesiones)`;
+
+		const payload: PaqueteVentaContinuePayload = {
 			serviceType,
 			totalSesiones: n,
-			precioTotal: precio,
-			metodoPago,
-			expiresAt: null,
+			precioTotalConIva: precio,
+			ingresoConcepto,
+			...(esClienteNuevo && nuevoCliente
+				? { nuevoCliente }
+				: { clienteId: cid }),
 		};
-		setBusy(true);
-		try {
-			await crearPaquete(input);
-			window.dispatchEvent(new CustomEvent(INGRESO_REGISTRADO_EVENT));
-			onCreated();
-			onClose();
-		} catch (err) {
-			setError(formatInvokeError(err) || "No se pudo registrar el plan");
-		} finally {
-			setBusy(false);
-		}
+		onContinueToPayment(payload);
+		onClose();
 	}
 
 	return (
@@ -163,14 +135,12 @@ export function PaqueteVentaModal({
 					id="paquete-venta-title"
 					className="text-base font-semibold text-slate-800 mb-4"
 				>
-					{esClienteNuevo
-						? "Registrar paciente y vender plan"
-						: "Vender plan de sesiones"}
+					Elegir plan de sesiones
 				</h2>
 				{esClienteNuevo && nuevoCliente ? (
 					<div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
 						<p className="font-medium text-slate-800">
-							Paciente nuevo (se creará la ficha al guardar)
+							Paciente nuevo (la ficha se creará al confirmar el cobro)
 						</p>
 						<p className="mt-1">
 							{nuevoCliente.nombres} {nuevoCliente.apellidos} ·{" "}
@@ -183,18 +153,14 @@ export function PaqueteVentaModal({
 						{error}
 					</div>
 				) : null}
-				<form onSubmit={(e) => void handleSubmit(e)} className="space-y-3">
+				<form onSubmit={(e) => handleContinue(e)} className="space-y-3">
 					<label className="flex flex-col gap-1">
 						<span className="text-xs font-medium text-slate-700">Servicio</span>
 						<select
 							value={serviceType}
 							onChange={(e) => {
-								const id = e.target.value;
-								setServiceType(id);
-								const st = settings.serviceTypes.find((s) => s.id === id);
-								if (st && st.suggestedPrice > 0) {
-									setPrecioPorSesion(Math.round(st.suggestedPrice));
-								}
+								setServiceType(e.target.value);
+								setPlanId("");
 							}}
 							className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
 							required
@@ -206,109 +172,69 @@ export function PaqueteVentaModal({
 							))}
 						</select>
 					</label>
-					<div className="grid grid-cols-2 gap-3">
-						<label className="flex flex-col gap-1">
-							<span className="text-xs font-medium text-slate-700">
-								Nº sesiones
-							</span>
-							<input
-								type="number"
-								min={1}
-								value={totalSesiones}
-								onChange={(e) => setTotalSesiones(e.target.value)}
+					<label className="flex flex-col gap-1">
+						<span className="text-xs font-medium text-slate-700">Plan</span>
+						{plansForService.length === 0 ? (
+							<p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+								No hay planes para este servicio. Configúrelos en{" "}
+								<strong>Configuración → Tipos de servicio</strong>.
+							</p>
+						) : (
+							<select
+								value={planId}
+								onChange={(e) => setPlanId(e.target.value)}
 								className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
 								required
-							/>
-						</label>
-						<label className="flex flex-col gap-1">
-							<span className="text-xs font-medium text-slate-700">
-								Precio por sesión (antes de IVA)
-							</span>
-							<input
-								type="text"
-								inputMode="numeric"
-								autoComplete="off"
-								value={
-									precioPorSesion === 0
-										? ""
-										: formatCurrency(precioPorSesion)
-								}
-								onChange={(e) =>
-									setPrecioPorSesion(parseCurrencyDigits(e.target.value))
-								}
-								placeholder="$ 0"
-								className="rounded-lg border border-slate-300 px-3 py-2 text-sm tabular-nums"
-								required
-							/>
-						</label>
-					</div>
-					<div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs space-y-1.5">
-						<div className="flex justify-between gap-2 text-slate-700">
-							<span>
-								Total antes de IVA
-								{totalesPaquete.n > 0 && precioPorSesion > 0 ? (
-									<span className="text-slate-500">
-										{" "}
-										({totalesPaquete.n} × {formatCurrency(precioPorSesion)})
-									</span>
-								) : null}
-							</span>
-							<span className="tabular-nums font-medium text-slate-800 shrink-0">
-								{formatCurrency(totalesPaquete.base)}
-							</span>
-						</div>
-						<div className="flex justify-between gap-2 text-slate-600">
-							<span>IVA ({ivaPct}%)</span>
-							<span className="tabular-nums shrink-0">
-								{formatCurrency(totalesPaquete.iva)}
-							</span>
-						</div>
-						<div className="flex justify-between gap-2 border-t border-slate-200 pt-1.5 text-slate-800 font-semibold">
-							<span>Total a cobrar (con IVA)</span>
-							<span className="tabular-nums shrink-0">
-								{formatCurrency(totalesPaquete.conIva)}
-							</span>
-						</div>
-						<p className="text-[0.65rem] text-slate-500 pt-0.5 leading-snug">
-							El cobro del plan se guarda como ingreso por el total con IVA; las
-							citas podrán enlazarse a este plan para descontar sesiones.
-						</p>
-					</div>
-					<label className="flex flex-col gap-1">
-						<span className="text-xs font-medium text-slate-700">
-							Método de pago
-						</span>
-						<select
-							value={metodoPago}
-							onChange={(e) => setMetodoPago(e.target.value)}
-							className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-						>
-							{METODOS.map((m) => (
-								<option key={m} value={m}>
-									{m}
-								</option>
-							))}
-						</select>
+							>
+								{plansForService.map((p) => (
+									<option key={p.id} value={p.id}>
+										{p.label} — {p.sessionCount} ses. ·{" "}
+										{formatCurrency(p.priceBeforeVat)} + IVA
+									</option>
+								))}
+							</select>
+						)}
 					</label>
+					{selectedPlan ? (
+						<div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs space-y-1.5">
+							<div className="flex justify-between gap-2 text-slate-700">
+								<span>Total antes de IVA</span>
+								<span className="tabular-nums font-medium text-slate-800 shrink-0">
+									{formatCurrency(totales.base)}
+								</span>
+							</div>
+							<div className="flex justify-between gap-2 text-slate-600">
+								<span>IVA ({ivaPct}%)</span>
+								<span className="tabular-nums shrink-0">
+									{formatCurrency(totales.iva)}
+								</span>
+							</div>
+							<div className="flex justify-between gap-2 border-t border-slate-200 pt-1.5 text-slate-800 font-semibold">
+								<span>Total a cobrar (con IVA)</span>
+								<span className="tabular-nums shrink-0">
+									{formatCurrency(totales.total)}
+								</span>
+							</div>
+							<p className="text-[0.65rem] text-slate-500 pt-0.5 leading-snug">
+								En el siguiente paso confirmará método de pago y podrá ajustar el
+								monto si es necesario.
+							</p>
+						</div>
+					) : null}
 					<div className="flex justify-end gap-2 pt-2">
 						<button
 							type="button"
 							onClick={onClose}
-							disabled={busy}
-							className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+							className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
 						>
 							Cancelar
 						</button>
 						<button
 							type="submit"
-							disabled={busy}
+							disabled={plansForService.length === 0}
 							className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-40"
 						>
-							{busy
-								? "Guardando…"
-								: esClienteNuevo
-									? "Guardar paciente, plan e ingreso"
-									: "Guardar plan e ingreso"}
+							Continuar al cobro
 						</button>
 					</div>
 				</form>

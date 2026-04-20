@@ -121,6 +121,44 @@ pub fn save_settings(db: tauri::State<'_, DbConn>, settings: AppSettings) -> Res
 		if st.suggested_price < 0.0 || !st.suggested_price.is_finite() {
 			return Err("El precio sugerido de cada servicio debe ser un número válido ≥ 0".into());
 		}
+		let mut seen_plan_ids = std::collections::HashSet::<String>::new();
+		for (pi, plan) in st.package_plans.iter().enumerate() {
+			if plan.id.trim().is_empty() {
+				return Err(format!(
+					"Servicio «{}»: cada plan requiere un id (plan #{})",
+					st.label, pi + 1
+				));
+			}
+			if !seen_plan_ids.insert(plan.id.trim().to_string()) {
+				return Err(format!(
+					"Servicio «{}»: id de plan duplicado «{}»",
+					st.label,
+					plan.id.trim()
+				));
+			}
+			if plan.label.trim().is_empty() {
+				return Err(format!(
+					"Servicio «{}»: el plan n.º {} ({} sesiones) requiere una etiqueta no vacía",
+					st.label,
+					pi + 1,
+					plan.session_count
+				));
+			}
+			if plan.session_count < 1 {
+				return Err(format!(
+					"Servicio «{}»: el plan «{}» debe tener al menos 1 sesión",
+					st.label,
+					plan.label
+				));
+			}
+			if plan.price_before_vat <= 0.0 || !plan.price_before_vat.is_finite() {
+				return Err(format!(
+					"Servicio «{}»: el plan «{}» requiere precio antes de IVA válido y mayor que cero",
+					st.label,
+					plan.label
+				));
+			}
+		}
 	}
 	let conn = db.lock().map_err(error::lock)?;
 	save_settings_json(&conn, &settings)?;

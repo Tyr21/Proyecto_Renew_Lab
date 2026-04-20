@@ -2,7 +2,15 @@ import { useCallback, useEffect, useState } from "react";
 import { actualizarCliente, crearCliente, listarPaquetesCliente } from "../../core/api";
 import { formatInvokeError } from "../../core/errors";
 import { serviceLabelFromSettings } from "../../core/serviceLabels";
-import type { AppSettings, Cliente, ClienteInput, PaqueteCliente } from "../../core/types";
+import type {
+	AppSettings,
+	Cliente,
+	ClienteInput,
+	PackagePaymentContext,
+	PaqueteCliente,
+	PaqueteVentaContinuePayload,
+} from "../../core/types";
+import { PaymentModal } from "../finances/PaymentModal";
 import { PaqueteVentaModal } from "./PaqueteVentaModal";
 
 interface ClienteModalProps {
@@ -42,6 +50,22 @@ export function ClienteModal({
 	const [paquetesLoading, setPaquetesLoading] = useState(false);
 	const [paquetesError, setPaquetesError] = useState<string | null>(null);
 	const [ventaPaqueteOpen, setVentaPaqueteOpen] = useState(false);
+	const [packagePaymentContext, setPackagePaymentContext] =
+		useState<PackagePaymentContext | null>(null);
+
+	function handlePaqueteContinueToPayment(payload: PaqueteVentaContinuePayload) {
+		if (mode !== "edit" || !initial) return;
+		setPackagePaymentContext({
+			clienteId: payload.clienteId,
+			nuevoCliente: payload.nuevoCliente,
+			serviceType: payload.serviceType,
+			totalSesiones: payload.totalSesiones,
+			expectedPrecioTotalConIva: payload.precioTotalConIva,
+			ingresoConcepto: payload.ingresoConcepto,
+			pacienteNombre: `${initial.nombres} ${initial.apellidos}`.trim(),
+			pacienteDocumento: initial.documentNumber.trim(),
+		});
+	}
 
 	const cargarPaquetes = useCallback(async (clienteId: string) => {
 		setPaquetesLoading(true);
@@ -56,6 +80,13 @@ export function ClienteModal({
 			setPaquetesLoading(false);
 		}
 	}, []);
+
+	useEffect(() => {
+		if (!open) {
+			setVentaPaqueteOpen(false);
+			setPackagePaymentContext(null);
+		}
+	}, [open]);
 
 	useEffect(() => {
 		if (!open) return;
@@ -359,13 +390,23 @@ export function ClienteModal({
 				</form>
 			</div>
 			{mode === "edit" && initial ? (
-				<PaqueteVentaModal
-					open={ventaPaqueteOpen}
-					settings={settings}
-					clienteId={initial.id}
-					onClose={() => setVentaPaqueteOpen(false)}
-					onCreated={() => void cargarPaquetes(initial.id)}
-				/>
+				<>
+					<PaqueteVentaModal
+						open={ventaPaqueteOpen}
+						settings={settings}
+						clienteId={initial.id}
+						onClose={() => setVentaPaqueteOpen(false)}
+						onContinueToPayment={handlePaqueteContinueToPayment}
+					/>
+					<PaymentModal
+						open={packagePaymentContext !== null}
+						prefill={null}
+						packageCheckout={packagePaymentContext}
+						settings={settings}
+						onClose={() => setPackagePaymentContext(null)}
+						onPackagePaymentSuccess={() => void cargarPaquetes(initial.id)}
+					/>
+				</>
 			) : null}
 		</div>
 	);

@@ -20,6 +20,14 @@ export const APPOINTMENT_BLOCK_WIDTH_FRACTION = 0.95;
 /** Valor inicial al añadir un tipo de servicio nuevo (COP). */
 export const DEFAULT_SUGGESTED_PRICE_COP = 150_000;
 
+/** Sesiones iniciales al añadir un plan de paquete en configuración. */
+export const DEFAULT_NEW_PACKAGE_PLAN_SESSION_COUNT = 10;
+
+/** Etiqueta inicial del plan; el usuario puede editarla antes de guardar. */
+export function defaultPackagePlanLabel(sessionCount: number): string {
+	return `Paquete de ${sessionCount} sesiones`;
+}
+
 /** Alineado con backend `startup_auth` y `admin_auth` (Argon2). */
 export const STARTUP_PASSWORD_MIN_LENGTH = 8;
 export const STARTUP_PASSWORD_MAX_LENGTH = 128;

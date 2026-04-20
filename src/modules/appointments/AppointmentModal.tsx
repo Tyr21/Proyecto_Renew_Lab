@@ -33,10 +33,14 @@ import type {
 	AppointmentStatus,
 	Cliente,
 	ClienteInput,
+	ClienteYPaqueteCreado,
+	PackagePaymentContext,
 	PaqueteCliente,
+	PaqueteVentaContinuePayload,
 } from "../../core/types";
 import { isAppointmentPastEnd } from "../../core/weekUtils";
 import { PaqueteVentaModal } from "../clientes/PaqueteVentaModal";
+import { PaymentModal } from "../finances/PaymentModal";
 
 interface PresetSlot {
 	date: string;
@@ -156,6 +160,35 @@ export function AppointmentModal({
 	const [ventaPaqueteOpen, setVentaPaqueteOpen] = useState(false);
 	const [paqueteNuevoCliente, setPaqueteNuevoCliente] =
 		useState<ClienteInput | null>(null);
+	const [packagePaymentContext, setPackagePaymentContext] =
+		useState<PackagePaymentContext | null>(null);
+
+	function handlePaqueteContinueToPayment(payload: PaqueteVentaContinuePayload) {
+		setPackagePaymentContext({
+			clienteId: payload.clienteId,
+			nuevoCliente: payload.nuevoCliente,
+			serviceType: payload.serviceType,
+			totalSesiones: payload.totalSesiones,
+			expectedPrecioTotalConIva: payload.precioTotalConIva,
+			ingresoConcepto: payload.ingresoConcepto,
+			pacienteNombre: patientFullName.trim(),
+			pacienteDocumento: documentNumber.trim(),
+		});
+	}
+
+	function applyPackagePaymentResultState(
+		res: ClienteYPaqueteCreado | PaqueteCliente,
+	) {
+		if ("cliente" in res) {
+			setClienteOriginal(res.cliente);
+			setClienteYaExistia(true);
+			setResolvedClienteId(res.cliente.id);
+			setSelectedPaqueteId(res.paquete.id);
+		} else {
+			setSelectedPaqueteId(res.id);
+		}
+		setPaquetesRefreshTick((t) => t + 1);
+	}
 
 	useEffect(() => {
 		setSugerenciaActivaIndex(-1);
@@ -375,6 +408,14 @@ export function AppointmentModal({
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [open, onClose]);
 
+	useEffect(() => {
+		if (!open) {
+			setVentaPaqueteOpen(false);
+			setPaqueteNuevoCliente(null);
+			setPackagePaymentContext(null);
+		}
+	}, [open]);
+
 	const clienteDraftForPaquete = useMemo((): ClienteInput | null => {
 		if (!open || readOnlyPast || isPaidLocked || resolvedClienteId) {
 			return null;
@@ -582,6 +623,142 @@ export function AppointmentModal({
 			status,
 			paqueteId: pkg,
 		};
+	}
+
+	async function finalizeCreateAfterPackageSale(
+		ctx: PackagePaymentContext,
+		res: ClienteYPaqueteCreado | PaqueteCliente,
+	) {
+		const paqueteId = "cliente" in res ? res.paquete.id : res.id;
+		const base = buildInput();
+		const input: AppointmentInput = {
+			...base,
+			serviceType: ctx.serviceType,
+			paqueteId,
+		};
+
+		setError(null);
+
+		const fieldErr = validateAppointmentFormFields(input, settings);
+		if (fieldErr) {
+			setError(
+				`${fieldErr} El cobro del plan ya quedó registrado; corrija los datos y pulse Guardar para crear la cita.`,
+			);
+			applyPackagePaymentResultState(res);
+			return;
+		}
+		if (!isValidAppointmentWindow(startTime, endTime)) {
+			setError(
+				"Horario inválido: use franjas de 30 min entre 07:00 y 20:00 (fin máx. 20:00). El cobro del plan ya quedó registrado; ajuste el horario y pulse Guardar.",
+			);
+			applyPackagePaymentResultState(res);
+			return;
+		}
+		const stCfg = settings.serviceTypes.find((s) => s.id === input.serviceType);
+		if (!stCfg) {
+			setError(
+				"El servicio del plan no está configurado. El cobro ya quedó registrado; revise la configuración.",
+			);
+			applyPackagePaymentResultState(res);
+			return;
+		}
+		const used = countOverlappingSameService(
+			weekAppointments,
+			appointmentDate,
+			input.serviceType,
+			startTime,
+			endTime,
+			undefined,
+		);
+		if (used >= stCfg.concurrentCapacity) {
+			setError(
+				`Capacidad superada para ${stCfg.label} (máx. ${stCfg.concurrentCapacity} concurrentes). El cobro del plan ya quedó registrado; cambie horario o amplíe la capacidad y pulse Guardar.`,
+			);
+			applyPackagePaymentResultState(res);
+			return;
+		}
+		const graceErr = gracePeriodBookingErrorMessage(
+			appointmentDate,
+			startTime,
+		);
+		if (graceErr) {
+			setError(
+				`${graceErr} El cobro del plan ya quedó registrado; ajuste y pulse Guardar.`,
+			);
+			applyPackagePaymentResultState(res);
+			return;
+		}
+
+		setBusy(true);
+		try {
+			await createAppointment({ ...input, status: undefined });
+
+			if ("cliente" in res) {
+				onSaved();
+				onClose();
+				return;
+			}
+
+			if (clienteYaExistia && clienteOriginal) {
+				const nombreCompleto =
+					`${clienteOriginal.nombres} ${clienteOriginal.apellidos}`.trim();
+				const hayDiferencias =
+					nombreCompleto !== input.patientFullName.trim() ||
+					clienteOriginal.documentType !== input.documentType ||
+					clienteOriginal.documentNumber !== input.documentNumber ||
+					clienteOriginal.phoneDialCode !== input.phoneDialCode ||
+					clienteOriginal.phoneNationalNumber !==
+						input.phoneNationalNumber ||
+					(clienteOriginal.birthdayMonth ?? null) !== input.birthdayMonth;
+				if (hayDiferencias) {
+					onSaved();
+					onClose();
+					return;
+				}
+			} else if (!clienteYaExistia) {
+				try {
+					const found = await buscarClientes(input.documentNumber);
+					const exacto = found.find(
+						(c) => c.documentNumber === input.documentNumber,
+					);
+					if (!exacto) {
+						const partes = input.patientFullName.trim().split(/\s+/);
+						const apellidos =
+							partes.length > 1
+								? partes[partes.length - 1]!
+								: CLIENTE_APELLIDO_PLACEHOLDER;
+						const nombres =
+							partes.length > 1
+								? partes.slice(0, -1).join(" ")
+								: partes[0] ?? input.patientFullName;
+						await crearCliente({
+							nombres,
+							apellidos,
+							documentType: input.documentType,
+							documentNumber: input.documentNumber,
+							phoneDialCode: input.phoneDialCode,
+							phoneNationalNumber: input.phoneNationalNumber,
+							email: "",
+							birthdayMonth: input.birthdayMonth,
+							notas: "",
+						});
+					}
+				} catch {
+					// La cita ya fue creada — ignorar error de cliente
+				}
+			}
+
+			onSaved();
+			onClose();
+		} catch (err) {
+			setError(
+				formatInvokeError(err) ||
+					"No se pudo crear la cita. El cobro del plan ya quedó registrado; pulse Guardar para reintentar.",
+			);
+			applyPackagePaymentResultState(res);
+		} finally {
+			setBusy(false);
+		}
 	}
 
 	async function handleSubmit(e: React.FormEvent) {
@@ -1012,7 +1189,7 @@ export function AppointmentModal({
 											}}
 											className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700"
 										>
-											Vender plan de sesiones
+											Crear nuevo paquete
 										</button>
 										<span className="text-[0.7rem] text-slate-600">
 											Cobra varias sesiones por adelantado; luego podrá enlazar cada
@@ -1032,7 +1209,7 @@ export function AppointmentModal({
 											}}
 											className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-violet-700"
 										>
-											Registrar paciente y vender plan
+											Crear nuevo paquete
 										</button>
 										<span className="text-[0.7rem] text-slate-600">
 											Guarda al paciente en la agenda, crea su ficha y registra el
@@ -1210,12 +1387,23 @@ export function AppointmentModal({
 				setVentaPaqueteOpen(false);
 				setPaqueteNuevoCliente(null);
 			}}
-			onCreated={() => setPaquetesRefreshTick((t) => t + 1)}
-			onCreatedWithCliente={(res) => {
-				setClienteOriginal(res.cliente);
-				setClienteYaExistia(true);
-				setResolvedClienteId(res.cliente.id);
-				setSelectedPaqueteId(res.paquete.id);
+			onContinueToPayment={handlePaqueteContinueToPayment}
+		/>
+		<PaymentModal
+			open={packagePaymentContext !== null}
+			prefill={null}
+			packageCheckout={packagePaymentContext}
+			settings={settings}
+			onClose={() => setPackagePaymentContext(null)}
+			onPackagePaymentSuccess={(
+				res: ClienteYPaqueteCreado | PaqueteCliente,
+				ctx: PackagePaymentContext,
+			) => {
+				if (mode === "create") {
+					void finalizeCreateAfterPackageSale(ctx, res);
+					return;
+				}
+				applyPackagePaymentResultState(res);
 			}}
 		/>
 		</>

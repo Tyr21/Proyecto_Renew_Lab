@@ -41,6 +41,9 @@ pub struct CrearPaqueteInput {
 	pub precio_total: f64,
 	pub metodo_pago: String,
 	pub expires_at: Option<String>,
+	/// Si viene informado, se usa como concepto del ingreso (p. ej. nombre del plan configurado).
+	#[serde(default)]
+	pub ingreso_concepto: Option<String>,
 }
 
 fn validate_metodo(m: &str) -> bool {
@@ -391,11 +394,18 @@ pub fn crear_paquete(
 	let label = settings
 		.label_for_service(&service_type)
 		.unwrap_or(&service_type);
-	let concepto = format!(
-		"Paquete: {} ({} sesiones)",
-		label,
-		input.total_sesiones
-	);
+	let concepto = input
+		.ingreso_concepto
+		.as_ref()
+		.map(|s| s.trim().to_string())
+		.filter(|s| !s.is_empty())
+		.unwrap_or_else(|| {
+			format!(
+				"Paquete: {} ({} sesiones)",
+				label,
+				input.total_sesiones
+			)
+		});
 	let paciente_nombre = format!("{} {}", nombre_cliente.0.trim(), nombre_cliente.1.trim()).trim().to_string();
 
 	let id = Uuid::new_v4().to_string();
@@ -488,6 +498,8 @@ pub struct CrearClienteYPaqueteInput {
 	pub precio_total: f64,
 	pub metodo_pago: String,
 	pub expires_at: Option<String>,
+	#[serde(default)]
+	pub ingreso_concepto: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -542,11 +554,18 @@ pub fn crear_cliente_y_paquete(
 	let label = settings
 		.label_for_service(&service_type)
 		.unwrap_or(&service_type);
-	let concepto = format!(
-		"Paquete: {} ({} sesiones)",
-		label,
-		input.total_sesiones
-	);
+	let concepto = input
+		.ingreso_concepto
+		.as_ref()
+		.map(|s| s.trim().to_string())
+		.filter(|s| !s.is_empty())
+		.unwrap_or_else(|| {
+			format!(
+				"Paquete: {} ({} sesiones)",
+				label,
+				input.total_sesiones
+			)
+		});
 
 	let cliente_id = Uuid::new_v4().to_string();
 	let paquete_id = Uuid::new_v4().to_string();

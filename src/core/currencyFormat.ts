@@ -25,3 +25,15 @@ export function parseCurrencyDigits(raw: string): number {
 	const n = parseInt(digits, 10);
 	return Number.isFinite(n) && n >= 0 ? n : 0;
 }
+
+/** Total con IVA a partir del subtotal antes de IVA (mismo redondeo que el modal de planes). */
+export function totalConIva(priceBeforeVat: number, ivaPct: number): {
+	base: number;
+	iva: number;
+	total: number;
+} {
+	const base = Number.isFinite(priceBeforeVat) ? priceBeforeVat : 0;
+	const pct = Number.isFinite(ivaPct) ? ivaPct : 0;
+	const iva = Math.round(base * (pct / 100));
+	return { base, iva, total: base + iva };
+}
