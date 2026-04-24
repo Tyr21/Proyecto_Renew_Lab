@@ -39,7 +39,7 @@ Representa una cita agendada. Los nombres de columna coinciden con el modelo per
 
 ### Tabla `app_config`
 
-Una fila (`id = 1`) con `settings_json`: configuración global (domingos, formato de hora, duración por defecto, listas de tipos de documento/servicio, capacidades concurrentes, **precio sugerido por tipo de servicio** en moneda local, **`billing`**, **`backup`**, y **`adminMode`**). JSON antiguo sin campos nuevos se completa al deserializar con `#[serde(default)]`.
+Una fila (`id = 1`) con `settings_json`: configuración global (domingos, formato de hora, duración por defecto, listas de tipos de documento/servicio, capacidades concurrentes, **precio sugerido por tipo de servicio** en moneda local, planes de paquete por servicio, **`billing`**, **`backup`**, **`oxygen`** — etiqueta de unidad, consumo teórico por sesión de cámara **K** y `service_type_id` para contar sesiones atendidas —, y **`adminMode`**). JSON antiguo sin campos nuevos se completa al deserializar con `#[serde(default)]`.
 
 **`adminMode`:** se persiste en JSON durante la sesión de edición/guardado, pero **al iniciar el proceso** (`setup` en `lib.rs`, tras `open_connection`) se ejecuta `commands::ensure_persisted_admin_mode_off`: si venía `true` en disco, se reescribe a `false`. Así el modo administrador **no queda activo por defecto** tras cerrar y reabrir la aplicación.
 
@@ -136,6 +136,12 @@ Eventos genéricos de calendario: mantenimiento programado, revisiones, alertas 
 | `created_at` / `updated_at` | Marcas de auditoría |
 
 Se cargan junto con las citas en `refreshAppointments` y se muestran en el calendario semanal (badges para todo-el-día, bloques con borde punteado para hora específica) y en la sidebar de hoy. El evento `evento_changed` en `window` refresca la vista.
+
+### Tabla `oxigeno_eventos` (control de oxígeno — cámara hiperbárica)
+
+Registro de eventos operativos por día (`fecha_operacion` en `YYYY-MM-DD`): tipo (`balance_inicial`, `recarga_pipeta`, `cierre`, `extra`), lecturas `medidor_a` / `medidor_b`, `saldo_enfermeria` opcional, `notas`, ruta relativa de foto bajo el directorio de datos (`oxigeno_fotos/...`), fecha EXIF validada al guardar, `created_at`. Índice por `fecha_operacion`.
+
+Las fotos se escriben solo desde comandos Rust en `app_data_dir` (subcarpeta `oxigeno_fotos`). Comandos Tauri: `listar_oxigeno_por_rango`, `registrar_evento_oxigeno`, `resumen_oxigeno_rango`, `leer_foto_oxigeno` (módulo `oxigeno.rs`). El resumen por rango cruza estas lecturas con citas `asistio` del `service_type_id` configurado en `oxygen` para el consumo teórico (sesiones × **K**) y deltas entre primera y última lectura del día.
 
 ### Reglas de transición de facturas
 

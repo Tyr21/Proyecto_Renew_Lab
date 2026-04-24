@@ -64,11 +64,16 @@ export function HelpModal({ open, onClose }: HelpModalProps) {
 						<ul className="mt-2 list-disc space-y-1 pl-5">
 							<li>
 								<strong>Cierre de caja:</strong> ingresos por fechas, totales por
-								medio de pago, exportar o imprimir el resumen.
+								medio de pago, tabla de oxígeno (sesiones vs. consumo teórico y
+								lecturas), exportar o imprimir el resumen.
 							</li>
 							<li>
 								<strong>Facturas:</strong> borradores, emitir factura y consultar
 								las ya emitidas.
+							</li>
+							<li>
+								<strong>Oxígeno:</strong> registro diario de medidores, foto con
+								fecha EXIF y saldo opcional; parámetros en Configuración.
 							</li>
 							<li>
 								<strong>Estadísticas:</strong> gráficas y números del consultorio

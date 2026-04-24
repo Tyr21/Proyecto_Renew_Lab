@@ -14,8 +14,8 @@ La aplicación permite:
 - Registrar **pagos** y consultar el **cierre de caja** por fechas.
 - Emitir y administrar **facturas** de venta (módulo local).
 - Mantener un **directorio de clientes**.
-- Consultar **reportes** e indicadores por período.
-- Ajustar **configuración** del consultorio (servicios, horarios, respaldos, seguridad).
+- Consultar **reportes** e indicadores por período (incluye **cierre de caja**, facturas y **oxígeno** cuando aplique).
+- Ajustar **configuración** del consultorio (servicios, horarios, respaldos, oxígeno, seguridad).
 
 ### 1.2 Inicio de la aplicación
 
@@ -28,15 +28,14 @@ Abra la aplicación desde el acceso directo o el menú de programas de Windows, 
 
 ## 2. Pantalla principal: pestañas superiores
 
-En la parte superior hay **cinco pestañas** (de izquierda a derecha):
+En la parte superior hay **cuatro pestañas** principales (de izquierda a derecha), más un botón de **Ayuda**:
 
 | Pestaña | Contenido |
 |---------|-----------|
 | **Calendario** | Vista semanal de citas y panel del día. |
-| **Cierre de caja** | Registro de ingresos y subsección **Facturas**. |
-| **Reportes** | Estadísticas y gráficas por período. |
+| **Reportes** | Varios apartados en **subpestañas**: **Cierre de caja** (ingresos y resumen de oxígeno en el mismo rango de fechas), **Facturas**, **Oxígeno** (registro diario de lecturas y fotos), **Estadísticas**, **Movimientos detallados**. |
 | **Clientes** | Búsqueda y ficha de clientes. |
-| **Configuración** | Ajustes generales (requiere contraseña de administrador; véase sección 8). |
+| **Configuración** | Ajustes generales (requiere contraseña de administrador; véase la sección **7** y el resumen de contraseñas en la sección **8**). |
 
 La pestaña activa aparece resaltada en azul.
 
@@ -88,18 +87,18 @@ Además de las citas de pacientes, puede haber **eventos** (mantenimiento, recor
 
 ## 4. Cierre de caja y facturas
 
-En la pestaña **Cierre de caja** hay dos subsecciones:
+Estas pantallas están en la pestaña superior **Reportes**, como **subpestañas** (no hay una pestaña principal separada llamada “Cierre de caja”).
 
 ### 4.1 Cierre de caja
 
 - Permite **filtrar ingresos por rango de fechas** y ver listados y totales.
-- Puede **registrar pagos** vinculados o no a una cita, según el flujo de la pantalla.
+- Puede **registrar pagos** vinculados o no a una cita, según el flujo de la pantalla (también puede abrirse el registro de pago desde el calendario al completar una cita, según la versión).
 - Los métodos de pago habituales incluyen **efectivo**, **tarjeta** y **transferencia** (según lo definido en el sistema).
-- En el mismo rango de fechas puede mostrarse un **resumen de oxígeno (cámara hiperbárica)**: sesiones atendidas del tipo configurado, consumo teórico y comparación con las lecturas de medidor registradas por enfermería (véase **Reportes → Oxígeno** y **Configuración → Oxígeno**).
+- En el mismo rango de fechas puede mostrarse un **resumen de oxígeno (cámara hiperbárica)**: sesiones atendidas del tipo configurado, consumo teórico y comparación con las lecturas de medidor registradas (véase **Reportes → Oxígeno** para el registro diario y **Configuración → Oxígeno** para K y tipo de servicio).
 
 ### 4.2 Facturas
 
-- Gestión de **facturas** en estados como borrador, emitida o anulada (según reglas y permisos).
+- En **Reportes → Facturas**: gestión de **facturas** en estados como borrador, emitida o anulada (según reglas y permisos).
 - La **anulación** de facturas emitidas puede estar restringida y requerir **modo administrador** (véase sección 7).
 
 ---
@@ -113,6 +112,8 @@ En la pestaña **Cierre de caja** hay dos subsecciones:
 ### 5.1 Oxígeno (cámara hiperbárica)
 
 En la subpestaña **Oxígeno** (dentro de **Reportes**) el personal puede **registrar por día** las lecturas de dos medidores, un **saldo declarado** opcional y una **foto** de los medidores. La aplicación exige que la foto tenga metadatos **EXIF** con **fecha de captura** coincidente con el **día de operación** elegido (salvo el tipo de evento “Extra”, donde la foto es opcional). Los tipos de evento habituales incluyen balance inicial, recarga, cierre y anotaciones extra.
+
+**Medidor A / Medidor B** son las dos lecturas que se documentan (y suelen salir en la foto). **Saldo declarado** es un campo aparte y opcional: sirve para anotar un balance o inventario que el consultorio quiera dejar explícito (p. ej. criterio interno o libreta), **sin sustituir** las lecturas A/B; si en su operación solo usan las dos lecturas, puede dejarse vacío. Ese saldo **no** entra en el cálculo automático del consumo teórico ni en los deltas del informe.
 
 Los parámetros **K** (consumo teórico por sesión) y el **tipo de servicio** usado para contar sesiones se configuran en **Configuración → Oxígeno**.
 
