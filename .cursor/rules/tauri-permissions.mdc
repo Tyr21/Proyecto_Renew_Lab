@@ -1,0 +1,48 @@
+---
+description: Permisos ACL de Tauri 2 y particularidades del ciclo de vida de la ventana
+alwaysApply: true
+---
+
+# Tauri 2 — ACL de permisos y ventana
+
+Tauri 2 rediseñó el sistema de permisos con **ACLs granulares**. El IPC rechaza en silencio (solo se ve en DevTools → Console) cualquier llamada no autorizada. Antes de usar una API del frontend (`@tauri-apps/api/*`) verificar que el permiso esté en `src-tauri/capabilities/*.json`.
+
+## Qué incluye `core:default`
+
+Solo incluye los sub-sets `:default` de cada core plugin, que en `core:window` son **solo getters** (`is-maximized`, `title`, `inner-size`, etc.). **No** incluye operaciones que modifican estado.
+
+Ejemplos que requieren opt-in explícito:
+
+- `core:window:allow-destroy` — para `appWindow.destroy()`
+- `core:window:allow-close` — para `appWindow.close()`
+- `core:window:allow-minimize`, `allow-maximize`, `allow-hide`, `allow-show`
+- `core:window:allow-set-title`, `allow-set-size`, `allow-set-position`
+
+Para habilitarlo:
+
+```json
+{
+  "permissions": [
+    "core:default",
+    "core:window:allow-destroy"
+  ]
+}
+```
+
+Cambios en `capabilities/*.json` **requieren recompilar Rust** (`npm run tauri dev`), no basta con el HMR de Vite.
+
+## `close()` vs `destroy()`
+
+- `close()` dispara `tauri://close-requested`. Si estás dentro de un handler `onCloseRequested`, provoca **bucle infinito**.
+- `destroy()` cierra directamente sin re-disparar el evento. Úsalo para confirmar-y-cerrar.
+
+## Diálogos dentro de `onCloseRequested`
+
+`window.confirm` / `window.alert` nativos del webview **no funcionan bien** dentro de `onCloseRequested` (bloquean el evento y no retornan). Siempre usar un **modal React propio**: `event.preventDefault()` incondicional, abrir modal, y en el botón "Cerrar" llamar a `getCurrentWindow().destroy()`.
+
+## Checklist al agregar nueva API de Tauri
+
+1. ¿La función está en `core:default`? Si modifica estado, probablemente no.
+2. Agregar permiso exacto en `capabilities/*.json`.
+3. Reiniciar `tauri dev` para regenerar ACL.
+4. Si algo "no hace nada", abrir DevTools → Console antes de depurar otra cosa.

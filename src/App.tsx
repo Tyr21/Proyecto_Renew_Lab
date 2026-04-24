@@ -61,6 +61,7 @@ function App() {
 	const [eventoPresetDate, setEventoPresetDate] = useState<string | null>(null);
 	const [eventoPresetTime, setEventoPresetTime] = useState<string | null>(null);
 	const [helpOpen, setHelpOpen] = useState(false);
+	const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
 
 	const weekRange = useMemo(() => {
 		if (!settings) return { start: "", end: "" };
@@ -266,6 +267,35 @@ function App() {
 		return () => document.removeEventListener("contextmenu", block);
 	}, []);
 
+	useEffect(() => {
+		let unlisten: (() => void) | undefined;
+		(async () => {
+			try {
+				const { getCurrentWindow } = await import("@tauri-apps/api/window");
+				const appWindow = getCurrentWindow();
+				unlisten = await appWindow.onCloseRequested((event) => {
+					event.preventDefault();
+					setConfirmCloseOpen(true);
+				});
+			} catch (e) {
+				console.error("No se pudo registrar confirmación de cierre:", e);
+			}
+		})();
+		return () => {
+			unlisten?.();
+		};
+	}, []);
+
+	async function handleConfirmClose() {
+		try {
+			const { getCurrentWindow } = await import("@tauri-apps/api/window");
+			await getCurrentWindow().destroy();
+		} catch (e) {
+			console.error("No se pudo cerrar la ventana:", e);
+			setConfirmCloseOpen(false);
+		}
+	}
+
 	if (loadError) {
 		return (
 			<div className="min-h-screen flex items-center justify-center bg-slate-100 p-6">
@@ -461,6 +491,42 @@ function App() {
 			<CitaEventNotifier />
 			<FinanceEventListener settings={settings} />
 			<HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+			{confirmCloseOpen && (
+				<div
+					className="fixed inset-0 z-[130] flex items-center justify-center bg-black/40 p-4"
+					role="dialog"
+					aria-modal="true"
+					aria-labelledby="confirm-close-title"
+				>
+					<div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl">
+						<h2
+							id="confirm-close-title"
+							className="text-lg font-semibold text-slate-800"
+						>
+							Cerrar aplicación
+						</h2>
+						<p className="mt-2 text-sm text-slate-600">
+							¿Desea cerrar la aplicación? Se perderán los cambios sin guardar.
+						</p>
+						<div className="mt-5 flex justify-end gap-2">
+							<button
+								type="button"
+								onClick={() => setConfirmCloseOpen(false)}
+								className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+							>
+								Cancelar
+							</button>
+							<button
+								type="button"
+								onClick={() => void handleConfirmClose()}
+								className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+							>
+								Cerrar
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }
