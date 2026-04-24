@@ -35,6 +35,13 @@ export interface BackupSettings {
 	externalPath: string;
 }
 
+/** Parámetros para comparar sesiones de cámara con consumo teórico de oxígeno. */
+export interface OxygenSettings {
+	unitsLabel: string;
+	perHyperbaricSession: number;
+	serviceTypeId: string;
+}
+
 /** Estado de la contraseña de inicio (el hash nunca sale del backend). */
 export interface StartupAuthStatus {
 	hasPassword: boolean;
@@ -56,6 +63,50 @@ export interface AppSettings {
 	adminMode: boolean;
 	billing: BillingSettings;
 	backup: BackupSettings;
+	oxygen: OxygenSettings;
+}
+
+export type OxigenoEventoTipo =
+	| "balance_inicial"
+	| "recarga_pipeta"
+	| "cierre"
+	| "extra";
+
+export interface OxigenoEvento {
+	id: string;
+	fechaOperacion: string;
+	tipo: string;
+	medidorA: number;
+	medidorB: number;
+	saldoEnfermeria: number | null;
+	notas: string;
+	fotoRelativa: string | null;
+	fotoExifFecha: string | null;
+	createdAt: string;
+}
+
+export interface RegistrarEventoOxigenoInput {
+	fechaOperacion: string;
+	tipo: OxigenoEventoTipo;
+	medidorA: number;
+	medidorB: number;
+	saldoEnfermeria?: number | null;
+	notas?: string | null;
+	fotoBytes?: number[] | null;
+	fotoExtension?: string | null;
+}
+
+export interface OxigenoResumenDia {
+	fecha: string;
+	sesionesCamara: number;
+	consumoTeorico: number;
+	deltaMedidorA: number | null;
+	deltaMedidorB: number | null;
+	eventosRegistrados: number;
+	unidadEtiqueta: string;
+	sinLecturas: boolean;
+	varianzaVsTeoricoA: number | null;
+	varianzaVsTeoricoB: number | null;
 }
 
 export interface Appointment {

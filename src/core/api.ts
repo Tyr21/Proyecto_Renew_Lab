@@ -22,6 +22,9 @@ import type {
 	Ingreso,
 	MovimientoFinancieroDetalle,
 	MetodoPagoStats,
+	OxigenoEvento,
+	OxigenoResumenDia,
+	RegistrarEventoOxigenoInput,
 	ServicioStats,
 	StartupAuthStatus,
 	AdminAuthStatus,
@@ -292,4 +295,36 @@ export async function actualizarEvento(id: string, input: EventoInput): Promise<
 
 export async function eliminarEvento(id: string): Promise<void> {
 	return invoke(TAURI_COMMANDS.eliminarEvento, { id });
+}
+
+export async function listarOxigenoPorRango(
+	fechaDesde: string,
+	fechaHasta: string,
+): Promise<OxigenoEvento[]> {
+	return invoke<OxigenoEvento[]>(TAURI_COMMANDS.listarOxigenoPorRango, {
+		fechaDesde,
+		fechaHasta,
+	});
+}
+
+export async function registrarEventoOxigeno(
+	input: RegistrarEventoOxigenoInput,
+): Promise<OxigenoEvento> {
+	return invoke<OxigenoEvento>(TAURI_COMMANDS.registrarEventoOxigeno, {
+		input,
+	});
+}
+
+export async function resumenOxigenoRango(
+	fechaDesde: string,
+	fechaHasta: string,
+): Promise<OxigenoResumenDia[]> {
+	return invoke<OxigenoResumenDia[]>(TAURI_COMMANDS.resumenOxigenoRango, {
+		fechaDesde,
+		fechaHasta,
+	});
+}
+
+export async function leerFotoOxigeno(fotoRelativa: string): Promise<number[]> {
+	return invoke<number[]>(TAURI_COMMANDS.leerFotoOxigeno, { fotoRelativa });
 }

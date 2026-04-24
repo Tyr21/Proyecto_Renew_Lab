@@ -160,6 +160,23 @@ pub fn save_settings(db: tauri::State<'_, DbConn>, settings: AppSettings) -> Res
 			}
 		}
 	}
+	if settings.oxygen.per_hyperbaric_session < 0.0
+		|| !settings.oxygen.per_hyperbaric_session.is_finite()
+	{
+		return Err(
+			"El consumo teórico de oxígeno por sesión debe ser un número válido ≥ 0".into(),
+		);
+	}
+	if settings.oxygen.service_type_id.trim().is_empty()
+		|| !settings
+			.service_types
+			.iter()
+			.any(|s| s.id == settings.oxygen.service_type_id)
+	{
+		return Err(
+			"El tipo de servicio para oxígeno debe coincidir con un tipo configurado".into(),
+		);
+	}
 	let conn = db.lock().map_err(error::lock)?;
 	save_settings_json(&conn, &settings)?;
 	Ok(settings)

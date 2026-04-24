@@ -13,6 +13,7 @@ import type {
 	AppSettings,
 	BackupSettings,
 	BillingSettings,
+	OxygenSettings,
 	ServicePackagePlanSetting,
 	ServiceTypeSetting,
 	TimeDisplay,
@@ -34,6 +35,7 @@ type SettingsSectionId =
 	| "servicios"
 	| "facturacion"
 	| "respaldos"
+	| "oxigeno"
 	| "administracion";
 
 const SECTIONS: { id: SettingsSectionId; label: string; description: string }[] = [
@@ -42,6 +44,11 @@ const SECTIONS: { id: SettingsSectionId; label: string; description: string }[] 
 	{ id: "servicios", label: "Tipos de servicio", description: "Capacidad y precios sugeridos" },
 	{ id: "facturacion", label: "Facturación", description: "Datos del consultorio en facturas" },
 	{ id: "respaldos", label: "Respaldos", description: "Copias automáticas de la base de datos" },
+	{
+		id: "oxigeno",
+		label: "Oxígeno",
+		description: "Consumo teórico por sesión de cámara hiperbárica",
+	},
 	{
 		id: "administracion",
 		label: "Administración",
@@ -248,6 +255,13 @@ export function SettingsPanel({
 
 	function updateBackup(patch: Partial<BackupSettings>) {
 		setDraft((d) => ({ ...d, backup: { ...d.backup, ...patch } }));
+	}
+
+	function updateOxygen(patch: Partial<OxygenSettings>) {
+		setDraft((d) => ({
+			...d,
+			oxygen: { ...d.oxygen, ...patch },
+		}));
 	}
 
 	return (
@@ -759,6 +773,67 @@ export function SettingsPanel({
 										</label>
 									</div>
 								</div>
+							</div>
+						</section>
+					)}
+
+					{activeSection === "oxigeno" && (
+						<section
+							className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5"
+							aria-labelledby="settings-oxigeno-heading"
+						>
+							<h2 id="settings-oxigeno-heading" className="text-base font-semibold text-slate-800">
+								Oxígeno (cámara hiperbárica)
+							</h2>
+							<p className="mt-1 text-xs text-slate-500">
+								Estos valores alimentan el resumen en cierre de caja y el registro diario de lecturas. El consumo teórico del día es sesiones atendidas (estado “asistió”) del tipo de servicio elegido, multiplicado por la cantidad indicada.
+							</p>
+							<div className="mt-6 space-y-5">
+								<label className="block text-sm md:max-w-md">
+									<span className="font-medium text-slate-700">Etiqueta de unidad</span>
+									<input
+										className="mt-1 w-full rounded border border-slate-300 px-2 py-2 text-sm"
+										placeholder="m³, unidades, bar…"
+										value={draft.oxygen?.unitsLabel ?? ""}
+										onChange={(e) => updateOxygen({ unitsLabel: e.target.value })}
+									/>
+								</label>
+								<label className="block text-sm md:max-w-xs">
+									<span className="font-medium text-slate-700">
+										Consumo teórico por sesión (K)
+									</span>
+									<input
+										type="number"
+										min={0}
+										step="any"
+										className="mt-1 w-full rounded border border-slate-300 px-2 py-2 text-sm tabular-nums"
+										value={draft.oxygen?.perHyperbaricSession ?? 1}
+										onChange={(e) =>
+											updateOxygen({
+												perHyperbaricSession: Math.max(
+													0,
+													Number.parseFloat(e.target.value) || 0,
+												),
+											})
+										}
+									/>
+								</label>
+								<label className="block text-sm md:max-w-md">
+									<span className="font-medium text-slate-700">
+										Tipo de servicio para contar sesiones
+									</span>
+									<select
+										className="mt-1 w-full rounded border border-slate-300 px-2 py-2 text-sm"
+										value={draft.oxygen?.serviceTypeId ?? "camara_hiperbarica"}
+										onChange={(e) => updateOxygen({ serviceTypeId: e.target.value })}
+									>
+										{draft.serviceTypes.map((s) => (
+											<option key={s.id} value={s.id}>
+												{s.label} ({s.id})
+											</option>
+										))}
+									</select>
+								</label>
 							</div>
 						</section>
 					)}

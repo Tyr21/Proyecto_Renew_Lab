@@ -133,7 +133,31 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
 	run_startup_auth_migration(conn)?;
 	run_admin_auth_migration(conn)?;
 	run_paquetes_migrations(conn)?;
+	run_oxigeno_migrations(conn)?;
 
+	Ok(())
+}
+
+fn run_oxigeno_migrations(conn: &Connection) -> Result<(), String> {
+	conn
+		.execute_batch(
+			r#"
+			CREATE TABLE IF NOT EXISTS oxigeno_eventos (
+				id TEXT PRIMARY KEY,
+				fecha_operacion TEXT NOT NULL,
+				tipo TEXT NOT NULL,
+				medidor_a REAL NOT NULL,
+				medidor_b REAL NOT NULL,
+				saldo_enfermeria REAL,
+				notas TEXT NOT NULL DEFAULT '',
+				foto_relativa TEXT,
+				foto_exif_fecha TEXT,
+				created_at TEXT NOT NULL
+			);
+			CREATE INDEX IF NOT EXISTS idx_oxigeno_fecha ON oxigeno_eventos(fecha_operacion);
+		"#,
+		)
+		.map_err(|e| e.to_string())?;
 	Ok(())
 }
 

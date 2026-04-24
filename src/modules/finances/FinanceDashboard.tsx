@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { eliminarIngreso, obtenerIngresos } from "../../core/api";
+import { eliminarIngreso, obtenerIngresos, resumenOxigenoRango } from "../../core/api";
 import type { ChartDataPoint } from "../../components/IncomeBarChart";
 import { IncomeBarChart } from "../../components/IncomeBarChart";
 import { INGRESO_REGISTRADO_EVENT } from "../../core/constants";
@@ -7,7 +7,7 @@ import { formatCurrency } from "../../core/currencyFormat";
 import { formatInvokeError } from "../../core/errors";
 import { fechaIngresoLocalISODate, formatHoraPago } from "../../core/ingresoDate";
 import { esc, openPrintWindow } from "../../core/printReport";
-import type { Ingreso } from "../../core/types";
+import type { Ingreso, OxigenoResumenDia } from "../../core/types";
 import { addDays, startOfWeekMonday, toISODateLocal } from "../../core/weekUtils";
 
 interface FinanceDashboardProps {
@@ -53,6 +53,22 @@ function sumByMethod(rows: Ingreso[]): {
 	return { efectivo, bancos, total };
 }
 
+function formatoOxigeno(n: number | null): string {
+	if (n == null || !Number.isFinite(n)) return "—";
+	return n.toLocaleString("es-CO", { maximumFractionDigits: 4 });
+}
+
+function filaOxigenoDestaca(row: OxigenoResumenDia): boolean {
+	if (row.sinLecturas) return true;
+	const base = Math.max(1e-9, Math.abs(row.consumoTeorico));
+	const tol = Math.max(1e-6, 0.15 * base);
+	const va = row.varianzaVsTeoricoA;
+	const vb = row.varianzaVsTeoricoB;
+	if (va != null && Number.isFinite(va) && Math.abs(va) > tol) return true;
+	if (vb != null && Number.isFinite(vb) && Math.abs(vb) > tol) return true;
+	return false;
+}
+
 export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 	const today = toISODateLocal(new Date());
 	const [dateFrom, setDateFrom] = useState(today);
@@ -62,6 +78,9 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 	const [error, setError] = useState<string | null>(null);
 	const [deletingId, setDeletingId] = useState<string | null>(null);
 	const [csvToast, setCsvToast] = useState(false);
+	const [oxygenRows, setOxygenRows] = useState<OxigenoResumenDia[]>([]);
+	const [oxygenLoading, setOxygenLoading] = useState(false);
+	const [oxygenError, setOxygenError] = useState<string | null>(null);
 
 	const loadIngresos = useCallback(async () => {
 		setError(null);
@@ -76,12 +95,30 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 		}
 	}, [dateFrom, dateTo]);
 
+	const loadOxygen = useCallback(async () => {
+		setOxygenError(null);
+		setOxygenLoading(true);
+		try {
+			const rows = await resumenOxigenoRango(dateFrom, dateTo);
+			setOxygenRows(rows);
+		} catch (e) {
+			setOxygenError(formatInvokeError(e) || "No se pudo cargar el resumen de oxígeno");
+			setOxygenRows([]);
+		} finally {
+			setOxygenLoading(false);
+		}
+	}, [dateFrom, dateTo]);
+
 	useEffect(() => {
 		void loadIngresos();
 		const onIngreso = () => { void loadIngresos(); };
 		window.addEventListener(INGRESO_REGISTRADO_EVENT, onIngreso);
 		return () => window.removeEventListener(INGRESO_REGISTRADO_EVENT, onIngreso);
 	}, [loadIngresos]);
+
+	useEffect(() => {
+		void loadOxygen();
+	}, [loadOxygen]);
 
 	const totals = useMemo(() => sumByMethod(ingresos), [ingresos]);
 
@@ -191,11 +228,52 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 			</tr>`
 		).join("");
 
+		let oxygenHtml = "";
+		if (oxygenRows.length > 0) {
+			const unidad = oxygenRows[0]?.unidadEtiqueta ?? "";
+			const oRows = oxygenRows
+				.map((row) => {
+					const alerta = filaOxigenoDestaca(row)
+						? '<span class="tag-warn">Revisar</span>'
+						: "";
+					return `<tr>
+						<td class="num">${esc(row.fecha)}</td>
+						<td class="num">${row.sesionesCamara}</td>
+						<td class="num">${formatoOxigeno(row.consumoTeorico)} ${esc(unidad)}</td>
+						<td class="num">${formatoOxigeno(row.deltaMedidorA)}</td>
+						<td class="num">${formatoOxigeno(row.deltaMedidorB)}</td>
+						<td class="num">${formatoOxigeno(row.varianzaVsTeoricoA)}</td>
+						<td class="num">${formatoOxigeno(row.varianzaVsTeoricoB)}</td>
+						<td>${row.eventosRegistrados}</td>
+						<td>${alerta}</td>
+					</tr>`;
+				})
+				.join("");
+			oxygenHtml = `
+			<div class="section-title">Ox\u00edgeno (c\u00e1mara hiperb\u00e1rica)</div>
+			<p class="subtitle">Consumo te\u00f3rico vs. delta de medidores (${esc(unidad)})</p>
+			<table>
+				<thead><tr>
+					<th>Fecha</th>
+					<th class="num">Sesiones</th>
+					<th class="num">Te\u00f3rico</th>
+					<th class="num">\u0394 A</th>
+					<th class="num">\u0394 B</th>
+					<th class="num">Var. A</th>
+					<th class="num">Var. B</th>
+					<th class="num">Eventos</th>
+					<th>Estado</th>
+				</tr></thead>
+				<tbody>${oRows}</tbody>
+			</table>`;
+		}
+
 		const body = `
 		<h1>Cierre de caja / Ingresos</h1>
 		<p class="subtitle">${esc(rangeLabel)} &mdash; ${ingresos.length} movimiento${ingresos.length === 1 ? "" : "s"}</p>
 		${cardsHtml}
 		${servicioHtml}
+		${oxygenHtml}
 		<div class="section-title">Detalle del per\u00edodo</div>
 		<table>
 			<thead><tr>
@@ -206,7 +284,7 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 		<p class="footer">Generado el ${new Date().toLocaleString("es-CO")} &mdash; Consultorio Renew Lab</p>`;
 
 		openPrintWindow(`Cierre de caja ${rangeLabel}`, body);
-	}, [ingresos, dateFrom, dateTo, totals, reportePorServicio]);
+	}, [ingresos, dateFrom, dateTo, totals, reportePorServicio, oxygenRows]);
 
 	function setHoy() {
 		const t = toISODateLocal(new Date());
@@ -393,6 +471,96 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 						</div>
 					</section>
 				) : null}
+
+				<section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+					<div className="border-b border-slate-200 px-4 py-3">
+						<h2 className="text-sm font-medium text-slate-800">
+							Oxígeno (cámara hiperbárica)
+						</h2>
+						<p className="mt-0.5 text-xs text-slate-500">
+							Sesiones atendidas del tipo configurado, consumo teórico (K × sesiones) y delta entre
+							primera y última lectura del día en cada medidor. Revise filas marcadas si faltan
+							registros o la varianza respecto al teórico es alta.
+						</p>
+					</div>
+					{oxygenError ? (
+						<div className="px-4 py-3 text-sm text-red-800" role="alert">
+							{oxygenError}
+						</div>
+					) : oxygenLoading ? (
+						<p className="px-4 py-8 text-center text-sm text-slate-500">Cargando resumen…</p>
+					) : oxygenRows.length === 0 ? (
+						<p className="px-4 py-8 text-center text-sm text-slate-500">
+							No hay fechas en el rango seleccionado.
+						</p>
+					) : (
+						<div className="overflow-x-auto">
+							<table className="w-full min-w-[720px] text-left text-sm">
+								<thead>
+									<tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-600">
+										<th className="px-3 py-2 font-medium">Fecha</th>
+										<th className="px-3 py-2 font-medium text-right">Sesiones</th>
+										<th className="px-3 py-2 font-medium text-right">Teórico</th>
+										<th className="px-3 py-2 font-medium text-right">Δ A</th>
+										<th className="px-3 py-2 font-medium text-right">Δ B</th>
+										<th className="px-3 py-2 font-medium text-right">Var. A</th>
+										<th className="px-3 py-2 font-medium text-right">Var. B</th>
+										<th className="px-3 py-2 font-medium text-right">Eventos</th>
+										<th className="px-3 py-2 font-medium">Alerta</th>
+									</tr>
+								</thead>
+								<tbody>
+									{oxygenRows.map((row) => {
+										const unidad = row.unidadEtiqueta || "u.";
+										const alerta = filaOxigenoDestaca(row);
+										return (
+											<tr
+												key={row.fecha}
+												className={`border-b border-slate-100 last:border-0 ${
+													alerta ? "bg-amber-50/80" : "hover:bg-slate-50/80"
+												}`}
+											>
+												<td className="px-3 py-2 tabular-nums text-slate-800">{row.fecha}</td>
+												<td className="px-3 py-2 text-right tabular-nums text-slate-800">
+													{row.sesionesCamara}
+												</td>
+												<td className="px-3 py-2 text-right tabular-nums text-slate-800">
+													{formatoOxigeno(row.consumoTeorico)} {unidad}
+												</td>
+												<td className="px-3 py-2 text-right tabular-nums text-slate-700">
+													{formatoOxigeno(row.deltaMedidorA)}
+												</td>
+												<td className="px-3 py-2 text-right tabular-nums text-slate-700">
+													{formatoOxigeno(row.deltaMedidorB)}
+												</td>
+												<td className="px-3 py-2 text-right tabular-nums text-slate-700">
+													{formatoOxigeno(row.varianzaVsTeoricoA)}
+												</td>
+												<td className="px-3 py-2 text-right tabular-nums text-slate-700">
+													{formatoOxigeno(row.varianzaVsTeoricoB)}
+												</td>
+												<td className="px-3 py-2 text-right tabular-nums text-slate-700">
+													{row.eventosRegistrados}
+												</td>
+												<td className="px-3 py-2 text-xs text-slate-700">
+													{row.sinLecturas ? (
+														<span className="font-medium text-amber-800">Sin lecturas</span>
+													) : alerta ? (
+														<span className="font-medium text-amber-800">
+															Varianza vs. teórico
+														</span>
+													) : (
+														<span className="text-slate-400">—</span>
+													)}
+												</td>
+											</tr>
+										);
+									})}
+								</tbody>
+							</table>
+						</div>
+					)}
+				</section>
 
 				{/* Gráfico de ingresos por día */}
 				{!loading && chartData.length > 0 && (

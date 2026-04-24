@@ -86,6 +86,10 @@ export const TAURI_COMMANDS = {
 	verifyAdminPassword: "verify_admin_password",
 	setAdminPassword: "set_admin_password",
 	clearAdminPassword: "clear_admin_password",
+	listarOxigenoPorRango: "listar_oxigeno_por_rango",
+	registrarEventoOxigeno: "registrar_evento_oxigeno",
+	resumenOxigenoRango: "resumen_oxigeno_rango",
+	leerFotoOxigeno: "leer_foto_oxigeno",
 } as const;
 
 export const FACTURA_CHANGED_EVENT = "factura_changed";

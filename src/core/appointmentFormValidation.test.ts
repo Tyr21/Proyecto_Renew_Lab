@@ -30,6 +30,11 @@ const baseSettings: AppSettings = {
 		retentionCount: 7,
 		externalPath: "",
 	},
+	oxygen: {
+		unitsLabel: "unidad(es)",
+		perHyperbaricSession: 1,
+		serviceTypeId: "camara_hiperbarica",
+	},
 };
 
 const baseInput: AppointmentInput = {

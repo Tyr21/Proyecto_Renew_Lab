@@ -95,6 +95,39 @@ impl Default for BillingSettings {
 	}
 }
 
+fn default_oxygen_service_type() -> String {
+	"camara_hiperbarica".into()
+}
+
+fn default_oxygen_per_session() -> f64 {
+	1.0
+}
+
+/// Parámetros para comparar sesiones de cámara con consumo teórico de oxígeno.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OxygenSettings {
+	/// Etiqueta mostrada en informes (p. ej. "m³", "unidades").
+	#[serde(default)]
+	pub units_label: String,
+	/// Consumo teórico por sesión de cámara (misma unidad que medidores / norma interna).
+	#[serde(default = "default_oxygen_per_session")]
+	pub per_hyperbaric_session: f64,
+	/// `service_types.id` usado para contar sesiones (por defecto cámara hiperbárica).
+	#[serde(default = "default_oxygen_service_type")]
+	pub service_type_id: String,
+}
+
+impl Default for OxygenSettings {
+	fn default() -> Self {
+		Self {
+			units_label: "unidad(es)".into(),
+			per_hyperbaric_session: default_oxygen_per_session(),
+			service_type_id: default_oxygen_service_type(),
+		}
+	}
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {
@@ -112,6 +145,8 @@ pub struct AppSettings {
 	pub billing: BillingSettings,
 	#[serde(default)]
 	pub backup: BackupSettings,
+	#[serde(default)]
+	pub oxygen: OxygenSettings,
 }
 
 impl Default for AppSettings {
@@ -148,6 +183,7 @@ impl Default for AppSettings {
 			admin_mode: false,
 			billing: BillingSettings::default(),
 			backup: BackupSettings::default(),
+			oxygen: OxygenSettings::default(),
 		}
 	}
 }
@@ -195,5 +231,6 @@ mod settings_deser_tests {
 		let s: AppSettings = serde_json::from_str(json).expect("parse");
 		assert_eq!(s.service_types.len(), 1);
 		assert!(s.service_types[0].package_plans.is_empty());
+		assert_eq!(s.oxygen.service_type_id, "camara_hiperbarica");
 	}
 }

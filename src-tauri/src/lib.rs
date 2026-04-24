@@ -8,6 +8,7 @@ mod error;
 mod eventos;
 mod facturacion;
 mod finance;
+mod oxigeno;
 mod paquetes;
 mod reports;
 mod settings_model;
@@ -115,6 +116,10 @@ pub fn run() {
 			admin_auth::verify_admin_password,
 			admin_auth::set_admin_password,
 			admin_auth::clear_admin_password,
+			oxigeno::listar_oxigeno_por_rango,
+			oxigeno::registrar_evento_oxigeno,
+			oxigeno::resumen_oxigeno_rango,
+			oxigeno::leer_foto_oxigeno,
 		])
 		.run(tauri::generate_context!())
 		.expect("error while running tauri application");

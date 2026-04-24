@@ -16,6 +16,7 @@ td{padding:7px 6px;border-bottom:1px solid #f1f5f9}
 td.num{text-align:right;font-variant-numeric:tabular-nums}
 td.bold{font-weight:600}
 .section-title{font-size:13px;font-weight:600;margin:16px 0 8px}
+.tag-warn{font-size:10px;color:#b45309;font-weight:600}
 .footer{margin-top:24px;text-align:center;font-size:10px;color:#94a3b8}
 @media print{body{padding:0}@page{margin:16mm 12mm}}
 `;

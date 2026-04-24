@@ -95,6 +95,7 @@ En la pestaña **Cierre de caja** hay dos subsecciones:
 - Permite **filtrar ingresos por rango de fechas** y ver listados y totales.
 - Puede **registrar pagos** vinculados o no a una cita, según el flujo de la pantalla.
 - Los métodos de pago habituales incluyen **efectivo**, **tarjeta** y **transferencia** (según lo definido en el sistema).
+- En el mismo rango de fechas puede mostrarse un **resumen de oxígeno (cámara hiperbárica)**: sesiones atendidas del tipo configurado, consumo teórico y comparación con las lecturas de medidor registradas por enfermería (véase **Reportes → Oxígeno** y **Configuración → Oxígeno**).
 
 ### 4.2 Facturas
 
@@ -108,6 +109,12 @@ En la pestaña **Cierre de caja** hay dos subsecciones:
 - Elija un **período** con atajos como: **Hoy**, **Esta semana**, **Este mes**, **Mes pasado**, **Últimos 12 meses** o un rango **personalizado** con fechas desde / hasta.
 - Podrá ver indicadores como citas por mes, ingresos por mes, distribución por tipo de servicio y por método de pago, y gráficas cuando estén disponibles.
 - Si existe opción de **imprimir** o exportar informe, úsela según las necesidades del consultorio.
+
+### 5.1 Oxígeno (cámara hiperbárica)
+
+En la subpestaña **Oxígeno** (dentro de **Reportes**) el personal puede **registrar por día** las lecturas de dos medidores, un **saldo declarado** opcional y una **foto** de los medidores. La aplicación exige que la foto tenga metadatos **EXIF** con **fecha de captura** coincidente con el **día de operación** elegido (salvo el tipo de evento “Extra”, donde la foto es opcional). Los tipos de evento habituales incluyen balance inicial, recarga, cierre y anotaciones extra.
+
+Los parámetros **K** (consumo teórico por sesión) y el **tipo de servicio** usado para contar sesiones se configuran en **Configuración → Oxígeno**.
 
 ---
 
@@ -153,7 +160,13 @@ El panel de configuración está organizado en **secciones** (menú lateral en p
 - **Cuántas copias** conservar en cada ubicación.
 - Opcional: **carpeta externa** (por ejemplo una carpeta sincronizada con la nube) para una copia adicional.
 
-### 7.6 Administración
+### 7.6 Oxígeno (cámara hiperbárica)
+
+- **Etiqueta de unidad** (por ejemplo m³ o unidades) para mostrar en informes.
+- **Consumo teórico por sesión (K)** multiplicado por las citas **atendidas** del tipo de servicio elegido.
+- **Tipo de servicio** cuyas sesiones con estado “asistió” se cuentan para el teórico (por defecto, cámara hiperbárica).
+
+### 7.7 Administración
 
 Aquí se gestionan el **modo administrador** y las **contraseñas de seguridad**.
 
@@ -175,7 +188,7 @@ Si el **modo administrador** está activado en el borrador de configuración (ca
 
 Con el modo administrador activo puede **cambiar** o **eliminar** la contraseña de administrador. Si la elimina, la próxima vez que entre en Configuración se le pedirá **definir una nueva**.
 
-### 7.7 Guardar y cancelar
+### 7.8 Guardar y cancelar
 
 - **Guardar configuración** escribe los cambios en la base de datos local y puede cerrar el panel según el comportamiento de la versión.
 - **Cancelar** descarta cambios no guardados (puede pedir confirmación si hay modificaciones pendientes).
