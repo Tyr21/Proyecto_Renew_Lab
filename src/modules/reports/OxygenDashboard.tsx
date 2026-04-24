@@ -102,7 +102,7 @@ export function OxygenDashboard({ settings }: Props) {
 		let fotoExtension: string | null = null;
 		if (fotoObligatoria) {
 			if (!archivoFoto) {
-				setErrorForm("Adjunte una foto de los medidores (JPEG o PNG con fecha EXIF del día de operación).");
+				setErrorForm("Adjunte una foto de los medidores (JPEG o PNG).");
 				return;
 			}
 			fotoExtension = extensionDesdeNombre(archivoFoto.name);
@@ -162,8 +162,11 @@ export function OxygenDashboard({ settings }: Props) {
 						Registro de oxígeno (cámara hiperbárica)
 					</h1>
 					<p className="mt-1 text-sm text-slate-600">
-						Lecturas de medidores, saldo declarado por enfermería y foto con fecha de captura (EXIF) que
-						debe coincidir con el día de operación. El consumo teórico en informes usa{" "}
+						Lecturas de medidores, saldo declarado por enfermería y foto de los medidores (JPG o PNG). El{" "}
+						<strong className="font-medium text-slate-800">día operativo</strong> del registro es el que
+						elija en “Día de operación”. Si la foto conserva EXIF con fecha de captura, esa fecha debe
+						coincidir con ese día; si no hay EXIF (p. ej. reenvíos por WhatsApp), la foto se guarda igual y
+						en la lista verá “Foto sin fecha EXIF registrada”. El consumo teórico en informes usa{" "}
 						<strong className="font-medium text-slate-800">
 							{k} {unidad}
 						</strong>{" "}
@@ -252,8 +255,9 @@ export function OxygenDashboard({ settings }: Props) {
 								Foto de medidores{fotoObligatoria ? " (obligatoria)" : " (opcional)"}
 							</span>
 							<p className="mt-0.5 text-xs text-slate-500">
-								La imagen debe incluir EXIF con fecha de captura del mismo día que “Día de operación”.
-								Formatos: JPG o PNG.
+								JPG o PNG (la app comprueba la cabecera del archivo). Si la imagen trae fecha EXIF, debe
+								ser del mismo día que “Día de operación”. Sin EXIF (frecuente en fotos reenviadas) la
+								foto se acepta: el día operativo queda el del formulario.
 							</p>
 							<input
 								type="file"

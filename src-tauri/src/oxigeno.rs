@@ -1,4 +1,4 @@
-//! Registro de lecturas de oxígeno, fotos con validación EXIF y resúmenes para cierre.
+//! Registro de lecturas de oxígeno, fotos (JPG/PNG por cabecera), EXIF opcional para fecha de captura y resúmenes para cierre.
 
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
@@ -14,6 +14,17 @@ use crate::commands::{load_settings_json, DbConn};
 use crate::error;
 
 const OXYGEN_PHOTOS_DIR: &str = "oxigeno_fotos";
+
+/// Firma inicial JPEG (SOI + siguiente marcador).
+const JPEG_MAGIC: &[u8] = &[0xFF, 0xD8, 0xFF];
+/// Firma PNG estándar.
+const PNG_MAGIC: &[u8] = &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FormatoImagenOxigeno {
+	Jpeg,
+	Png,
+}
 
 pub static OXIGENO_TIPOS: &[&str] = &["balance_inicial", "recarga_pipeta", "cierre", "extra"];
 
@@ -36,32 +47,50 @@ pub(crate) fn parse_exif_datetime_to_iso_date(raw: &str) -> Result<String, Strin
 	Ok(format!("{y}-{m}-{d}"))
 }
 
-fn exif_capture_date_ymd(bytes: &[u8]) -> Result<String, String> {
+/// Comprueba cabecera JPEG o PNG. No inspecciona el resto del contenedor.
+fn detectar_jpeg_o_png(bytes: &[u8]) -> Result<FormatoImagenOxigeno, String> {
+	if bytes.len() < JPEG_MAGIC.len() {
+		return Err("Archivo de imagen demasiado pequeño o corrupto.".into());
+	}
+	if bytes[..JPEG_MAGIC.len()] == *JPEG_MAGIC {
+		return Ok(FormatoImagenOxigeno::Jpeg);
+	}
+	if bytes.len() < PNG_MAGIC.len() {
+		return Err("Archivo de imagen demasiado pequeño o corrupto.".into());
+	}
+	if bytes[..PNG_MAGIC.len()] == *PNG_MAGIC {
+		return Ok(FormatoImagenOxigeno::Png);
+	}
+	Err("La foto debe ser JPEG o PNG (cabecera no reconocida).".into())
+}
+
+fn extension_coincide_con_cabecera(fmt: FormatoImagenOxigeno, ext_normalizada: &str) -> Result<(), String> {
+	match (fmt, ext_normalizada) {
+		(FormatoImagenOxigeno::Jpeg, "jpg") | (FormatoImagenOxigeno::Png, "png") => Ok(()),
+		_ => Err(
+			"La extensión del archivo no coincide con el formato real (use JPG o PNG según la imagen)."
+				.into(),
+		),
+	}
+}
+
+/// Si hay EXIF legible con fecha de captura, devuelve `Some(YYYY-MM-DD)`; si no hay EXIF,
+/// no se puede leer o no hay fecha usable, devuelve `None`. No valida la cabecera de la imagen.
+fn exif_fecha_captura_opcional(bytes: &[u8]) -> Option<String> {
 	let mut cursor = Cursor::new(bytes);
-	let exif = ExifReader::new()
-		.read_from_container(&mut cursor)
-		.map_err(|_| {
-			"No se pudieron leer metadatos EXIF (use JPEG con fecha de captura o PNG con EXIF)"
-				.to_string()
-		})?;
+	let exif = ExifReader::new().read_from_container(&mut cursor).ok()?;
 	let field = exif
 		.get_field(Tag::DateTimeOriginal, In::PRIMARY)
 		.or_else(|| exif.get_field(Tag::DateTimeDigitized, In::PRIMARY))
-		.or_else(|| exif.get_field(Tag::DateTime, In::PRIMARY))
-		.ok_or_else(|| {
-			"La imagen no incluye fecha de captura (EXIF). Adjunte otra foto.".to_string()
-		})?;
+		.or_else(|| exif.get_field(Tag::DateTime, In::PRIMARY))?;
 	let raw = match &field.value {
 		Value::Ascii(v) => {
-			let slice = v.get(0).ok_or_else(|| "Fecha EXIF vacía".to_string())?;
-			std::str::from_utf8(slice)
-				.map_err(|_| "Fecha EXIF inválida (no UTF-8)".to_string())?
-				.trim_end_matches('\0')
-				.to_string()
+			let slice = v.first()?;
+			std::str::from_utf8(slice).ok()?.trim_end_matches('\0').to_string()
 		}
-		_ => return Err("Formato de fecha EXIF inesperado".to_string()),
+		_ => return None,
 	};
-	parse_exif_datetime_to_iso_date(&raw)
+	parse_exif_datetime_to_iso_date(&raw).ok()
 }
 
 fn sanitize_image_extension(ext: &str) -> Result<String, String> {
@@ -204,19 +233,23 @@ pub fn registrar_evento_oxigeno(
 	}
 
 	let (foto_relativa, foto_exif_fecha) = if let Some(b) = bytes.filter(|v| !v.is_empty()) {
-		let exif_date = exif_capture_date_ymd(b)?;
-		if exif_date != input.fecha_operacion {
-			return Err(format!(
-				"La fecha de la foto (EXIF: {exif_date}) no coincide con el día de operación ({}).",
-				input.fecha_operacion
-			));
-		}
 		let ext = sanitize_image_extension(
 			input
 				.foto_extension
 				.as_deref()
 				.ok_or_else(|| "Indique extensión de la foto (jpg/png)".to_string())?,
 		)?;
+		let formato = detectar_jpeg_o_png(b)?;
+		extension_coincide_con_cabecera(formato, &ext)?;
+		let exif_date = exif_fecha_captura_opcional(b);
+		if let Some(ref d) = exif_date {
+			if d != &input.fecha_operacion {
+				return Err(format!(
+					"La fecha de la foto (EXIF: {d}) no coincide con el día de operación ({}).",
+					input.fecha_operacion
+				));
+			}
+		}
 		let base = app_oxygen_dir(&app)?;
 		let day_dir = base.join(&input.fecha_operacion);
 		std::fs::create_dir_all(&day_dir).map_err(|e| e.to_string())?;
@@ -227,7 +260,7 @@ pub fn registrar_evento_oxigeno(
 			.join(&input.fecha_operacion)
 			.join(&fname);
 		let rel_str = rel.to_string_lossy().replace('\\', "/");
-		(Some(rel_str), Some(exif_date))
+		(Some(rel_str), exif_date)
 	} else {
 		(None, None)
 	};
@@ -408,8 +441,24 @@ mod tests {
 	}
 
 	#[test]
-	fn exif_rechaza_buffer_invalido() {
-		assert!(exif_capture_date_ymd(b"no-es-una-imagen").is_err());
+	fn cabecera_imagen_rechaza_buffer_invalido() {
+		assert!(detectar_jpeg_o_png(b"no-es-una-imagen").is_err());
+	}
+
+	#[test]
+	fn jpeg_minimo_sin_exif_devuelve_none_en_fecha() {
+		let mut v = Vec::from(JPEG_MAGIC);
+		v.extend_from_slice(&[0xD9]); // EOI (imagen degenerada; basta para cabecera + lector EXIF)
+		assert_eq!(detectar_jpeg_o_png(&v).unwrap(), FormatoImagenOxigeno::Jpeg);
+		assert_eq!(exif_fecha_captura_opcional(&v), None);
+	}
+
+	#[test]
+	fn png_minimo_sin_exif_devuelve_none_en_fecha() {
+		let mut v = Vec::from(PNG_MAGIC);
+		v.extend_from_slice(&[0, 0, 0, 0]);
+		assert_eq!(detectar_jpeg_o_png(&v).unwrap(), FormatoImagenOxigeno::Png);
+		assert_eq!(exif_fecha_captura_opcional(&v), None);
 	}
 
 	#[test]

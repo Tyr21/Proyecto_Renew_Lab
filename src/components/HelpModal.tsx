@@ -88,10 +88,11 @@ export function HelpModal({ open, onClose }: HelpModalProps) {
 								o anuladas según permisos.
 							</li>
 							<li>
-								<strong>Oxígeno:</strong> registro por día (dos medidores, tipo
-								de evento, notas). La foto debe ser JPG o PNG con{" "}
-								<strong>fecha EXIF</strong> del mismo día de operación (salvo tipo
-								“Extra”, donde la foto es opcional). El saldo declarado es
+								<strong>Oxígeno:</strong> registro por día (dos medidores, tipo de evento, notas). La
+								foto debe ser JPG o PNG válidos. Si la foto incluye{" "}
+								<strong>fecha EXIF</strong> de captura, debe coincidir con el día de operación
+								elegido; si no hay EXIF (p. ej. reenvíos), la foto se guarda igual y el día operativo
+								es el del formulario. En tipo “Extra” la foto es opcional. El saldo declarado es
 								opcional y no sustituye las lecturas.
 							</li>
 							<li>
