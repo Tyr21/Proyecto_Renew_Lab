@@ -4,7 +4,7 @@ interface HelpModalProps {
 }
 
 /**
- * Guía breve para el uso diario (sin apartado de Configuración).
+ * Guía breve en pantalla (complementa docs/MANUAL_USUARIO.md).
  */
 export function HelpModal({ open, onClose }: HelpModalProps) {
 	if (!open) return null;
@@ -20,7 +20,7 @@ export function HelpModal({ open, onClose }: HelpModalProps) {
 			}}
 		>
 			<div
-				className="max-h-[85vh] w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-xl flex flex-col"
+				className="flex max-h-[85vh] w-full max-w-xl flex-col overflow-hidden rounded-xl bg-white shadow-xl"
 				onClick={(e) => e.stopPropagation()}
 			>
 				<div className="shrink-0 border-b border-slate-200 px-5 py-4">
@@ -31,27 +31,41 @@ export function HelpModal({ open, onClose }: HelpModalProps) {
 						Ayuda
 					</h2>
 					<p className="mt-1 text-sm text-slate-600">
-						Resumen de lo que puede hacer en la aplicación.
+						Resumen de la aplicación. Los datos se guardan en este equipo (base de
+						datos local); el funcionamiento habitual no requiere Internet.
 					</p>
 				</div>
-				<div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 text-sm text-slate-700 space-y-5">
+				<div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4 text-sm text-slate-700">
+					<section>
+						<h3 className="font-semibold text-slate-800">Navegación</h3>
+						<p className="mt-2">
+							Arriba tiene cuatro pestañas: <strong>Calendario</strong>,{" "}
+							<strong>Reportes</strong>, <strong>Clientes</strong> y{" "}
+							<strong>Configuración</strong>. Este botón de ayuda no cierra su
+							trabajo: vuelva cuando lo necesite.
+						</p>
+					</section>
+
 					<section>
 						<h3 className="font-semibold text-slate-800">Calendario</h3>
-						<ul className="mt-2 list-disc space-y-1 pl-5">
+						<ul className="mt-2 list-disc space-y-1.5 pl-5">
 							<li>
-								Vea la semana en columnas y el panel lateral con el día de hoy.
+								Semana en columnas y panel lateral con el día de hoy; puede
+								incluir domingo según ajustes.
 							</li>
 							<li>
-								Haga clic en un espacio libre para agendar una cita; en una cita
-								para verla o editarla.
+								Clic en un hueco libre para nueva cita; clic en una cita para
+								verla o editarla. El sistema respeta la capacidad por tipo de
+								servicio (varias plazas a la misma hora si está configurado).
 							</li>
 							<li>
-								Puede marcar si el paciente asistió o no; si asistió, se puede
-								registrar el pago desde el aviso que aparece.
+								Estados: pendiente, asistió o no asistió. Si marcó{" "}
+								<strong>asistió</strong>, puede abrirse el registro de pago desde
+								el aviso.
 							</li>
 							<li>
-								Cree recordatorios o eventos desde el calendario para no olvidar
-								tareas.
+								Eventos y recordatorios (mantenimiento, etc.) se crean desde los
+								controles del calendario.
 							</li>
 						</ul>
 					</section>
@@ -59,43 +73,75 @@ export function HelpModal({ open, onClose }: HelpModalProps) {
 					<section>
 						<h3 className="font-semibold text-slate-800">Reportes</h3>
 						<p className="mt-2">
-							Aquí están los informes y el dinero. Use las pestañas internas:
+							Todo está bajo la pestaña <strong>Reportes</strong>, usando las
+							subpestañas:
 						</p>
-						<ul className="mt-2 list-disc space-y-1 pl-5">
+						<ul className="mt-2 list-disc space-y-1.5 pl-5">
 							<li>
-								<strong>Cierre de caja:</strong> ingresos por fechas, totales por
-								medio de pago, tabla de oxígeno (sesiones vs. consumo teórico y
-								lecturas), exportar o imprimir el resumen.
+								<strong>Cierre de caja:</strong> ingresos por rango de fechas,
+								totales por medio de pago, gráfico por día, exportar CSV o PDF.
+								Incluye tabla de <strong>oxígeno</strong> (sesiones atendidas,
+								consumo teórico y lecturas del día) para el mismo rango.
 							</li>
 							<li>
-								<strong>Facturas:</strong> borradores, emitir factura y consultar
-								las ya emitidas.
+								<strong>Facturas:</strong> borradores, emitir, consultar emitidas
+								o anuladas según permisos.
 							</li>
 							<li>
-								<strong>Oxígeno:</strong> registro diario de medidores, foto con
-								fecha EXIF y saldo opcional; parámetros en Configuración.
+								<strong>Oxígeno:</strong> registro por día (dos medidores, tipo
+								de evento, notas). La foto debe ser JPG o PNG con{" "}
+								<strong>fecha EXIF</strong> del mismo día de operación (salvo tipo
+								“Extra”, donde la foto es opcional). El saldo declarado es
+								opcional y no sustituye las lecturas.
 							</li>
 							<li>
-								<strong>Estadísticas:</strong> gráficas y números del consultorio
-								según el período que elija.
+								<strong>Estadísticas:</strong> indicadores y gráficas por período.
 							</li>
 							<li>
-								<strong>Movimientos detallados:</strong> listado de cada ingreso
-								con cliente, servicio, medio de pago y recibo; filtre por fechas e
-								imprima o exporte si lo necesita.
+								<strong>Movimientos detallados:</strong> cada ingreso con
+								detalles; filtre por fechas e imprima o exporte si aplica.
 							</li>
 						</ul>
 					</section>
 
 					<section>
 						<h3 className="font-semibold text-slate-800">Clientes</h3>
-						<ul className="mt-2 list-disc space-y-1 pl-5">
-							<li>Busque y abra fichas de pacientes.</li>
+						<ul className="mt-2 list-disc space-y-1.5 pl-5">
+							<li>Busque por nombre o documento y abra la ficha del paciente.</li>
 							<li>
-								Al crear o editar citas puede autocompletar datos desde aquí si el
-								cliente ya existe.
+								Al agendar o editar citas puede autocompletar datos si el cliente
+								ya existe.
 							</li>
 						</ul>
+					</section>
+
+					<section>
+						<h3 className="font-semibold text-slate-800">Configuración</h3>
+						<ul className="mt-2 list-disc space-y-1.5 pl-5">
+							<li>
+								Requiere <strong>contraseña de administrador</strong> al entrar;
+								al salir y volver, se vuelve a pedir.
+							</li>
+							<li>
+								Aquí ajusta calendario, documentos, servicios y precios sugeridos,
+								facturación, respaldos automáticos, oxígeno (unidad, K por sesión,
+								tipo de servicio a contar) y modo administrador / contraseñas.
+							</li>
+							<li>
+								El <strong>modo administrador</strong> no permanece activo al
+								cerrar y abrir la aplicación: debe activarlo de nuevo si lo
+								necesita.
+							</li>
+						</ul>
+					</section>
+
+					<section>
+						<h3 className="font-semibold text-slate-800">Si algo no guarda</h3>
+						<p className="mt-2">
+							Lea el mensaje de error: suele indicar datos faltantes, cupo lleno u
+							otra regla del consultorio. Use respaldos periódicos según lo
+							configurado en Configuración.
+						</p>
 					</section>
 				</div>
 				<div className="shrink-0 border-t border-slate-200 px-5 py-3">
