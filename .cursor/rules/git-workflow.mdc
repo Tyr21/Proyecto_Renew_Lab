@@ -1,0 +1,27 @@
+---
+description: Flujo Git (commit, push) y lockfiles para equipos y agentes
+alwaysApply: true
+---
+
+# Git: commit, push y reproducibilidad
+
+## Antes de `git commit`
+
+- `git status` y, si aplica, `git diff` para no incluir ruido (`dist/`, `src-tauri/target/`, `*.db`, etc.; ya están en `.gitignore`).
+- **Dependencias Node:** el repo usa `package-lock.json` versionado. Tras cambiar `package.json`, ejecutar instalación, verificar el lock y **incluir `package-lock.json` en el commit** si cambió.
+- **Dependencias Rust:** el repo versiona `src-tauri/Cargo.lock`. Tras cambiar `src-tauri/Cargo.toml`, compilar o regenerar resolución y **incluir `Cargo.lock` en el commit** si cambió. `cargo build --locked` en `src-tauri` debe seguir pasando.
+- **No** commitear `node_modules/`, `src-tauri/target/`, ni bases de datos locales.
+
+## Secuencia habitual
+
+1. `git add` (archivos puntuales o el conjunto adecuado; evitar añadir artefactos ignorados a la fuerza).
+2. `git commit -m "mensaje descriptivo en presente o imperativo, una idea por commit"`.
+3. `git push`. Primera subida de una rama: `git push -u origin <rama>`.
+
+## Si el remoto va por delante
+
+- `git pull --rebase` (o `git pull`) y resolver conflictos; luego `git push` de nuevo.
+
+## Recordatorio
+
+- `src-tauri/Cargo.toml` siempre se versiona; con él, en aplicaciones Tauri, **`Cargo.lock` también** (misma política que `package-lock.json`).
