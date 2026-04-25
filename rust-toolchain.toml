@@ -1,0 +1,3 @@
+# rustup instala y usa este toolchain al entrar al directorio (reproducibilidad con Cargo.lock)
+[toolchain]
+channel = "1.94.0"

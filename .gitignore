@@ -9,6 +9,9 @@ lerna-debug.log*
 
 node_modules
 
+# Tauri / Rust: artefactos (Cargo.lock y package-lock.json SÍ se versionan)
+src-tauri/target/
+
 # Cargo (directorio de compilación de tests en la raíz; no versionar)
 target-test-db/
 
