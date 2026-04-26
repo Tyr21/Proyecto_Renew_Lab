@@ -111,9 +111,9 @@ Estas pantallas están en la pestaña superior **Reportes**, como **subpestañas
 
 ### 5.1 Oxígeno (cámara hiperbárica)
 
-En la subpestaña **Oxígeno** (dentro de **Reportes**) el personal puede **registrar por día** las lecturas de dos medidores, un **saldo declarado** opcional y una **foto** de los medidores. La aplicación exige que la foto tenga metadatos **EXIF** con **fecha de captura** coincidente con el **día de operación** elegido (salvo el tipo de evento “Extra”, donde la foto es opcional). Los tipos de evento habituales incluyen balance inicial, recarga, cierre y anotaciones extra.
+En la subpestaña **Oxígeno** (dentro de **Reportes**) el personal puede **registrar por día** las lecturas de dos medidores y una **foto** de los medidores. La aplicación exige que la foto tenga metadatos **EXIF** con **fecha de captura** coincidente con el **día de operación** elegido (salvo el tipo de evento “Extra”, donde la foto es opcional). Los tipos de evento habituales incluyen balance inicial, recarga, cierre y anotaciones extra.
 
-**Medidor A / Medidor B** son las dos lecturas que se documentan (y suelen salir en la foto). **Saldo declarado** es un campo aparte y opcional: sirve para anotar un balance o inventario que el consultorio quiera dejar explícito (p. ej. criterio interno o libreta), **sin sustituir** las lecturas A/B; si en su operación solo usan las dos lecturas, puede dejarse vacío. Ese saldo **no** entra en el cálculo automático del consumo teórico ni en los deltas del informe.
+**Medidor A / Medidor B** son las dos lecturas que se documentan (y suelen salir en la foto); entran en los informes y en la comparación con el consumo teórico.
 
 Los parámetros **K** (consumo teórico por sesión) y el **tipo de servicio** usado para contar sesiones se configuran en **Configuración → Oxígeno**.
 

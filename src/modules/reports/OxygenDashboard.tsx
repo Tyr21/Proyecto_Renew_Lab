@@ -42,7 +42,6 @@ export function OxygenDashboard({ settings }: Props) {
 	const [tipo, setTipo] = useState<OxigenoEventoTipo>("balance_inicial");
 	const [medidorA, setMedidorA] = useState("");
 	const [medidorB, setMedidorB] = useState("");
-	const [saldoEnfermeria, setSaldoEnfermeria] = useState("");
 	const [notas, setNotas] = useState("");
 	const [archivoFoto, setArchivoFoto] = useState<File | null>(null);
 	const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -89,15 +88,6 @@ export function OxygenDashboard({ settings }: Props) {
 			setErrorForm("Indique lecturas numéricas válidas en ambos medidores.");
 			return;
 		}
-		let saldo: number | null = null;
-		if (saldoEnfermeria.trim()) {
-			const s = Number.parseFloat(saldoEnfermeria.replace(",", "."));
-			if (!Number.isFinite(s)) {
-				setErrorForm("El saldo declarado debe ser un número válido.");
-				return;
-			}
-			saldo = s;
-		}
 		let fotoBytes: number[] | null = null;
 		let fotoExtension: string | null = null;
 		if (fotoObligatoria) {
@@ -129,7 +119,7 @@ export function OxygenDashboard({ settings }: Props) {
 				tipo,
 				medidorA: a,
 				medidorB: b,
-				saldoEnfermeria: saldo,
+				saldoEnfermeria: null,
 				notas: notas.trim() || null,
 				fotoBytes,
 				fotoExtension,
@@ -137,7 +127,6 @@ export function OxygenDashboard({ settings }: Props) {
 			setOkMsg("Registro guardado correctamente.");
 			setMedidorA("");
 			setMedidorB("");
-			setSaldoEnfermeria("");
 			setNotas("");
 			setArchivoFoto(null);
 			await recargarLista();
@@ -162,7 +151,7 @@ export function OxygenDashboard({ settings }: Props) {
 						Registro de oxígeno (cámara hiperbárica)
 					</h1>
 					<p className="mt-1 text-sm text-slate-600">
-						Lecturas de medidores, saldo declarado por enfermería y foto de los medidores (JPG o PNG). El{" "}
+						Lecturas de medidores y foto de los medidores (JPG o PNG). El{" "}
 						<strong className="font-medium text-slate-800">día operativo</strong> del registro es el que
 						elija en “Día de operación”. Si la foto conserva EXIF con fecha de captura, esa fecha debe
 						coincidir con ese día; si no hay EXIF (p. ej. reenvíos por WhatsApp), la foto se guarda igual y
@@ -227,19 +216,6 @@ export function OxygenDashboard({ settings }: Props) {
 								/>
 							</label>
 						</div>
-						<label className="block text-sm">
-							<span className="font-medium text-slate-700">
-								Saldo declarado por enfermería (opcional)
-							</span>
-							<input
-								type="text"
-								inputMode="decimal"
-								className="mt-1 w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 tabular-nums text-slate-800"
-								value={saldoEnfermeria}
-								onChange={(e) => setSaldoEnfermeria(e.target.value)}
-								placeholder="Opcional"
-							/>
-						</label>
 						<label className="block text-sm">
 							<span className="font-medium text-slate-700">Notas</span>
 							<textarea
@@ -316,9 +292,6 @@ export function OxygenDashboard({ settings }: Props) {
 										<p className="font-medium text-slate-800">{etiquetaTipo(ev.tipo)}</p>
 										<p className="tabular-nums text-slate-700">
 											A: {ev.medidorA} · B: {ev.medidorB}
-											{ev.saldoEnfermeria != null
-												? ` · Saldo decl.: ${ev.saldoEnfermeria}`
-												: ""}
 										</p>
 										{ev.notas ? (
 											<p className="text-xs text-slate-600">{ev.notas}</p>

@@ -395,10 +395,25 @@ function App() {
 				<button
 					type="button"
 					onClick={() => setHelpOpen(true)}
-					className="ml-auto shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+					className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
 					title="Ayuda"
 				>
-					❓ Ayuda
+					<svg
+						className="h-4 w-4 shrink-0 text-sky-600"
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						strokeWidth={2}
+						aria-hidden
+					>
+						<path
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.45-.994.9V15m0 3h.01M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"
+						/>
+					</svg>
+					Ayuda
 				</button>
 			</nav>
 
