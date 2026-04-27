@@ -26,7 +26,7 @@ enum FormatoImagenOxigeno {
 	Png,
 }
 
-pub static OXIGENO_TIPOS: &[&str] = &["balance_inicial", "recarga_pipeta", "cierre", "extra"];
+pub static OXIGENO_TIPOS: &[&str] = &["recarga_pipeta", "cierre"];
 
 /// Convierte cadena EXIF típica `YYYY:MM:DD HH:MM:SS` a `YYYY-MM-DD`.
 pub(crate) fn parse_exif_datetime_to_iso_date(raw: &str) -> Result<String, String> {
@@ -103,10 +103,6 @@ fn sanitize_image_extension(ext: &str) -> Result<String, String> {
 	}
 }
 
-fn foto_obligatoria(tipo: &str) -> bool {
-	tipo != "extra"
-}
-
 fn app_oxygen_dir(app: &AppHandle) -> Result<PathBuf, String> {
 	let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
 	Ok(dir.join(OXYGEN_PHOTOS_DIR))
@@ -153,6 +149,16 @@ pub struct OxigenoResumenDia {
 	pub sin_lecturas: bool,
 	pub varianza_vs_teorico_a: Option<f64>,
 	pub varianza_vs_teorico_b: Option<f64>,
+}
+
+/// Último evento guardado (más reciente en `created_at`) para mostrar contexto al registrar lecturas.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UltimaLecturaOxigeno {
+	pub medidor_a: f64,
+	pub medidor_b: f64,
+	pub fecha_operacion: String,
+	pub created_at: String,
 }
 
 fn validate_fecha_ymd(s: &str) -> Result<(), String> {
@@ -203,6 +209,34 @@ pub fn listar_oxigeno_por_rango(
 	Ok(out)
 }
 
+/// Lecturas A/B del registro con `created_at` más reciente. Sin filas devuelve `null`.
+#[tauri::command]
+pub fn obtener_ultima_lectura_oxigeno(
+	db: tauri::State<'_, DbConn>,
+) -> Result<Option<UltimaLecturaOxigeno>, String> {
+	let conn = db.lock().map_err(error::lock)?;
+	let mut stmt = conn
+		.prepare(
+			r#"SELECT medidor_a, medidor_b, fecha_operacion, created_at
+			FROM oxigeno_eventos
+			ORDER BY created_at DESC
+			LIMIT 1"#,
+		)
+		.map_err(error::db)?;
+	match stmt.query_row([], |row| {
+		Ok(UltimaLecturaOxigeno {
+			medidor_a: row.get(0)?,
+			medidor_b: row.get(1)?,
+			fecha_operacion: row.get(2)?,
+			created_at: row.get(3)?,
+		})
+	}) {
+		Ok(v) => Ok(Some(v)),
+		Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+		Err(e) => Err(e.to_string()),
+	}
+}
+
 #[tauri::command]
 pub fn registrar_evento_oxigeno(
 	app: AppHandle,
@@ -226,9 +260,8 @@ pub fn registrar_evento_oxigeno(
 		}
 	}
 
-	let foto_required = foto_obligatoria(&tipo);
 	let bytes = input.foto_bytes.as_ref();
-	if foto_required && (bytes.is_none() || bytes.unwrap().is_empty()) {
+	if bytes.is_none() || bytes.unwrap().is_empty() {
 		return Err("Adjunte foto de los medidores para este tipo de registro.".into());
 	}
 

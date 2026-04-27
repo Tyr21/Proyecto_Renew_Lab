@@ -90,6 +90,7 @@ export const TAURI_COMMANDS = {
 	registrarEventoOxigeno: "registrar_evento_oxigeno",
 	resumenOxigenoRango: "resumen_oxigeno_rango",
 	leerFotoOxigeno: "leer_foto_oxigeno",
+	obtenerUltimaLecturaOxigeno: "obtener_ultima_lectura_oxigeno",
 } as const;
 
 export const FACTURA_CHANGED_EVENT = "factura_changed";

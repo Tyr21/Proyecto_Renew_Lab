@@ -66,11 +66,15 @@ export interface AppSettings {
 	oxygen: OxygenSettings;
 }
 
-export type OxigenoEventoTipo =
-	| "balance_inicial"
-	| "recarga_pipeta"
-	| "cierre"
-	| "extra";
+export type OxigenoEventoTipo = "recarga_pipeta" | "cierre";
+
+/** Último registro de oxígeno guardado (más reciente en el almacenamiento), para contexto al capturar lecturas. */
+export interface UltimaLecturaOxigeno {
+	medidorA: number;
+	medidorB: number;
+	fechaOperacion: string;
+	createdAt: string;
+}
 
 export interface OxigenoEvento {
 	id: string;

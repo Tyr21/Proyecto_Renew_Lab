@@ -120,6 +120,7 @@ pub fn run() {
 			oxigeno::registrar_evento_oxigeno,
 			oxigeno::resumen_oxigeno_rango,
 			oxigeno::leer_foto_oxigeno,
+			oxigeno::obtener_ultima_lectura_oxigeno,
 		])
 		.run(tauri::generate_context!())
 		.expect("error while running tauri application");

@@ -111,9 +111,9 @@ Estas pantallas están en la pestaña superior **Reportes**, como **subpestañas
 
 ### 5.1 Oxígeno (cámara hiperbárica)
 
-En la subpestaña **Oxígeno** (dentro de **Reportes**) el personal puede **registrar por día** las lecturas de dos medidores y una **foto** de los medidores. La aplicación exige que la foto tenga metadatos **EXIF** con **fecha de captura** coincidente con el **día de operación** elegido (salvo el tipo de evento “Extra”, donde la foto es opcional). Los tipos de evento habituales incluyen balance inicial, recarga, cierre y anotaciones extra.
+En la subpestaña **Oxígeno** (dentro de **Reportes**) el personal puede **registrar por día** las lecturas de dos medidores y una **foto** de los medidores. La aplicación exige que la foto tenga metadatos **EXIF** con **fecha de captura** coincidente con el **día de operación** elegido. El formulario ofrece los tipos **Recarga de pipeta** y **Cierre**; al elegir uno, se muestra su nombre como título y un texto de ayuda. Las bases antiguas pueden conservar tipos ya no disponibles (p. ej. “Extra”, “Balance inicial”) en registros antiguos.
 
-**Medidor A / Medidor B** son las dos lecturas que se documentan (y suelen salir en la foto); entran en los informes y en la comparación con el consumo teórico.
+**Medidor A / Medidor B** son las dos lecturas que se documentan (y suelen salir en la foto); entran en los informes y en la comparación con el consumo teórico. Bajo cada etiqueta, la aplicación muestra la **última lectura guardada** en el sistema (el registro con fecha de creación más reciente) usando la **etiqueta de unidad** de Configuración → Oxígeno (p. ej. kPa).
 
 Los parámetros **K** (consumo teórico por sesión) y el **tipo de servicio** usado para contar sesiones se configuran en **Configuración → Oxígeno**.
 

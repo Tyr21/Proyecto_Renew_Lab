@@ -139,9 +139,9 @@ Se cargan junto con las citas en `refreshAppointments` y se muestran en el calen
 
 ### Tabla `oxigeno_eventos` (control de oxígeno — cámara hiperbárica)
 
-Registro de eventos operativos por día (`fecha_operacion` en `YYYY-MM-DD`): tipo (`balance_inicial`, `recarga_pipeta`, `cierre`, `extra`), lecturas `medidor_a` / `medidor_b`, `notas`, ruta relativa de foto bajo el directorio de datos (`oxigeno_fotos/...`), fecha EXIF validada al guardar, `created_at`. La columna `saldo_enfermeria` puede existir en bases antiguas; el formulario actual no la captura (nuevos registros con valor nulo). Índice por `fecha_operacion`.
+Registro de eventos operativos por día (`fecha_operacion` en `YYYY-MM-DD`): tipo (`recarga_pipeta`, `cierre`; valores históricos `balance_inicial`, `extra` u otros pueden existir en filas antiguas), lecturas `medidor_a` / `medidor_b`, `notas`, ruta relativa de foto bajo el directorio de datos (`oxigeno_fotos/...`), fecha EXIF validada al guardar, `created_at`. La columna `saldo_enfermeria` puede existir en bases antiguas; el formulario actual no la captura (nuevos registros con valor nulo). Índice por `fecha_operacion`.
 
-Las fotos se escriben solo desde comandos Rust en `app_data_dir` (subcarpeta `oxigeno_fotos`). Comandos Tauri: `listar_oxigeno_por_rango`, `registrar_evento_oxigeno`, `resumen_oxigeno_rango`, `leer_foto_oxigeno` (módulo `oxigeno.rs`). El resumen por rango cruza estas lecturas con citas `asistio` del `service_type_id` configurado en `oxygen` para el consumo teórico (sesiones × **K**) y deltas entre primera y última lectura del día.
+Las fotos se escriben solo desde comandos Rust en `app_data_dir` (subcarpeta `oxigeno_fotos`). Comandos Tauri: `listar_oxigeno_por_rango`, `registrar_evento_oxigeno`, `resumen_oxigeno_rango`, `leer_foto_oxigeno`, `obtener_ultima_lectura_oxigeno` (módulo `oxigeno.rs`). El resumen por rango cruza estas lecturas con citas `asistio` del `service_type_id` configurado en `oxygen` para el consumo teórico (sesiones × **K**) y deltas entre primera y última lectura del día.
 
 ### Reglas de transición de facturas
 

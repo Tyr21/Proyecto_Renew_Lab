@@ -92,7 +92,8 @@ export function HelpModal({ open, onClose }: HelpModalProps) {
 								foto debe ser JPG o PNG válidos. Si la foto incluye{" "}
 								<strong>fecha EXIF</strong> de captura, debe coincidir con el día de operación
 								elegido; si no hay EXIF (p. ej. reenvíos), la foto se guarda igual y el día operativo
-								es el del formulario. En tipo “Extra” la foto es opcional.
+								es el del formulario. Al elegir el tipo de evento, la pantalla muestra
+								una breve explicación de cuándo usarlo.
 							</li>
 							<li>
 								<strong>Estadísticas:</strong> indicadores y gráficas por período.

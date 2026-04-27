@@ -24,6 +24,7 @@ import type {
 	MetodoPagoStats,
 	OxigenoEvento,
 	OxigenoResumenDia,
+	UltimaLecturaOxigeno,
 	RegistrarEventoOxigenoInput,
 	ServicioStats,
 	StartupAuthStatus,
@@ -327,4 +328,8 @@ export async function resumenOxigenoRango(
 
 export async function leerFotoOxigeno(fotoRelativa: string): Promise<number[]> {
 	return invoke<number[]>(TAURI_COMMANDS.leerFotoOxigeno, { fotoRelativa });
+}
+
+export async function obtenerUltimaLecturaOxigeno(): Promise<UltimaLecturaOxigeno | null> {
+	return invoke<UltimaLecturaOxigeno | null>(TAURI_COMMANDS.obtenerUltimaLecturaOxigeno);
 }

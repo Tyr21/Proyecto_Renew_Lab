@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
 	leerFotoOxigeno,
 	listarOxigenoPorRango,
+	obtenerUltimaLecturaOxigeno,
 	registrarEventoOxigeno,
 } from "../../core/api";
 import { formatInvokeError } from "../../core/errors";
@@ -10,22 +11,45 @@ import type {
 	AppSettings,
 	OxigenoEvento,
 	OxigenoEventoTipo,
+	UltimaLecturaOxigeno,
 } from "../../core/types";
 
-const TIPO_OPCIONES: { value: OxigenoEventoTipo; label: string }[] = [
-	{ value: "balance_inicial", label: "Balance inicial" },
-	{ value: "recarga_pipeta", label: "Recarga de pipeta" },
-	{ value: "cierre", label: "Cierre" },
-	{ value: "extra", label: "Extra (sin foto obligatoria)" },
+const TIPO_CONFIG: {
+	value: OxigenoEventoTipo;
+	label: string;
+	ayuda: string;
+}[] = [
+	{
+		value: "recarga_pipeta",
+		label: "Recarga de pipeta",
+		ayuda:
+			"Úselo cuando haya recarga o cambio de suministro (pipeta) y deba constar en el historial, además de sus registros de rutina.",
+	},
+	{
+		value: "cierre",
+		label: "Cierre",
+		ayuda:
+			"Lectura al cierre de jornada o cierre de control, para documentar el estado al final del período.",
+	},
 ];
 
 function etiquetaTipo(t: string): string {
-	return TIPO_OPCIONES.find((o) => o.value === t)?.label ?? t;
+	if (t === "extra") return "Extra (registro antiguo)";
+	if (t === "balance_inicial") return "Balance inicial (registro antiguo)";
+	return TIPO_CONFIG.find((o) => o.value === t)?.label ?? t;
 }
 
 function extensionDesdeNombre(archivo: string): string | null {
 	const m = /\.([a-z0-9]+)$/i.exec(archivo.trim());
 	return m ? m[1]!.toLowerCase() : null;
+}
+
+function formatearLecturaMedidor(n: number): string {
+	if (!Number.isFinite(n)) return "—";
+	return new Intl.NumberFormat("es-CO", {
+		maximumFractionDigits: 4,
+		minimumFractionDigits: 0,
+	}).format(n);
 }
 
 interface Props {
@@ -39,7 +63,7 @@ export function OxygenDashboard({ settings }: Props) {
 	const [loadingLista, setLoadingLista] = useState(true);
 	const [errorLista, setErrorLista] = useState<string | null>(null);
 
-	const [tipo, setTipo] = useState<OxigenoEventoTipo>("balance_inicial");
+	const [tipo, setTipo] = useState<OxigenoEventoTipo>("recarga_pipeta");
 	const [medidorA, setMedidorA] = useState("");
 	const [medidorB, setMedidorB] = useState("");
 	const [notas, setNotas] = useState("");
@@ -48,8 +72,13 @@ export function OxygenDashboard({ settings }: Props) {
 	const [guardando, setGuardando] = useState(false);
 	const [errorForm, setErrorForm] = useState<string | null>(null);
 	const [okMsg, setOkMsg] = useState<string | null>(null);
+	const [ultimaLectura, setUltimaLectura] = useState<UltimaLecturaOxigeno | null | undefined>(
+		undefined,
+	);
 
-	const fotoObligatoria = tipo !== "extra";
+	const tipoSeleccion = TIPO_CONFIG.find((o) => o.value === tipo);
+	const tituloTipoAyuda = tipoSeleccion?.label ?? "";
+	const ayudaTipo = tipoSeleccion?.ayuda ?? "";
 
 	const recargarLista = useCallback(async () => {
 		setErrorLista(null);
@@ -64,9 +93,23 @@ export function OxygenDashboard({ settings }: Props) {
 		}
 	}, [fechaOperacion]);
 
+	const cargarUltimaLectura = useCallback(async () => {
+		try {
+			const u = await obtenerUltimaLecturaOxigeno();
+			setUltimaLectura(u);
+		} catch (e) {
+			console.error(e);
+			setUltimaLectura(null);
+		}
+	}, []);
+
 	useEffect(() => {
 		void recargarLista();
 	}, [recargarLista]);
+
+	useEffect(() => {
+		void cargarUltimaLectura();
+	}, [cargarUltimaLectura]);
 
 	useEffect(() => {
 		if (!archivoFoto) {
@@ -90,27 +133,17 @@ export function OxygenDashboard({ settings }: Props) {
 		}
 		let fotoBytes: number[] | null = null;
 		let fotoExtension: string | null = null;
-		if (fotoObligatoria) {
-			if (!archivoFoto) {
-				setErrorForm("Adjunte una foto de los medidores (JPEG o PNG).");
-				return;
-			}
-			fotoExtension = extensionDesdeNombre(archivoFoto.name);
-			if (!fotoExtension || !["jpg", "jpeg", "png"].includes(fotoExtension)) {
-				setErrorForm("Use imagen JPG o PNG.");
-				return;
-			}
-			const buf = await archivoFoto.arrayBuffer();
-			fotoBytes = Array.from(new Uint8Array(buf));
-		} else if (archivoFoto) {
-			fotoExtension = extensionDesdeNombre(archivoFoto.name);
-			if (!fotoExtension || !["jpg", "jpeg", "png"].includes(fotoExtension)) {
-				setErrorForm("Si adjunta foto, use JPG o PNG.");
-				return;
-			}
-			const buf = await archivoFoto.arrayBuffer();
-			fotoBytes = Array.from(new Uint8Array(buf));
+		if (!archivoFoto) {
+			setErrorForm("Adjunte una foto de los medidores (JPEG o PNG).");
+			return;
 		}
+		fotoExtension = extensionDesdeNombre(archivoFoto.name);
+		if (!fotoExtension || !["jpg", "jpeg", "png"].includes(fotoExtension)) {
+			setErrorForm("Use imagen JPG o PNG.");
+			return;
+		}
+		const buf = await archivoFoto.arrayBuffer();
+		fotoBytes = Array.from(new Uint8Array(buf));
 
 		setGuardando(true);
 		try {
@@ -130,6 +163,7 @@ export function OxygenDashboard({ settings }: Props) {
 			setNotas("");
 			setArchivoFoto(null);
 			await recargarLista();
+			void cargarUltimaLectura();
 		} catch (err) {
 			setErrorForm(formatInvokeError(err) || "No se pudo guardar el registro");
 		} finally {
@@ -177,44 +211,85 @@ export function OxygenDashboard({ settings }: Props) {
 									onChange={(e) => setFechaOperacion(e.target.value)}
 								/>
 							</label>
-							<label className="block text-sm">
+						</div>
+						<div className="grid gap-3 sm:grid-cols-2 sm:items-start">
+							<label className="block text-sm sm:min-w-0">
 								<span className="font-medium text-slate-700">Tipo de evento</span>
 								<select
 									className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800"
 									value={tipo}
 									onChange={(e) => setTipo(e.target.value as OxigenoEventoTipo)}
+									aria-describedby="oxigeno-tipo-ayuda"
 								>
-									{TIPO_OPCIONES.map((o) => (
+									{TIPO_CONFIG.map((o) => (
 										<option key={o.value} value={o.value}>
 											{o.label}
 										</option>
 									))}
 								</select>
 							</label>
+							<div
+								id="oxigeno-tipo-ayuda"
+								className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2.5 text-sm text-slate-700"
+							>
+								<p className="font-medium text-sky-900">{tituloTipoAyuda}</p>
+								<p className="mt-1 leading-relaxed">{ayudaTipo}</p>
+							</div>
 						</div>
+						{ultimaLectura === undefined ? (
+							<p className="text-xs text-slate-400" aria-live="polite">
+								Cargando última lectura guardada…
+							</p>
+						) : null}
 						<div className="grid gap-4 sm:grid-cols-2">
-							<label className="block text-sm">
+							<div className="text-sm">
 								<span className="font-medium text-slate-700">Medidor A</span>
-								<input
-									type="text"
-									inputMode="decimal"
-									className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 tabular-nums text-slate-800"
-									value={medidorA}
-									onChange={(e) => setMedidorA(e.target.value)}
-									placeholder="Lectura"
-								/>
-							</label>
-							<label className="block text-sm">
+								{ultimaLectura != null ? (
+									<p className="mt-0.5 text-xs text-slate-600 tabular-nums" aria-live="polite">
+										Último registro = {formatearLecturaMedidor(ultimaLectura.medidorA)} {unidad}
+									</p>
+								) : ultimaLectura === null ? (
+									<p className="mt-0.5 text-xs text-slate-500" aria-live="polite">
+										Sin registro previo.
+									</p>
+								) : null}
+								<label className="mt-1 block">
+									<span className="sr-only">Lectura medidor A</span>
+									<input
+										type="text"
+										inputMode="decimal"
+										className="w-full rounded-lg border border-slate-300 px-3 py-2 tabular-nums text-slate-800"
+										value={medidorA}
+										onChange={(e) => setMedidorA(e.target.value)}
+										placeholder="Lectura"
+										aria-label="Lectura medidor A"
+									/>
+								</label>
+							</div>
+							<div className="text-sm">
 								<span className="font-medium text-slate-700">Medidor B</span>
-								<input
-									type="text"
-									inputMode="decimal"
-									className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 tabular-nums text-slate-800"
-									value={medidorB}
-									onChange={(e) => setMedidorB(e.target.value)}
-									placeholder="Lectura"
-								/>
-							</label>
+								{ultimaLectura != null ? (
+									<p className="mt-0.5 text-xs text-slate-600 tabular-nums" aria-live="polite">
+										Último registro = {formatearLecturaMedidor(ultimaLectura.medidorB)} {unidad}
+									</p>
+								) : ultimaLectura === null ? (
+									<p className="mt-0.5 text-xs text-slate-500" aria-live="polite">
+										Sin registro previo.
+									</p>
+								) : null}
+								<label className="mt-1 block">
+									<span className="sr-only">Lectura medidor B</span>
+									<input
+										type="text"
+										inputMode="decimal"
+										className="w-full rounded-lg border border-slate-300 px-3 py-2 tabular-nums text-slate-800"
+										value={medidorB}
+										onChange={(e) => setMedidorB(e.target.value)}
+										placeholder="Lectura"
+										aria-label="Lectura medidor B"
+									/>
+								</label>
+							</div>
 						</div>
 						<label className="block text-sm">
 							<span className="font-medium text-slate-700">Notas</span>
@@ -228,7 +303,7 @@ export function OxygenDashboard({ settings }: Props) {
 						</label>
 						<div>
 							<span className="block text-sm font-medium text-slate-700">
-								Foto de medidores{fotoObligatoria ? " (obligatoria)" : " (opcional)"}
+								Foto de medidores (obligatoria)
 							</span>
 							<p className="mt-0.5 text-xs text-slate-500">
 								JPG o PNG (la app comprueba la cabecera del archivo). Si la imagen trae fecha EXIF, debe
