@@ -6,6 +6,7 @@ import {
 	defaultPackagePlanLabel,
 } from "../../core/constants";
 import { formatInvokeError } from "../../core/errors";
+import { logger } from "../../core/logger";
 import { AdminPasswordAdminSection } from "./AdminPasswordAdminSection";
 import { StartupPasswordAdminSection } from "./StartupPasswordAdminSection";
 import { formatCurrency, parseCurrencyDigits } from "../../core/currencyFormat";
@@ -98,6 +99,7 @@ export function SettingsPanel({
 			setAdminModeModalOpen(false);
 			setAdminModePwd("");
 		} catch (e) {
+			void logger.invokeError("settings.verifyAdminPassword", e);
 			setAdminModeErr(formatInvokeError(e));
 		} finally {
 			setAdminModeBusy(false);
@@ -133,7 +135,8 @@ export function SettingsPanel({
 				onClose();
 			}, 1500);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : String(err));
+			void logger.invokeError("settings.save", err);
+			setError(formatInvokeError(err) || "No se pudo guardar la configuración");
 		} finally {
 			setBusy(false);
 		}

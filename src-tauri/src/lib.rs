@@ -18,6 +18,12 @@ mod time_rules;
 use std::sync::Mutex;
 
 use tauri::Manager;
+use tauri_plugin_log::{Target, TargetKind};
+
+/// Tamaño máximo por archivo de log antes de rotar (5 MB).
+const LOG_MAX_FILE_SIZE: u128 = 5 * 1024 * 1024;
+/// Nombre base del archivo de logs en `LogDir`.
+const LOG_FILE_NAME: &str = "renew-lab";
 
 fn try_startup_backup(app_data_dir: &std::path::Path) {
 	let db_path = app_data_dir.join("consultorio.db");
@@ -45,15 +51,37 @@ fn try_startup_backup(app_data_dir: &std::path::Path) {
 		.unwrap_or_default();
 
 	match backup::run_startup_backup(app_data_dir, &backup_settings) {
-		Ok(n) if n > 0 => println!("[backup] {n} respaldo(s) creado(s) al iniciar"),
-		Err(e) => eprintln!("[backup] error: {e}"),
+		Ok(n) if n > 0 => log::info!(target: "backup", "{n} respaldo(s) creado(s) al iniciar"),
+		Err(e) => log::error!(target: "backup", "error en respaldo de inicio: {e}"),
 		_ => {}
 	}
+}
+
+/// Plugin de logs persistentes con rotación por tamaño.
+///
+/// Escribe a:
+/// - Consola (stdout) — útil en `tauri dev` y para soporte vía DevTools.
+/// - Archivo en `LogDir` del sistema (ver README) con rotación automática
+///   cuando un archivo supera `LOG_MAX_FILE_SIZE`. Los archivos antiguos
+///   se conservan con timestamp en el nombre.
+fn build_log_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
+	tauri_plugin_log::Builder::new()
+		.targets([
+			Target::new(TargetKind::Stdout),
+			Target::new(TargetKind::LogDir {
+				file_name: Some(LOG_FILE_NAME.into()),
+			}),
+		])
+		.max_file_size(LOG_MAX_FILE_SIZE)
+		.rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
+		.level(log::LevelFilter::Info)
+		.build()
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
 	tauri::Builder::default()
+		.plugin(build_log_plugin())
 		.setup(|app| {
 			let dir = app.handle().path().app_data_dir().map_err(|e| {
 				std::io::Error::new(std::io::ErrorKind::Other, e.to_string())

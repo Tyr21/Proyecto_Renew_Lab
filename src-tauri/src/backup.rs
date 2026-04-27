@@ -79,10 +79,10 @@ pub fn run_startup_backup(
 		if ext_dir.is_dir() {
 			match copy_db(&db_path, ext_dir, retention) {
 				Ok(_) => count += 1,
-				Err(e) => eprintln!("[backup] respaldo externo falló: {e}"),
+				Err(e) => log::error!(target: "backup", "respaldo externo falló: {e}"),
 			}
 		} else {
-			eprintln!("[backup] ruta externa no existe o no es carpeta: {ext}");
+			log::warn!(target: "backup", "ruta externa no existe o no es carpeta: {ext}");
 		}
 	}
 

@@ -40,7 +40,7 @@ fn cita_event_payload(row: &AppointmentRow) -> serde_json::Value {
 fn emit_cita_event(app: &AppHandle, event: &str, row: &AppointmentRow) {
 	let payload = cita_event_payload(row);
 	if let Err(e) = app.emit(event, payload) {
-		eprintln!("[cita_event] emit {event} failed: {e}");
+		log::warn!(target: "cita_event", "emit {event} falló: {e}");
 	}
 }
 

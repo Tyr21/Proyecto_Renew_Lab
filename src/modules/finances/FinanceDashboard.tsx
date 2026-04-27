@@ -5,6 +5,7 @@ import { IncomeBarChart } from "../../components/IncomeBarChart";
 import { INGRESO_REGISTRADO_EVENT } from "../../core/constants";
 import { formatCurrency } from "../../core/currencyFormat";
 import { formatInvokeError } from "../../core/errors";
+import { logger } from "../../core/logger";
 import { fechaIngresoLocalISODate, formatHoraPago } from "../../core/ingresoDate";
 import { esc, openPrintWindow } from "../../core/printReport";
 import type { Ingreso, OxigenoResumenDia } from "../../core/types";
@@ -89,6 +90,7 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 			const list = await obtenerIngresos(dateFrom, dateTo);
 			setIngresos(list);
 		} catch (e) {
+			void logger.invokeError("finance.obtenerIngresos", e);
 			setError(formatInvokeError(e) || "No se pudieron cargar los ingresos");
 		} finally {
 			setLoading(false);
@@ -102,6 +104,7 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 			const rows = await resumenOxigenoRango(dateFrom, dateTo);
 			setOxygenRows(rows);
 		} catch (e) {
+			void logger.invokeError("finance.resumenOxigeno", e);
 			setOxygenError(formatInvokeError(e) || "No se pudo cargar el resumen de oxígeno");
 			setOxygenRows([]);
 		} finally {
@@ -173,6 +176,7 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 			await eliminarIngreso(id);
 			await loadIngresos();
 		} catch (e) {
+			void logger.invokeError("finance.eliminarIngreso", e);
 			setError(formatInvokeError(e) || "No se pudo eliminar el ingreso");
 		} finally {
 			setDeletingId(null);

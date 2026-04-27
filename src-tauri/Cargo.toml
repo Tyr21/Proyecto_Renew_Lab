@@ -26,4 +26,6 @@ uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 argon2 = { version = "0.5", features = ["std"] }
 kamadak-exif = "0.6"
+tauri-plugin-log = "2.8.0"
+log = "0.4.29"
 

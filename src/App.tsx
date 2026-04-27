@@ -3,6 +3,7 @@ import { CitaEventNotifier } from "./components/CitaEventNotifier";
 import { FinanceEventListener } from "./components/FinanceEventListener";
 import { HelpModal } from "./components/HelpModal";
 import { StartupSplash } from "./components/StartupSplash";
+import { ToastHost } from "./components/ToastHost";
 import { ConfigAdminGate } from "./components/ConfigAdminGate";
 import { StartupLoginScreen } from "./components/StartupLoginScreen";
 import {
@@ -15,6 +16,8 @@ import {
 	updateAppointment,
 } from "./core/api";
 import { formatInvokeError } from "./core/errors";
+import { logger } from "./core/logger";
+import { showToast } from "./core/toastBus";
 import {
 	APP_VERSION,
 	EVENTO_CHANGED_EVENT,
@@ -105,7 +108,7 @@ function App() {
 			setAppointments(list);
 			setEventos(evts);
 		} catch (e) {
-			console.error(e);
+			void logger.invokeError("calendar.refresh", e);
 		} finally {
 			setCalendarRefreshing(false);
 		}
@@ -128,6 +131,7 @@ function App() {
 					await loadSettingsAfterAuth();
 				}
 			} catch (e) {
+				void logger.invokeError("app.bootstrap", e);
 				setLoadError(
 					e instanceof Error ? e.message : "No se pudo cargar la configuración",
 				);
@@ -255,7 +259,11 @@ function App() {
 			});
 			void refreshAppointments();
 		} catch (err) {
-			alert(formatInvokeError(err));
+			void logger.invokeError("calendar.quickStatus", err);
+			showToast({
+				level: "error",
+				message: formatInvokeError(err) || "No se pudo actualizar la cita",
+			});
 		}
 	}
 
@@ -285,7 +293,10 @@ function App() {
 					setConfirmCloseOpen(true);
 				});
 			} catch (e) {
-				console.error("No se pudo registrar confirmación de cierre:", e);
+				void logger.error(
+					`No se pudo registrar confirmación de cierre: ${formatInvokeError(e)}`,
+					{ target: "app.window" },
+				);
 			}
 		})();
 		return () => {
@@ -298,7 +309,10 @@ function App() {
 			const { getCurrentWindow } = await import("@tauri-apps/api/window");
 			await getCurrentWindow().destroy();
 		} catch (e) {
-			console.error("No se pudo cerrar la ventana:", e);
+			void logger.error(
+				`No se pudo cerrar la ventana: ${formatInvokeError(e)}`,
+				{ target: "app.window" },
+			);
 			setConfirmCloseOpen(false);
 		}
 	}
@@ -510,6 +524,7 @@ function App() {
 			/>
 			<CitaEventNotifier />
 			<FinanceEventListener settings={settings} />
+			<ToastHost />
 			<HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
 			{confirmCloseOpen && (
 				<div

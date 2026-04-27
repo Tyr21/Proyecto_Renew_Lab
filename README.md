@@ -45,3 +45,7 @@ Los criterios de producto de la Fase 2 y la lista de comandos de prueba están r
 ## IDE recomendado
 
 - [VS Code](https://code.visualstudio.com/) + [extensión Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+
+## Soporte
+
+- **Logs**: archivo rotado por tamaño (5 MB, mantiene históricos) en el `LogDir` del sistema; en Windows: `%LOCALAPPDATA%\com.premex.consultorio-renew-lab\logs\renew-lab.log` (más rotaciones `renew-lab_<timestamp>.log`). Adjuntar el archivo más reciente al reportar incidencias.

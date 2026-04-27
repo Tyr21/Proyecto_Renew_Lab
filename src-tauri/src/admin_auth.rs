@@ -43,7 +43,7 @@ fn hash_password(plain: &str) -> Result<String, String> {
 		.hash_password(plain.as_bytes(), &salt)
 		.map(|h| h.to_string())
 		.map_err(|e| {
-			eprintln!("[admin_auth] hash error: {e}");
+			log::error!(target: "admin_auth", "hash error: {e}");
 			"No se pudo procesar la contraseña".into()
 		})
 }

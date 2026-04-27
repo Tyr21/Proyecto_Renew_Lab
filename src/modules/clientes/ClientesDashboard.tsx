@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { buscarClientes, eliminarCliente } from "../../core/api";
 import { formatInvokeError } from "../../core/errors";
+import { logger } from "../../core/logger";
 import type { AppSettings, Cliente } from "../../core/types";
 import { ClienteModal } from "./ClienteModal";
 import { ClienteResumenModal } from "./ClienteResumenModal";
@@ -33,6 +34,7 @@ export function ClientesDashboard({ settings }: ClientesDashboardProps) {
 			const found = await buscarClientes(q.trim());
 			setResultados(found);
 		} catch (e) {
+			void logger.invokeError("clientes.buscar", e);
 			setSearchError(formatInvokeError(e) || "Error al buscar clientes");
 		} finally {
 			setSearching(false);
@@ -124,6 +126,7 @@ export function ClientesDashboard({ settings }: ClientesDashboardProps) {
 			setResultados((prev) => prev.filter((c) => c.id !== id));
 			return true;
 		} catch (e) {
+			void logger.invokeError("clientes.eliminar", e);
 			setSearchError(formatInvokeError(e) || "No se pudo eliminar el cliente");
 			return false;
 		}
