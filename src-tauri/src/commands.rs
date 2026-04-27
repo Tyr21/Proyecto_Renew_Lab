@@ -95,7 +95,7 @@ pub fn get_settings(db: tauri::State<'_, DbConn>) -> Result<AppSettings, String>
 
 #[tauri::command]
 pub fn save_settings(db: tauri::State<'_, DbConn>, settings: AppSettings) -> Result<AppSettings, String> {
-	if settings.default_duration_minutes == 0 || settings.default_duration_minutes % 30 != 0 {
+	if settings.default_duration_minutes == 0 || !settings.default_duration_minutes.is_multiple_of(30) {
 		return Err("La duración por defecto debe ser múltiplo de 30 minutos".into());
 	}
 	if settings.document_types.is_empty() {

@@ -113,18 +113,15 @@ pub fn set_admin_password(
 	let conn = db.lock().map_err(error::lock)?;
 	let existing = load_admin_hash(&conn)?;
 
-	match &existing {
-		Some(hash) => {
-			let cur = current_password.as_deref().unwrap_or("").trim();
-			if cur.is_empty() {
-				return Err("Indique la contraseña actual de administrador".into());
-			}
-			if !verify_password(hash, cur) {
-				return Err("La contraseña actual de administrador no es correcta".into());
-			}
-		}
-		None => {}
-	}
+	if let Some(hash) = &existing {
+ 			let cur = current_password.as_deref().unwrap_or("").trim();
+ 			if cur.is_empty() {
+ 				return Err("Indique la contraseña actual de administrador".into());
+ 			}
+ 			if !verify_password(hash, cur) {
+ 				return Err("La contraseña actual de administrador no es correcta".into());
+ 			}
+ 		}
 
 	let new_hash = hash_password(&new_trim)?;
 	conn

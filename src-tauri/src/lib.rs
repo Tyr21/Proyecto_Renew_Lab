@@ -86,19 +86,19 @@ pub fn run() {
 		.plugin(tauri_plugin_dialog::init())
 		.setup(|app| {
 			let dir = app.handle().path().app_data_dir().map_err(|e| {
-				std::io::Error::new(std::io::ErrorKind::Other, e.to_string())
+				std::io::Error::other(e.to_string())
 			})?;
 			std::fs::create_dir_all(&dir).map_err(|e| {
-				std::io::Error::new(std::io::ErrorKind::Other, e.to_string())
+				std::io::Error::other(e.to_string())
 			})?;
 
 			try_startup_backup(&dir);
 
 			let conn = db::open_connection(app.handle()).map_err(|e| {
-				std::io::Error::new(std::io::ErrorKind::Other, e)
+				std::io::Error::other(e)
 			})?;
 			commands::ensure_persisted_admin_mode_off(&conn).map_err(|e| {
-				std::io::Error::new(std::io::ErrorKind::Other, e)
+				std::io::Error::other(e)
 			})?;
 			app.manage(Mutex::new(conn));
 			Ok(())

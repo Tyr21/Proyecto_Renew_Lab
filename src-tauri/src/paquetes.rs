@@ -47,7 +47,7 @@ pub struct CrearPaqueteInput {
 }
 
 fn validate_metodo(m: &str) -> bool {
-	METODOS_VALIDOS.iter().any(|&v| v == m)
+	METODOS_VALIDOS.contains(&m)
 }
 
 fn parse_expires_date(s: &str) -> Result<NaiveDate, String> {
@@ -321,8 +321,7 @@ pub fn listar_paquetes_cliente(
 			let id: String = row.get(0)?;
 			let total: i64 = row.get(3)?;
 			let (cons, res) = contar_sesiones_paquete(&conn, &id).map_err(|e| {
-				rusqlite::Error::ToSqlConversionFailure(Box::new(std::io::Error::new(
-					std::io::ErrorKind::Other,
+				rusqlite::Error::ToSqlConversionFailure(Box::new(std::io::Error::other(
 					e,
 				)))
 			})?;

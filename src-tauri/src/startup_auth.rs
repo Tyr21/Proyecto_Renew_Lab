@@ -106,18 +106,15 @@ pub fn set_startup_password(
 	let conn = db.lock().map_err(error::lock)?;
 	let existing = load_hash(&conn)?;
 
-	match &existing {
-		Some(hash) => {
-			let cur = current_password.as_deref().unwrap_or("").trim();
-			if cur.is_empty() {
-				return Err("Indique la contraseña actual".into());
-			}
-			if !verify_password(hash, cur) {
-				return Err("La contraseña actual no es correcta".into());
-			}
-		}
-		None => {}
-	}
+	if let Some(hash) = &existing {
+ 			let cur = current_password.as_deref().unwrap_or("").trim();
+ 			if cur.is_empty() {
+ 				return Err("Indique la contraseña actual".into());
+ 			}
+ 			if !verify_password(hash, cur) {
+ 				return Err("La contraseña actual no es correcta".into());
+ 			}
+ 		}
 
 	let new_hash = hash_password(&new_trim)?;
 	conn
@@ -136,7 +133,7 @@ pub fn clear_startup_password_with_admin(
 	admin_password: String,
 ) -> Result<(), String> {
 	let conn = db.lock().map_err(error::lock)?;
-	admin_auth::verify_admin_password_with_conn(&conn, &admin_password.trim())?;
+	admin_auth::verify_admin_password_with_conn(&conn, admin_password.trim())?;
 	let Some(_) = load_hash(&conn)? else {
 		return Err("No hay contraseña de inicio para quitar".into());
 	};
@@ -159,7 +156,7 @@ pub fn set_startup_password_with_admin(
 	validate_new_password(&new_password)?;
 	let new_trim = new_password.trim().to_string();
 	let conn = db.lock().map_err(error::lock)?;
-	admin_auth::verify_admin_password_with_conn(&conn, &admin_password.trim())?;
+	admin_auth::verify_admin_password_with_conn(&conn, admin_password.trim())?;
 	let new_hash = hash_password(&new_trim)?;
 	conn
 		.execute(

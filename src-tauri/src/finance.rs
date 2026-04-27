@@ -62,7 +62,7 @@ fn load_ingreso_by_id(conn: &Connection, id: &str) -> Result<IngresoRow, String>
 }
 
 fn validate_metodo(m: &str) -> bool {
-	METODOS_VALIDOS.iter().any(|&v| v == m)
+	METODOS_VALIDOS.contains(&m)
 }
 
 /// Ingreso con datos de factura vinculada (si existe) para listados e impresión.

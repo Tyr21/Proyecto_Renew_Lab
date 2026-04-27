@@ -1,8 +1,8 @@
-/// Sanitizes internal errors to prevent leaking implementation details
-/// (table names, column names, file paths, etc.) to the frontend WebView.
-///
-/// Each function logs the full error vía `log::error!` (persistido por
-/// `tauri-plugin-log`) y devuelve un mensaje genérico para la UI.
+//! Sanitizes internal errors to prevent leaking implementation details
+//! (table names, column names, file paths, etc.) to the frontend WebView.
+//!
+//! Each function logs the full error vía `log::error!` (persistido por
+//! `tauri-plugin-log`) y devuelve un mensaje genérico para la UI.
 
 pub(crate) fn db<E: std::fmt::Display>(e: E) -> String {
 	log::error!(target: "error::db", "{e}");
