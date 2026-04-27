@@ -160,6 +160,9 @@ El panel de configuración está organizado en **secciones** (menú lateral en p
 - Activación de **copias automáticas** de la base de datos al iniciar la aplicación.
 - **Cuántas copias** conservar en cada ubicación.
 - Opcional: **carpeta externa** (por ejemplo una carpeta sincronizada con la nube) para una copia adicional.
+- **Restaurar desde respaldo:** lista los respaldos locales y permite elegir uno externo con un selector de archivos. Pide la contraseña de administrador, advierte que se reemplaza la base activa y pierde datos posteriores, y cierra la aplicación al terminar para que vuelva a abrirse con la base restaurada.
+
+> **Importante sobre los respaldos:** los archivos generados (`consultorio_<fecha>.db`) son **copias sin cifrar** de la base. Trate cada respaldo con el mismo nivel de cuidado que la información del consultorio: guárdelo en USB cifrados, carpetas privadas o servicios con su propia cuenta protegida. Consulte la sección **9. Datos, privacidad y respaldos** para recomendaciones detalladas.
 
 ### 7.6 Oxígeno (cámara hiperbárica)
 
@@ -211,7 +214,16 @@ Con el modo administrador activo puede **cambiar** o **eliminar** la contraseña
 ## 9. Datos, privacidad y respaldos
 
 - Toda la información principal reside en un **archivo de base de datos** en el equipo. Haga **copias de respaldo** según la sección **Respaldos** y, si es posible, mantenga copias en otro medio o ubicación segura.
-- Proteja el equipo con contraseña de sesión de Windows y, en portátiles, considere **cifrado de disco** si el riesgo de robo o pérdida del equipo es relevante.
+- **El archivo de base de datos no está cifrado:** quien tenga acceso al equipo (con privilegios de administrador del sistema o si el equipo se pierde sin protección) podría abrir el archivo. Las contraseñas de inicio y de administrador se almacenan con técnicas que dificultan adivinarlas (Argon2), pero **no protegen el contenido del resto de la base si alguien copia el archivo**.
+- **Proteja el equipo:**
+	- Active el **cifrado de disco** del sistema operativo (en Windows: **BitLocker**). Esto protege todo el contenido del equipo si se pierde o se lo roban estando apagado.
+	- Use **contraseña de sesión de Windows** y bloqueo automático al ausentarse.
+	- Si comparte el equipo con personal del consultorio, considere crear sesiones de Windows separadas.
+- **Proteja los respaldos:**
+	- El archivo de respaldo (`consultorio_*.db`) **es una copia exacta de la base, igualmente sin cifrar**. Guárdelo en un medio confiable.
+	- Para respaldos externos en USB, prefiera unidades con **BitLocker To Go** o equivalente.
+	- Para respaldos en la nube, use carpetas en servicios donde usted controla la cuenta y, idealmente, con cifrado en cliente.
+- **Si pierde una contraseña**, la aplicación **no puede recuperarla**: solo restablecerla con los procedimientos de Configuración (que a su vez requieren la contraseña de administrador, o pasos guiados si se perdió esta). Guarde sus contraseñas en un lugar seguro fuera de la aplicación.
 
 ---
 

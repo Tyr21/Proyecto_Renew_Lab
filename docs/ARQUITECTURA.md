@@ -229,9 +229,55 @@ Los eventos como `cita_creada`, `cita_actualizada`, `cita_completada` o `cita_ca
 
 ## Consideraciones de seguridad
 
-- **Modelo de amenaza:** aplicación de escritorio con datos en disco; la protección apunta a **uso casual** y **separación de roles** en el consultorio, no a resistencia a copia offline del archivo `consultorio.db` ni a malware con privilegios en el equipo.
-- **Sin cifrado de BD en el estado actual:** quien obtenga una copia del archivo puede intentar ataques offline contra los hashes (mitigar con contraseñas largas) o manipular filas si controla el disco.
-- **Mejora futura opcional:** cifrado de SQLite (p. ej. SQLCipher) + gestión de clave vía keyring del SO; coste de complejidad y recuperación ante pérdida de clave.
+### Modelo de amenaza
+
+Aplicación de escritorio mono-equipo, ejecutada bajo la sesión de Windows del usuario que la opera. Los adversarios contemplados son:
+
+- **Personal del consultorio sin contraseña** que intenta abrir la app o llegar a Configuración desde la pantalla principal.
+- **Personas con acceso físico ocasional al equipo encendido y desbloqueado** (curiosos, pacientes en sala) que abren la app ya iniciada.
+- **Robo o pérdida del equipo** (portátil, PC de oficina) sin que el atacante conozca la contraseña de Windows.
+- **Malware genérico** sin privilegios elevados que opera bajo la cuenta del usuario.
+
+**No** se contemplan: atacantes con privilegios de administrador del sistema, malware dirigido al producto, atacantes con acceso físico extendido capaces de copiar el disco, ni acceso a infraestructura en la nube.
+
+### Qué protege la app
+
+- **Bloqueo de arranque opcional:** contraseña de inicio (`startup_auth`) verificada con Argon2 antes de mostrar el calendario.
+- **Separación de roles:** contraseña de administrador (`admin_auth`) requerida para entrar a `Configuración`, activar `modo administrador`, eliminar citas pasadas o restaurar respaldos.
+- **Hashes resistentes a cómputo offline:** ambas contraseñas se almacenan con Argon2id y parámetros configurables; nunca viajan al frontend.
+- **Validación duplicada Rust ↔ TypeScript** en operaciones de citas y cobros, para que reglas críticas no dependan solo del cliente.
+- **IPC con ACL granular** (`capabilities/*.json`): el frontend solo puede invocar comandos explícitamente permitidos.
+- **Respaldos automáticos al inicio** con retención configurable (local y opcionalmente externa) y restauración manual con confirmación de admin.
+
+### Qué NO protege la app
+
+- **Lectura/copia del archivo `consultorio.db`** por cualquiera con acceso al sistema de archivos (administrador del equipo, portátil robado sin cifrado de disco, copia desde otro arranque). El archivo está en SQLite estándar **sin cifrado en reposo**.
+- **Manipulación directa de filas** desde fuera de la app (ej. abrir el `.db` con DB Browser y editar). La integridad lógica solo se garantiza vía los comandos Rust.
+- **Ataques offline contra los hashes** una vez exfiltrado el `.db`: Argon2 los hace costosos pero no imposibles ante contraseñas cortas.
+- **Confidencialidad de los respaldos**: los archivos `consultorio_*.db` en `app_data_dir/backups` y en la ruta externa configurable son copias **sin cifrar** de la BD activa.
+
+### Decisión: no cifrar la BD en disco (vigente a 2026-04)
+
+Se evaluó la opción de migrar a SQLCipher (clave AES-256 vía `PRAGMA key`) con la clave gestionada por el keyring del SO (Windows Credential Manager). Se decidió **no** adoptarlo en esta fase por:
+
+- **Riesgo operativo:** una clave perdida (perfil de Windows corrupto, reinstalación, migración de equipo) inutiliza tanto la BD activa como **todos los respaldos** generados con ella, comprometiendo continuidad del consultorio.
+- **Incompatibilidad con el flujo de respaldos:** los respaldos son copias byte-a-byte; con rotación de clave, los respaldos antiguos requerirían un histórico de claves para poder restaurarse, contradiciendo el principio "el usuario no toca archivos a mano".
+- **Mitigación equivalente disponible:** el cifrado de disco del SO (BitLocker en Windows 10/11) cubre el escenario principal (robo/pérdida del equipo) sin introducir un modo de fallo crítico nuevo y sin coste de mantenimiento en el código.
+- **Coherencia con el modelo de amenaza:** el producto está dimensionado para uso casual y separación de roles en un único consultorio, no para resistir copia offline del archivo.
+
+**Criterios para reabrir la decisión:**
+
+- Migración a un esquema multi-equipo o multi-sucursal con sincronización.
+- Almacenamiento de respaldos en nube no controlada por el usuario.
+- Requisito legal explícito de cifrado en reposo para datos de salud (p. ej. si se entra al alcance de auditorías de Habeas Data — Ley 1581/2012 — con tratamiento de datos sensibles bajo art. 6).
+
+### Recomendaciones operativas
+
+- Activar **BitLocker** (o equivalente) en el equipo donde corre la app.
+- Mantener **contraseña de sesión** de Windows y bloqueo automático.
+- Usar contraseñas largas (frases de paso) tanto para Windows como para inicio/admin de la app.
+- Configurar la ruta externa de respaldos hacia un medio confiable: USB con BitLocker To Go, carpeta de OneDrive con cifrado en cliente o disco de red restringido.
+- Si se descarta el equipo, borrar de forma segura el disco antes de transferirlo.
 
 ## Documentos relacionados
 
