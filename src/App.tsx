@@ -526,7 +526,7 @@ function App() {
 							Cerrar aplicación
 						</h2>
 						<p className="mt-2 text-sm text-slate-600">
-							¿Desea cerrar la aplicación? Se perderán los cambios sin guardar.
+							¿Desea cerrar la aplicación?
 						</p>
 						<div className="mt-5 flex justify-end gap-2">
 							<button
