@@ -1,6 +1,7 @@
 mod admin_auth;
 mod appointment_model;
 mod backup;
+mod backup_commands;
 mod clientes;
 mod commands;
 mod db;
@@ -82,6 +83,7 @@ fn build_log_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
 pub fn run() {
 	tauri::Builder::default()
 		.plugin(build_log_plugin())
+		.plugin(tauri_plugin_dialog::init())
 		.setup(|app| {
 			let dir = app.handle().path().app_data_dir().map_err(|e| {
 				std::io::Error::new(std::io::ErrorKind::Other, e.to_string())
@@ -149,6 +151,8 @@ pub fn run() {
 			oxigeno::resumen_oxigeno_rango,
 			oxigeno::leer_foto_oxigeno,
 			oxigeno::obtener_ultima_lectura_oxigeno,
+			backup_commands::listar_respaldos_locales,
+			backup_commands::restaurar_respaldo,
 		])
 		.run(tauri::generate_context!())
 		.expect("error while running tauri application");

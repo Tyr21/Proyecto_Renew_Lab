@@ -4,6 +4,7 @@ import type {
 	AppSettings,
 	Appointment,
 	AppointmentInput,
+	BackupFileInfo,
 	CitasPorMes,
 	Cliente,
 	ClienteInput,
@@ -332,4 +333,18 @@ export async function leerFotoOxigeno(fotoRelativa: string): Promise<number[]> {
 
 export async function obtenerUltimaLecturaOxigeno(): Promise<UltimaLecturaOxigeno | null> {
 	return invoke<UltimaLecturaOxigeno | null>(TAURI_COMMANDS.obtenerUltimaLecturaOxigeno);
+}
+
+export async function listarRespaldosLocales(): Promise<BackupFileInfo[]> {
+	return invoke<BackupFileInfo[]>(TAURI_COMMANDS.listarRespaldosLocales);
+}
+
+export async function restaurarRespaldo(
+	sourcePath: string,
+	adminPassword: string,
+): Promise<void> {
+	return invoke(TAURI_COMMANDS.restaurarRespaldo, {
+		sourcePath,
+		adminPassword,
+	});
 }

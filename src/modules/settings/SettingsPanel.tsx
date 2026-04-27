@@ -8,6 +8,7 @@ import {
 import { formatInvokeError } from "../../core/errors";
 import { logger } from "../../core/logger";
 import { AdminPasswordAdminSection } from "./AdminPasswordAdminSection";
+import { BackupRestoreSection } from "./BackupRestoreSection";
 import { StartupPasswordAdminSection } from "./StartupPasswordAdminSection";
 import { formatCurrency, parseCurrencyDigits } from "../../core/currencyFormat";
 import type {
@@ -903,6 +904,8 @@ export function SettingsPanel({
 										/>
 									</label>
 								</div>
+
+								<BackupRestoreSection adminModeActive={draft.adminMode ?? false} />
 							</div>
 						</section>
 					)}

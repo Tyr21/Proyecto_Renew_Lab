@@ -35,6 +35,14 @@ export interface BackupSettings {
 	externalPath: string;
 }
 
+/** Metadatos de un archivo de respaldo encontrado en disco. */
+export interface BackupFileInfo {
+	name: string;
+	fullPath: string;
+	sizeBytes: number;
+	modifiedAtIso: string;
+}
+
 /** Parámetros para comparar sesiones de cámara con consumo teórico de oxígeno. */
 export interface OxygenSettings {
 	unitsLabel: string;

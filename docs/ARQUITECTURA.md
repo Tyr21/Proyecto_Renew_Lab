@@ -215,6 +215,18 @@ Los eventos como `cita_creada`, `cita_actualizada`, `cita_completada` o `cita_ca
 - **Formularios anidados:** los formularios de contraseña en configuración no usan `<form>` internos dentro del formulario principal de “Guardar configuración” (evita envíos accidentales del padre); botones `type="button"` y manejadores `onClick` / tecla Enter acotada.
 - **Comandos relevantes (resumen):** `get_startup_auth_status`, `verify_startup_password`, `set_startup_password`, `clear_startup_password_with_admin`, `set_startup_password_with_admin`; `get_admin_auth_status`, `verify_admin_password`, `set_admin_password`, `clear_admin_password`.
 
+## Respaldos y restauración
+
+- **Generación automática (al iniciar):** `run_startup_backup` (`backup.rs`) copia `consultorio.db` con prefijo `consultorio_<timestamp>.db` a `app_data_dir/backups` y, si está configurada en `BackupSettings.external_path`, también a una ruta externa (sincronizable con la nube). La retención (`retention_count`) se aplica por carpeta.
+- **Listado y restauración manual:** módulo `backup_commands.rs` con dos comandos Tauri:
+	- `listar_respaldos_locales`: devuelve `Vec<BackupFileInfo>` (nombre, ruta absoluta, tamaño y fecha de modificación) leyendo solo `app_data_dir/backups`. Para archivos fuera de esa carpeta el frontend usa el diálogo nativo (`@tauri-apps/plugin-dialog`, capability `dialog:allow-open`).
+	- `restaurar_respaldo`: recibe `source_path` y `admin_password`. Exige modo administrador activo (`settings.admin_mode == true`) y verifica el hash Argon2 con `verify_admin_password_with_conn`. La operación:
+		1. Hace checkpoint del WAL y reemplaza la `Connection` activa por una `open_in_memory` para liberar handles (Windows no permite renombrar un archivo abierto).
+		2. Valida la fuente (prefijo `consultorio_`, extensión `.db`, cabecera SQLite y `PRAGMA schema_version` legible).
+		3. Copia a `consultorio.db.restore.tmp`, elimina los archivos auxiliares `consultorio.db-wal` / `-shm` y hace `fs::rename` atómico sobre `consultorio.db`.
+		4. Reabre la BD restaurada con `db::open_connection` (aplica migraciones) y la reinstala en el `Mutex<Connection>` compartido.
+- **UX:** componente `BackupRestoreSection` en `Configuración → Respaldos`. Lista los respaldos locales, permite elegir un archivo externo, exige confirmación con contraseña de administrador y, tras la restauración exitosa, ofrece cerrar la aplicación para que cualquier estado en memoria se reconstruya al volver a abrirla.
+
 ## Consideraciones de seguridad
 
 - **Modelo de amenaza:** aplicación de escritorio con datos en disco; la protección apunta a **uso casual** y **separación de roles** en el consultorio, no a resistencia a copia offline del archivo `consultorio.db` ni a malware con privilegios en el equipo.

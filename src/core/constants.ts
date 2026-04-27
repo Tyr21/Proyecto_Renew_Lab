@@ -105,7 +105,13 @@ export const TAURI_COMMANDS = {
 	resumenOxigenoRango: "resumen_oxigeno_rango",
 	leerFotoOxigeno: "leer_foto_oxigeno",
 	obtenerUltimaLecturaOxigeno: "obtener_ultima_lectura_oxigeno",
+	listarRespaldosLocales: "listar_respaldos_locales",
+	restaurarRespaldo: "restaurar_respaldo",
 } as const;
+
+/** Prefijo y extensión de los archivos de respaldo (alineado con backend `backup.rs`). */
+export const BACKUP_FILE_PREFIX = "consultorio_";
+export const BACKUP_FILE_EXTENSION = "db";
 
 export const FACTURA_CHANGED_EVENT = "factura_changed";
 export const EVENTO_CHANGED_EVENT = "evento_changed";
