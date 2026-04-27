@@ -1,3 +1,17 @@
+import packageJson from "../../package.json";
+
+/** Versión de la aplicación (origen: `package.json`, alineado con `tauri.conf.json`). */
+export const APP_VERSION = packageJson.version;
+
+export const APP_AUTHOR_NAME = "Lucas Peláez Ospina";
+export const APP_AUTHOR_EMAIL = "lucasp19@hotmail.com";
+
+/**
+ * Imagen de pantalla de arranque (logo Renew Lab), servida desde `public/`.
+ * Vite: `import.meta.env.BASE_URL` termina en `/` (p. ej. `/`).
+ */
+export const STARTUP_SPLASH_IMAGE_URL = `${import.meta.env.BASE_URL}renew-lab-splash.jpeg`;
+
 /** Horario operativo [7:00, 20:00) en la misma fecha local */
 export const CALENDAR_DAY_START_HOUR = 7;
 export const CALENDAR_DAY_END_HOUR = 20;

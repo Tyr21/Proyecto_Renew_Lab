@@ -1,3 +1,9 @@
+import {
+	APP_AUTHOR_EMAIL,
+	APP_AUTHOR_NAME,
+	APP_VERSION,
+} from "../core/constants";
+
 interface HelpModalProps {
 	open: boolean;
 	onClose: () => void;
@@ -143,6 +149,31 @@ export function HelpModal({ open, onClose }: HelpModalProps) {
 							otra regla del consultorio. Use respaldos periódicos según lo
 							configurado en Configuración.
 						</p>
+					</section>
+
+					<section className="border-t border-slate-200 pt-4">
+						<h3 className="font-semibold text-slate-800">Sobre esta aplicación</h3>
+						<dl className="mt-2 space-y-1.5 text-slate-700">
+							<div>
+								<dt className="inline font-medium text-slate-800">Versión: </dt>
+								<dd className="inline tabular-nums">{APP_VERSION}</dd>
+							</div>
+							<div>
+								<dt className="inline font-medium text-slate-800">Autor: </dt>
+								<dd className="inline">{APP_AUTHOR_NAME}</dd>
+							</div>
+							<div>
+								<dt className="inline font-medium text-slate-800">Correo: </dt>
+								<dd className="inline">
+									<a
+										href={`mailto:${APP_AUTHOR_EMAIL}`}
+										className="text-sky-700 underline decoration-sky-300 underline-offset-2 hover:text-sky-900"
+									>
+										{APP_AUTHOR_EMAIL}
+									</a>
+								</dd>
+							</div>
+						</dl>
 					</section>
 				</div>
 				<div className="shrink-0 border-t border-slate-200 px-5 py-3">

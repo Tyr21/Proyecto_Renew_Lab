@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CitaEventNotifier } from "./components/CitaEventNotifier";
 import { FinanceEventListener } from "./components/FinanceEventListener";
 import { HelpModal } from "./components/HelpModal";
+import { StartupSplash } from "./components/StartupSplash";
 import { ConfigAdminGate } from "./components/ConfigAdminGate";
 import { StartupLoginScreen } from "./components/StartupLoginScreen";
 import {
@@ -14,7 +15,11 @@ import {
 	updateAppointment,
 } from "./core/api";
 import { formatInvokeError } from "./core/errors";
-import { EVENTO_CHANGED_EVENT, INGRESO_REGISTRADO_EVENT } from "./core/constants";
+import {
+	APP_VERSION,
+	EVENTO_CHANGED_EVENT,
+	INGRESO_REGISTRADO_EVENT,
+} from "./core/constants";
 import { isSlotBookableWithGracePeriod } from "./core/leadTime";
 import type { AppSettings, Appointment, Evento } from "./core/types";
 import { addDays, getWeekDates, startOfWeekMonday, toISODateLocal } from "./core/weekUtils";
@@ -62,6 +67,8 @@ function App() {
 	const [eventoPresetTime, setEventoPresetTime] = useState<string | null>(null);
 	const [helpOpen, setHelpOpen] = useState(false);
 	const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
+	/** Tras contraseña de inicio correcta, mientras se obtiene `getSettings`. */
+	const [postPasswordLoading, setPostPasswordLoading] = useState(false);
 
 	const weekRange = useMemo(() => {
 		if (!settings) return { start: "", end: "" };
@@ -312,23 +319,25 @@ function App() {
 	}
 
 	if (startupGate === "checking") {
-		return (
-			<div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-600">
-				Cargando…
-			</div>
-		);
+		return <StartupSplash />;
 	}
 
 	if (startupGate === "password") {
+		if (postPasswordLoading) {
+			return <StartupSplash />;
+		}
 		return (
 			<StartupLoginScreen
 				onSuccess={async () => {
+					setPostPasswordLoading(true);
 					try {
 						await loadSettingsAfterAuth();
 					} catch (e) {
 						setLoadError(
 							e instanceof Error ? e.message : "No se pudo cargar la configuración",
 						);
+					} finally {
+						setPostPasswordLoading(false);
 					}
 				}}
 			/>
@@ -336,11 +345,7 @@ function App() {
 	}
 
 	if (!settings) {
-		return (
-			<div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-600">
-				Cargando…
-			</div>
-		);
+		return <StartupSplash />;
 	}
 
 	return (
@@ -396,7 +401,7 @@ function App() {
 					type="button"
 					onClick={() => setHelpOpen(true)}
 					className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-					title="Ayuda"
+					title={`Ayuda (v${APP_VERSION}) — guía, versión y contacto del autor`}
 				>
 					<svg
 						className="h-4 w-4 shrink-0 text-sky-600"
