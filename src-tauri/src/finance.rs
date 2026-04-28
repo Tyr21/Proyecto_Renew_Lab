@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
-use crate::commands::{DbConn, load_settings_json};
+use crate::commands::{load_settings_json, DbConn};
 use crate::error;
 
 const METODOS_VALIDOS: &[&str] = &["Efectivo", "Tarjeta", "Transferencia"];
@@ -84,7 +84,9 @@ pub struct MovimientoFinancieroDetalle {
 	pub paquete_id: Option<String>,
 }
 
-fn row_to_movimiento_detalle(row: &rusqlite::Row<'_>) -> rusqlite::Result<MovimientoFinancieroDetalle> {
+fn row_to_movimiento_detalle(
+	row: &rusqlite::Row<'_>,
+) -> rusqlite::Result<MovimientoFinancieroDetalle> {
 	Ok(MovimientoFinancieroDetalle {
 		id: row.get(0)?,
 		fecha_pago: row.get(1)?,

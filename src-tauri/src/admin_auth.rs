@@ -114,22 +114,21 @@ pub fn set_admin_password(
 	let existing = load_admin_hash(&conn)?;
 
 	if let Some(hash) = &existing {
- 			let cur = current_password.as_deref().unwrap_or("").trim();
- 			if cur.is_empty() {
- 				return Err("Indique la contraseña actual de administrador".into());
- 			}
- 			if !verify_password(hash, cur) {
- 				return Err("La contraseña actual de administrador no es correcta".into());
- 			}
- 		}
+		let cur = current_password.as_deref().unwrap_or("").trim();
+		if cur.is_empty() {
+			return Err("Indique la contraseña actual de administrador".into());
+		}
+		if !verify_password(hash, cur) {
+			return Err("La contraseña actual de administrador no es correcta".into());
+		}
+	}
 
 	let new_hash = hash_password(&new_trim)?;
-	conn
-		.execute(
-			"UPDATE admin_auth SET password_hash = ?1 WHERE id = 1",
-			params![new_hash],
-		)
-		.map_err(error::db)?;
+	conn.execute(
+		"UPDATE admin_auth SET password_hash = ?1 WHERE id = 1",
+		params![new_hash],
+	)
+	.map_err(error::db)?;
 	Ok(())
 }
 
@@ -146,11 +145,10 @@ pub fn clear_admin_password(db: State<'_, DbConn>, current_password: String) -> 
 	if !verify_password(&hash, cur) {
 		return Err("Contraseña de administrador incorrecta".into());
 	}
-	conn
-		.execute(
-			"UPDATE admin_auth SET password_hash = NULL WHERE id = 1",
-			[],
-		)
-		.map_err(error::db)?;
+	conn.execute(
+		"UPDATE admin_auth SET password_hash = NULL WHERE id = 1",
+		[],
+	)
+	.map_err(error::db)?;
 	Ok(())
 }

@@ -15,13 +15,10 @@ use crate::db;
 use crate::error;
 
 fn resolve_app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
-	let dir = app
-		.path()
-		.app_data_dir()
-		.map_err(|e| {
-			log::error!(target: "backup_commands", "app_data_dir: {e}");
-			"No se pudo localizar la carpeta de datos de la aplicación".to_string()
-		})?;
+	let dir = app.path().app_data_dir().map_err(|e| {
+		log::error!(target: "backup_commands", "app_data_dir: {e}");
+		"No se pudo localizar la carpeta de datos de la aplicación".to_string()
+	})?;
 	std::fs::create_dir_all(&dir)
 		.map_err(|e| format!("No se pudo crear la carpeta de datos: {e}"))?;
 	Ok(dir)
@@ -98,7 +95,8 @@ pub fn restaurar_respaldo(
 
 	let new_conn = db::open_connection(&app).map_err(|e| {
 		log::error!(target: "backup_commands", "no se pudo abrir la BD restaurada: {e}");
-		"La base de datos se reemplazó pero no se pudo abrir la nueva. Reinicie la aplicación.".to_string()
+		"La base de datos se reemplazó pero no se pudo abrir la nueva. Reinicie la aplicación."
+			.to_string()
 	})?;
 	*guard = new_conn;
 	Ok(())

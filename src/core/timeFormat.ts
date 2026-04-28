@@ -1,8 +1,4 @@
-import {
-	CALENDAR_DAY_END_HOUR,
-	CALENDAR_DAY_START_HOUR,
-	SLOT_MINUTES,
-} from "./constants";
+import { CALENDAR_DAY_END_HOUR, CALENDAR_DAY_START_HOUR, SLOT_MINUTES } from "./constants";
 import type { TimeDisplay } from "./types";
 
 export function parseHHMM(s: string): { h: number; m: number } | null {
@@ -40,11 +36,7 @@ export function formatTimeLabel(hhmm: string, mode: TimeDisplay): string {
 
 export function generateSlotStarts(): string[] {
 	const out: string[] = [];
-	for (
-		let m = CALENDAR_DAY_START_HOUR * 60;
-		m < CALENDAR_DAY_END_HOUR * 60;
-		m += SLOT_MINUTES
-	) {
+	for (let m = CALENDAR_DAY_START_HOUR * 60; m < CALENDAR_DAY_END_HOUR * 60; m += SLOT_MINUTES) {
 		out.push(hhmmFromMinutes(m));
 	}
 	return out;

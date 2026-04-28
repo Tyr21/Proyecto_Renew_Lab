@@ -50,9 +50,7 @@ export async function setStartupPassword(
 	});
 }
 
-export async function clearStartupPasswordWithAdmin(
-	adminPassword: string,
-): Promise<void> {
+export async function clearStartupPasswordWithAdmin(adminPassword: string): Promise<void> {
 	return invoke(TAURI_COMMANDS.clearStartupPasswordWithAdmin, {
 		adminPassword,
 	});
@@ -94,9 +92,7 @@ export async function getSettings(): Promise<AppSettings> {
 	return invoke<AppSettings>(TAURI_COMMANDS.getSettings);
 }
 
-export async function saveSettings(
-	settings: AppSettings,
-): Promise<AppSettings> {
+export async function saveSettings(settings: AppSettings): Promise<AppSettings> {
 	return invoke<AppSettings>(TAURI_COMMANDS.saveSettings, { settings });
 }
 
@@ -110,16 +106,11 @@ export async function listAppointmentsRange(
 	});
 }
 
-export async function createAppointment(
-	input: AppointmentInput,
-): Promise<Appointment> {
+export async function createAppointment(input: AppointmentInput): Promise<Appointment> {
 	return invoke<Appointment>(TAURI_COMMANDS.createAppointment, { input });
 }
 
-export async function updateAppointment(
-	id: string,
-	input: AppointmentInput,
-): Promise<Appointment> {
+export async function updateAppointment(id: string, input: AppointmentInput): Promise<Appointment> {
 	return invoke<Appointment>(TAURI_COMMANDS.updateAppointment, {
 		id,
 		input,
@@ -134,16 +125,11 @@ export async function getAppointment(id: string): Promise<Appointment> {
 	return invoke<Appointment>(TAURI_COMMANDS.getAppointment, { id });
 }
 
-export async function crearIngreso(
-	input: CrearIngresoInput,
-): Promise<Ingreso> {
+export async function crearIngreso(input: CrearIngresoInput): Promise<Ingreso> {
 	return invoke<Ingreso>(TAURI_COMMANDS.crearIngreso, { input });
 }
 
-export async function obtenerIngresos(
-	startDate: string,
-	endDate: string,
-): Promise<Ingreso[]> {
+export async function obtenerIngresos(startDate: string, endDate: string): Promise<Ingreso[]> {
 	return invoke<Ingreso[]>(TAURI_COMMANDS.obtenerIngresos, { startDate, endDate });
 }
 
@@ -151,10 +137,10 @@ export async function listarMovimientosFinancierosDetalle(
 	startDate: string,
 	endDate: string,
 ): Promise<MovimientoFinancieroDetalle[]> {
-	return invoke<MovimientoFinancieroDetalle[]>(
-		TAURI_COMMANDS.listarMovimientosFinancierosDetalle,
-		{ startDate, endDate },
-	);
+	return invoke<MovimientoFinancieroDetalle[]>(TAURI_COMMANDS.listarMovimientosFinancierosDetalle, {
+		startDate,
+		endDate,
+	});
 }
 
 export async function eliminarIngreso(id: string): Promise<void> {
@@ -205,10 +191,7 @@ export async function crearCliente(input: ClienteInput): Promise<Cliente> {
 	return invoke<Cliente>(TAURI_COMMANDS.crearCliente, { input });
 }
 
-export async function actualizarCliente(
-	id: string,
-	input: ClienteInput,
-): Promise<Cliente> {
+export async function actualizarCliente(id: string, input: ClienteInput): Promise<Cliente> {
 	return invoke<Cliente>(TAURI_COMMANDS.actualizarCliente, { id, input });
 }
 
@@ -223,37 +206,29 @@ export async function obtenerCliente(id: string): Promise<Cliente> {
 export async function obtenerResumenClienteDashboard(
 	clienteId: string,
 ): Promise<ClienteResumenDashboard> {
-	return invoke<ClienteResumenDashboard>(
-		TAURI_COMMANDS.obtenerResumenClienteDashboard,
-		{ clienteId },
-	);
+	return invoke<ClienteResumenDashboard>(TAURI_COMMANDS.obtenerResumenClienteDashboard, {
+		clienteId,
+	});
 }
 
 export async function eliminarCliente(id: string): Promise<void> {
 	return invoke(TAURI_COMMANDS.eliminarCliente, { id });
 }
 
-export async function listarPaquetesCliente(
-	clienteId: string,
-): Promise<PaqueteCliente[]> {
+export async function listarPaquetesCliente(clienteId: string): Promise<PaqueteCliente[]> {
 	return invoke<PaqueteCliente[]>(TAURI_COMMANDS.listarPaquetesCliente, {
 		clienteId,
 	});
 }
 
-export async function crearPaquete(
-	input: CrearPaqueteInput,
-): Promise<PaqueteCliente> {
+export async function crearPaquete(input: CrearPaqueteInput): Promise<PaqueteCliente> {
 	return invoke<PaqueteCliente>(TAURI_COMMANDS.crearPaquete, { input });
 }
 
 export async function crearClienteYPaquete(
 	input: CrearClienteYPaqueteInput,
 ): Promise<ClienteYPaqueteCreado> {
-	return invoke<ClienteYPaqueteCreado>(
-		TAURI_COMMANDS.crearClienteYPaquete,
-		{ input },
-	);
+	return invoke<ClienteYPaqueteCreado>(TAURI_COMMANDS.crearClienteYPaquete, { input });
 }
 
 export async function listarFacturas(
@@ -261,7 +236,11 @@ export async function listarFacturas(
 	endDate: string,
 	estado?: string,
 ): Promise<Factura[]> {
-	return invoke<Factura[]>(TAURI_COMMANDS.listarFacturas, { startDate, endDate, estado: estado ?? null });
+	return invoke<Factura[]>(TAURI_COMMANDS.listarFacturas, {
+		startDate,
+		endDate,
+		estado: estado ?? null,
+	});
 }
 
 export async function obtenerFactura(id: string): Promise<Factura> {
@@ -280,10 +259,7 @@ export async function anularFactura(id: string, motivo: string): Promise<Factura
 	return invoke<Factura>(TAURI_COMMANDS.anularFactura, { id, motivo });
 }
 
-export async function listarEventosRango(
-	startDate: string,
-	endDate: string,
-): Promise<Evento[]> {
+export async function listarEventosRango(startDate: string, endDate: string): Promise<Evento[]> {
 	return invoke<Evento[]>(TAURI_COMMANDS.listarEventosRango, { startDate, endDate });
 }
 
@@ -339,10 +315,7 @@ export async function listarRespaldosLocales(): Promise<BackupFileInfo[]> {
 	return invoke<BackupFileInfo[]>(TAURI_COMMANDS.listarRespaldosLocales);
 }
 
-export async function restaurarRespaldo(
-	sourcePath: string,
-	adminPassword: string,
-): Promise<void> {
+export async function restaurarRespaldo(sourcePath: string, adminPassword: string): Promise<void> {
 	return invoke(TAURI_COMMANDS.restaurarRespaldo, {
 		sourcePath,
 		adminPassword,

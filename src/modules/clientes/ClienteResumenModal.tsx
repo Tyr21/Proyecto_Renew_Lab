@@ -21,8 +21,18 @@ interface ClienteResumenModalProps {
 }
 
 const MESES_CORTO = [
-	"Ene", "Feb", "Mar", "Abr", "May", "Jun",
-	"Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
+	"Ene",
+	"Feb",
+	"Mar",
+	"Abr",
+	"May",
+	"Jun",
+	"Jul",
+	"Ago",
+	"Sep",
+	"Oct",
+	"Nov",
+	"Dic",
 ];
 
 function etiquetaFecha(isoDate: string): string {
@@ -37,36 +47,26 @@ function etiquetaFecha(isoDate: string): string {
 	}).format(dt);
 }
 
-function filaCita(
-	c: CitaResumenCliente,
-	settings: AppSettings,
-	clave: string,
-): ReactElement {
+function filaCita(c: CitaResumenCliente, settings: AppSettings, clave: string): ReactElement {
 	const enPlan = Boolean(c.paqueteId && String(c.paqueteId).trim().length > 0);
-	const etiquetaPago = c.isPaid
-		? "Sí"
-		: enPlan
-			? "No (cubierta por plan)"
-			: "No";
+	const etiquetaPago = c.isPaid ? "Sí" : enPlan ? "No (cubierta por plan)" : "No";
 
 	return (
-		<li
-			key={clave}
-			className="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2 text-sm"
-		>
+		<li key={clave} className="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2 text-sm">
 			<div className="flex flex-wrap items-baseline justify-between gap-2">
 				<span className="font-medium text-slate-800">
-					{etiquetaFecha(c.appointmentDate)} ·{" "}
-					{formatTimeLabel(c.startTime, settings.timeDisplay)} –{" "}
-					{formatTimeLabel(c.endTime, settings.timeDisplay)}
+					{etiquetaFecha(c.appointmentDate)} · {formatTimeLabel(c.startTime, settings.timeDisplay)}{" "}
+					– {formatTimeLabel(c.endTime, settings.timeDisplay)}
 				</span>
 				<span className="text-xs text-slate-500">
-					{c.status === "asistio" ? "Asistió" : c.status === "no_asistio" ? "No asistió" : "Pendiente"}
+					{c.status === "asistio"
+						? "Asistió"
+						: c.status === "no_asistio"
+							? "No asistió"
+							: "Pendiente"}
 				</span>
 			</div>
-			<p className="mt-1 text-slate-700">
-				{serviceLabelFromSettings(settings, c.serviceType)}
-			</p>
+			<p className="mt-1 text-slate-700">{serviceLabelFromSettings(settings, c.serviceType)}</p>
 			<div className="mt-1 flex flex-wrap gap-2 text-xs">
 				<span
 					className={`rounded px-1.5 py-0.5 font-medium ${
@@ -77,9 +77,7 @@ function filaCita(
 				</span>
 				<span
 					className={`rounded px-1.5 py-0.5 font-medium ${
-						c.isPaid
-							? "bg-emerald-100 text-emerald-800"
-							: "bg-amber-100 text-amber-900"
+						c.isPaid ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"
 					}`}
 				>
 					Pagado: {etiquetaPago}
@@ -142,10 +140,7 @@ export function ClienteResumenModal({
 			<div className="flex max-h-[min(90vh,720px)] w-full max-w-lg flex-col rounded-xl bg-white shadow-xl">
 				<div className="shrink-0 border-b border-slate-200 px-5 py-4">
 					<div className="flex items-start justify-between gap-3">
-						<h2
-							id="cliente-resumen-titulo"
-							className="text-lg font-semibold text-slate-800"
-						>
+						<h2 id="cliente-resumen-titulo" className="text-lg font-semibold text-slate-800">
 							Ficha del cliente
 						</h2>
 						<button
@@ -211,9 +206,7 @@ export function ClienteResumenModal({
 									</p>
 								) : (
 									<ul className="mt-2 space-y-2">
-										{data!.ultimosServicios.map((row) =>
-											filaCita(row, settings, `u-${row.id}`),
-										)}
+										{data!.ultimosServicios.map((row) => filaCita(row, settings, `u-${row.id}`))}
 									</ul>
 								)}
 							</section>
@@ -228,9 +221,7 @@ export function ClienteResumenModal({
 									</p>
 								) : (
 									<ul className="mt-2 space-y-2">
-										{data!.proximasCitas.map((row) =>
-											filaCita(row, settings, `p-${row.id}`),
-										)}
+										{data!.proximasCitas.map((row) => filaCita(row, settings, `p-${row.id}`))}
 									</ul>
 								)}
 							</section>

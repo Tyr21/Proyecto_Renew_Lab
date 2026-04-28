@@ -117,8 +117,7 @@ export const FACTURA_CHANGED_EVENT = "factura_changed";
 export const EVENTO_CHANGED_EVENT = "evento_changed";
 
 export function slotCountForDay(): number {
-	const minutes =
-		(CALENDAR_DAY_END_HOUR - CALENDAR_DAY_START_HOUR) * 60;
+	const minutes = (CALENDAR_DAY_END_HOUR - CALENDAR_DAY_START_HOUR) * 60;
 	return minutes / SLOT_MINUTES;
 }
 

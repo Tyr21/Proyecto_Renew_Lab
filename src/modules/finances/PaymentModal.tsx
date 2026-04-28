@@ -99,10 +99,7 @@ export function PaymentModal({
 		? (packageCheckout!.expectedPrecioTotalConIva ?? 0)
 		: (prefill!.suggestedPrice ?? 0);
 
-	const showPriceMismatch =
-		suggestedRef > 0 &&
-		monto > 0 &&
-		Math.abs(monto - suggestedRef) > 0.009;
+	const showPriceMismatch = suggestedRef > 0 && monto > 0 && Math.abs(monto - suggestedRef) > 0.009;
 
 	async function handleSubmit(e: FormEvent) {
 		e.preventDefault();
@@ -203,10 +200,7 @@ export function PaymentModal({
 			aria-labelledby="payment-modal-title"
 		>
 			<div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
-				<h2
-					id="payment-modal-title"
-					className="text-lg font-semibold text-slate-800"
-				>
+				<h2 id="payment-modal-title" className="text-lg font-semibold text-slate-800">
 					{isPackage ? "Cobrar plan de sesiones" : "Registrar pago"}
 				</h2>
 				<p className="mt-1 text-xs text-slate-500">
@@ -222,9 +216,7 @@ export function PaymentModal({
 				) : null}
 				<form className="mt-4 space-y-3" onSubmit={handleSubmit}>
 					<div>
-						<label className="block text-xs font-medium text-slate-600">
-							Concepto
-						</label>
+						<label className="block text-xs font-medium text-slate-600">Concepto</label>
 						<input
 							type="text"
 							className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
@@ -234,9 +226,7 @@ export function PaymentModal({
 						/>
 					</div>
 					<div>
-						<label className="block text-xs font-medium text-slate-600">
-							Documento paciente
-						</label>
+						<label className="block text-xs font-medium text-slate-600">Documento paciente</label>
 						<input
 							type="text"
 							className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
@@ -246,23 +236,17 @@ export function PaymentModal({
 						/>
 					</div>
 					<div>
-						<label className="block text-xs font-medium text-slate-600">
-							Monto
-						</label>
+						<label className="block text-xs font-medium text-slate-600">Monto</label>
 						<input
 							type="text"
 							inputMode="numeric"
 							autoComplete="off"
 							className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm tabular-nums"
 							value={monto === 0 ? "" : formatCurrency(monto)}
-							onChange={(e) =>
-								setMonto(parseCurrencyDigits(e.target.value))
-							}
+							onChange={(e) => setMonto(parseCurrencyDigits(e.target.value))}
 							placeholder="$ 0"
 							required
-							aria-describedby={
-								showPriceMismatch ? "payment-monto-advertencia" : undefined
-							}
+							aria-describedby={showPriceMismatch ? "payment-monto-advertencia" : undefined}
 						/>
 						{showPriceMismatch ? (
 							<p
@@ -271,15 +255,13 @@ export function PaymentModal({
 								role="status"
 								aria-live="polite"
 							>
-								⚠️ El valor ingresado difiere del total esperado de{" "}
-								{formatCurrency(suggestedRef)}. ¿Confirma que es correcto?
+								⚠️ El valor ingresado difiere del total esperado de {formatCurrency(suggestedRef)}.
+								¿Confirma que es correcto?
 							</p>
 						) : null}
 					</div>
 					<div>
-						<label className="block text-xs font-medium text-slate-600">
-							Método de pago
-						</label>
+						<label className="block text-xs font-medium text-slate-600">Método de pago</label>
 						<select
 							className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
 							value={metodoPago}
@@ -299,9 +281,7 @@ export function PaymentModal({
 								checked={generarFactura}
 								onChange={(e) => setGenerarFactura(e.target.checked)}
 							/>
-							<span className="text-slate-700">
-								Generar documento de venta (factura)
-							</span>
+							<span className="text-slate-700">Generar documento de venta (factura)</span>
 						</label>
 					) : null}
 					{error ? (
@@ -323,11 +303,7 @@ export function PaymentModal({
 							className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
 							disabled={busy}
 						>
-							{busy
-								? "Guardando…"
-								: isPackage
-									? "Confirmar cobro"
-									: "Registrar pago"}
+							{busy ? "Guardando…" : isPackage ? "Confirmar cobro" : "Registrar pago"}
 						</button>
 					</div>
 				</form>

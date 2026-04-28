@@ -62,7 +62,8 @@ fn cleanup_old(dir: &Path, keep: usize) {
 }
 
 fn copy_db(db_path: &Path, dest_dir: &Path, retention: usize) -> Result<PathBuf, String> {
-	fs::create_dir_all(dest_dir).map_err(|e| format!("No se pudo crear carpeta de respaldo: {e}"))?;
+	fs::create_dir_all(dest_dir)
+		.map_err(|e| format!("No se pudo crear carpeta de respaldo: {e}"))?;
 	let dest = dest_dir.join(backup_filename());
 	fs::copy(db_path, &dest).map_err(|e| format!("Error al copiar respaldo: {e}"))?;
 	cleanup_old(dest_dir, retention);
@@ -101,7 +102,10 @@ pub fn list_local_backups_info(app_data_dir: &Path) -> Vec<BackupFileInfo> {
 	let dir = app_data_dir.join(LOCAL_BACKUPS_SUBDIR);
 	let mut files = list_backups(&dir);
 	files.sort_by(|a, b| b.cmp(a));
-	files.into_iter().filter_map(|p| build_backup_info(&p)).collect()
+	files
+		.into_iter()
+		.filter_map(|p| build_backup_info(&p))
+		.collect()
 }
 
 /// Valida que `source_path` exista, sea archivo regular y respete el prefijo `consultorio_*.db`.
@@ -126,8 +130,8 @@ fn validate_backup_source(source_path: &Path) -> Result<(), String> {
 
 	let mut buf = [0u8; 16];
 	use std::io::Read;
-	let mut f = fs::File::open(source_path)
-		.map_err(|e| format!("No se puede abrir el respaldo: {e}"))?;
+	let mut f =
+		fs::File::open(source_path).map_err(|e| format!("No se puede abrir el respaldo: {e}"))?;
 	f.read_exact(&mut buf)
 		.map_err(|e| format!("No se puede leer la cabecera del respaldo: {e}"))?;
 	if buf != SQLITE_HEADER {
@@ -144,15 +148,16 @@ fn validate_backup_source(source_path: &Path) -> Result<(), String> {
 pub fn restore_from_backup(app_data_dir: &Path, source_path: &Path) -> Result<(), String> {
 	validate_backup_source(source_path)?;
 
-	let canonical_source = fs::canonicalize(source_path)
-		.map_err(|e| format!("Ruta de respaldo inválida: {e}"))?;
+	let canonical_source =
+		fs::canonicalize(source_path).map_err(|e| format!("Ruta de respaldo inválida: {e}"))?;
 	let canonical_data = fs::canonicalize(app_data_dir)
 		.map_err(|e| format!("No se pudo localizar la carpeta de datos: {e}"))?;
 	let active_db = canonical_data.join(DB_FILE);
 	if let Ok(active_canonical) = fs::canonicalize(&active_db) {
 		if active_canonical == canonical_source {
 			return Err(
-				"No se puede restaurar el archivo activo sobre sí mismo. Elija otro respaldo.".into(),
+				"No se puede restaurar el archivo activo sobre sí mismo. Elija otro respaldo."
+					.into(),
 			);
 		}
 	}
@@ -164,11 +169,9 @@ pub fn restore_from_backup(app_data_dir: &Path, source_path: &Path) -> Result<()
 	fs::copy(&canonical_source, &tmp_path)
 		.map_err(|e| format!("No se pudo copiar el respaldo a un archivo temporal: {e}"))?;
 
-	if let Err(e) = rusqlite::Connection::open_with_flags(
-		&tmp_path,
-		rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-	)
-	.and_then(|c| c.query_row("PRAGMA schema_version", [], |row| row.get::<_, i64>(0)))
+	if let Err(e) =
+		rusqlite::Connection::open_with_flags(&tmp_path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+			.and_then(|c| c.query_row("PRAGMA schema_version", [], |row| row.get::<_, i64>(0)))
 	{
 		let _ = fs::remove_file(&tmp_path);
 		return Err(format!(
@@ -194,10 +197,7 @@ pub fn restore_from_backup(app_data_dir: &Path, source_path: &Path) -> Result<()
 
 /// Ejecuta el respaldo automático al iniciar la app.
 /// Retorna la cantidad de respaldos creados (0, 1 o 2).
-pub fn run_startup_backup(
-	app_data_dir: &Path,
-	settings: &BackupSettings,
-) -> Result<u32, String> {
+pub fn run_startup_backup(app_data_dir: &Path, settings: &BackupSettings) -> Result<u32, String> {
 	if !settings.enabled {
 		return Ok(0);
 	}
@@ -292,8 +292,10 @@ mod tests {
 
 	fn write_minimal_sqlite_file(path: &Path) {
 		let conn = rusqlite::Connection::open(path).unwrap();
-		conn.execute_batch("CREATE TABLE marker (k TEXT PRIMARY KEY); INSERT INTO marker VALUES ('ok');")
-			.unwrap();
+		conn.execute_batch(
+			"CREATE TABLE marker (k TEXT PRIMARY KEY); INSERT INTO marker VALUES ('ok');",
+		)
+		.unwrap();
 		drop(conn);
 	}
 

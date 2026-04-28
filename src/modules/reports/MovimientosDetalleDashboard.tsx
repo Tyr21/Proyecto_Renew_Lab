@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { listarMovimientosFinancierosDetalle } from "../../core/api";
-import {
-	FACTURA_CHANGED_EVENT,
-	INGRESO_REGISTRADO_EVENT,
-} from "../../core/constants";
+import { FACTURA_CHANGED_EVENT, INGRESO_REGISTRADO_EVENT } from "../../core/constants";
 import { formatCurrency } from "../../core/currencyFormat";
 import { formatInvokeError } from "../../core/errors";
 import { fechaIngresoLocalISODate, formatHoraPago } from "../../core/ingresoDate";
@@ -44,9 +41,7 @@ function etiquetaServicio(settings: AppSettings, concepto: string): string {
 	return serviceLabelFromSettings(settings, trimmed);
 }
 
-export function MovimientosDetalleDashboard({
-	settings,
-}: MovimientosDetalleDashboardProps) {
+export function MovimientosDetalleDashboard({ settings }: MovimientosDetalleDashboardProps) {
 	const [dateFrom, setDateFrom] = useState(() => {
 		const now = new Date();
 		return toISODateLocal(new Date(now.getFullYear(), now.getMonth(), 1));
@@ -102,9 +97,7 @@ export function MovimientosDetalleDashboard({
 			const recibo = etiquetaRecibo(r);
 			const vf = valorFacturaMostrado(r).toFixed(0);
 			const mi = r.monto.toFixed(0);
-			return [fecha, hora, nombre, doc, serv, r.metodoPago, recibo, vf, mi].join(
-				",",
-			);
+			return [fecha, hora, nombre, doc, serv, r.metodoPago, recibo, vf, mi].join(",");
 		});
 		const csv = [header, ...lineas].join("\r\n");
 		const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
@@ -183,14 +176,11 @@ export function MovimientosDetalleDashboard({
 			<div className="mx-auto max-w-7xl space-y-6">
 				<header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
 					<div>
-						<h1 className="text-xl font-semibold text-slate-800">
-							Movimientos con detalle
-						</h1>
+						<h1 className="text-xl font-semibold text-slate-800">Movimientos con detalle</h1>
 						<p className="mt-1 text-sm text-slate-600">
-							Ingresos del rango: cliente, documento, servicio, medio de pago, recibo
-							(serie-número de factura si existe; en ventas de paquete sin factura,
-							referencia al paquete) y valor factura (total de la factura vinculada;
-							si no hay factura, el monto del ingreso).
+							Ingresos del rango: cliente, documento, servicio, medio de pago, recibo (serie-número
+							de factura si existe; en ventas de paquete sin factura, referencia al paquete) y valor
+							factura (total de la factura vinculada; si no hay factura, el monto del ingreso).
 						</p>
 					</div>
 					<div className="flex flex-col gap-2">
@@ -279,34 +269,22 @@ export function MovimientosDetalleDashboard({
 								<th className="whitespace-nowrap px-3 py-3">Servicio</th>
 								<th className="whitespace-nowrap px-3 py-3">Medio de pago</th>
 								<th className="whitespace-nowrap px-3 py-3">N° recibo</th>
-								<th className="whitespace-nowrap px-3 py-3 text-right">
-									Valor factura
-								</th>
+								<th className="whitespace-nowrap px-3 py-3 text-right">Valor factura</th>
 							</tr>
 						</thead>
 						<tbody>
 							{rows.length === 0 && !loading ? (
 								<tr>
-									<td
-										colSpan={7}
-										className="px-4 py-12 text-center text-slate-500"
-									>
+									<td colSpan={7} className="px-4 py-12 text-center text-slate-500">
 										No hay movimientos en el rango seleccionado.
 									</td>
 								</tr>
 							) : (
 								rows.map((r) => (
-									<tr
-										key={r.id}
-										className="border-b border-slate-100 hover:bg-slate-50/80"
-									>
+									<tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50/80">
 										<td className="whitespace-nowrap px-3 py-2.5 text-slate-800">
-											<span className="block">
-												{fechaIngresoLocalISODate(r.fechaPago)}
-											</span>
-											<span className="text-xs text-slate-500">
-												{formatHoraPago(r.fechaPago)}
-											</span>
+											<span className="block">{fechaIngresoLocalISODate(r.fechaPago)}</span>
+											<span className="text-xs text-slate-500">{formatHoraPago(r.fechaPago)}</span>
 										</td>
 										<td className="max-w-[200px] px-3 py-2.5 text-slate-800">
 											{r.pacienteNombre || "—"}
@@ -317,9 +295,7 @@ export function MovimientosDetalleDashboard({
 										<td className="max-w-[220px] px-3 py-2.5 text-slate-700">
 											{etiquetaServicio(settings, r.concepto)}
 										</td>
-										<td className="whitespace-nowrap px-3 py-2.5 text-slate-700">
-											{r.metodoPago}
-										</td>
+										<td className="whitespace-nowrap px-3 py-2.5 text-slate-700">{r.metodoPago}</td>
 										<td className="whitespace-nowrap px-3 py-2.5 font-mono text-sm text-slate-800">
 											{etiquetaRecibo(r)}
 										</td>

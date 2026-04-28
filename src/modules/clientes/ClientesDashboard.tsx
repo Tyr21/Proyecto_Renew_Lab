@@ -138,12 +138,10 @@ export function ClientesDashboard({ settings }: ClientesDashboardProps) {
 				{/* Header */}
 				<header className="flex items-center justify-between">
 					<div>
-						<h1 className="text-xl font-semibold text-slate-800">
-							👥 Clientes
-						</h1>
+						<h1 className="text-xl font-semibold text-slate-800">👥 Clientes</h1>
 						<p className="mt-0.5 text-sm text-slate-500">
-							Busca por nombre, apellido o número de documento. Con resultados: flechas
-							para resaltar, Enter o Tab para abrir la ficha.
+							Busca por nombre, apellido o número de documento. Con resultados: flechas para
+							resaltar, Enter o Tab para abrir la ficha.
 						</p>
 					</div>
 					<button
@@ -260,7 +258,7 @@ export function ClientesDashboard({ settings }: ClientesDashboardProps) {
 						? async (id) => {
 								const ok = await handleEliminar(id);
 								if (ok) setResumenClienteId(null);
-						  }
+							}
 						: undefined
 				}
 			/>

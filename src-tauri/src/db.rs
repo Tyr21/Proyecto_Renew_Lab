@@ -35,10 +35,7 @@ const DB_FILE: &str = "consultorio.db";
 // ---------------------------------------------------------------------------
 
 pub fn open_connection(app: &AppHandle) -> Result<Connection, String> {
-	let dir = app
-		.path()
-		.app_data_dir()
-		.map_err(|e| e.to_string())?;
+	let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
 	std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
 	let path = dir.join(DB_FILE);
 	let conn = Connection::open(path).map_err(|e| e.to_string())?;
@@ -52,9 +49,8 @@ pub fn open_connection(app: &AppHandle) -> Result<Connection, String> {
 }
 
 fn run_migrations(conn: &Connection) -> Result<(), String> {
-	conn
-		.execute_batch(
-			r#"
+	conn.execute_batch(
+		r#"
 			CREATE TABLE IF NOT EXISTS appointments (
 				id TEXT PRIMARY KEY,
 				patient_full_name TEXT NOT NULL,
@@ -113,8 +109,8 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
 			CREATE INDEX IF NOT EXISTS idx_clientes_nombres
 				ON clientes(nombres, apellidos);
 		"#,
-		)
-		.map_err(|e| e.to_string())?;
+	)
+	.map_err(|e| e.to_string())?;
 
 	// Migración incremental: agrega paciente_nombre si aún no existe
 	let _ = conn.execute(
@@ -124,9 +120,8 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
 
 	backfill_ingresos_paciente_nombre(conn)?;
 
-	let _ = conn.execute_batch(
-		"CREATE INDEX IF NOT EXISTS idx_ingresos_cita ON ingresos(cita_id);",
-	);
+	let _ =
+		conn.execute_batch("CREATE INDEX IF NOT EXISTS idx_ingresos_cita ON ingresos(cita_id);");
 
 	run_facturacion_migrations(conn)?;
 	run_eventos_migrations(conn)?;
@@ -139,9 +134,8 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
 }
 
 fn run_oxigeno_migrations(conn: &Connection) -> Result<(), String> {
-	conn
-		.execute_batch(
-			r#"
+	conn.execute_batch(
+		r#"
 			CREATE TABLE IF NOT EXISTS oxigeno_eventos (
 				id TEXT PRIMARY KEY,
 				fecha_operacion TEXT NOT NULL,
@@ -156,15 +150,14 @@ fn run_oxigeno_migrations(conn: &Connection) -> Result<(), String> {
 			);
 			CREATE INDEX IF NOT EXISTS idx_oxigeno_fecha ON oxigeno_eventos(fecha_operacion);
 		"#,
-		)
-		.map_err(|e| e.to_string())?;
+	)
+	.map_err(|e| e.to_string())?;
 	Ok(())
 }
 
 fn run_paquetes_migrations(conn: &Connection) -> Result<(), String> {
-	conn
-		.execute_batch(
-			r#"
+	conn.execute_batch(
+		r#"
 			CREATE TABLE IF NOT EXISTS paquetes (
 				id TEXT PRIMARY KEY,
 				cliente_id TEXT NOT NULL,
@@ -180,13 +173,10 @@ fn run_paquetes_migrations(conn: &Connection) -> Result<(), String> {
 			CREATE INDEX IF NOT EXISTS idx_paquetes_cliente ON paquetes(cliente_id);
 			CREATE INDEX IF NOT EXISTS idx_paquetes_status ON paquetes(status);
 		"#,
-		)
-		.map_err(|e| e.to_string())?;
+	)
+	.map_err(|e| e.to_string())?;
 
-	let _ = conn.execute(
-		"ALTER TABLE appointments ADD COLUMN paquete_id TEXT",
-		[],
-	);
+	let _ = conn.execute("ALTER TABLE appointments ADD COLUMN paquete_id TEXT", []);
 	let _ = conn.execute_batch(
 		"CREATE INDEX IF NOT EXISTS idx_appointments_paquete ON appointments(paquete_id);",
 	);
@@ -197,42 +187,38 @@ fn run_paquetes_migrations(conn: &Connection) -> Result<(), String> {
 }
 
 fn run_startup_auth_migration(conn: &Connection) -> Result<(), String> {
-	conn
-		.execute_batch(
-			r#"
+	conn.execute_batch(
+		r#"
 			CREATE TABLE IF NOT EXISTS startup_auth (
 				id INTEGER PRIMARY KEY CHECK (id = 1),
 				password_hash TEXT
 			);
 			"#,
-		)
-		.map_err(|e| e.to_string())?;
-	conn
-		.execute(
-			"INSERT OR IGNORE INTO startup_auth (id, password_hash) VALUES (1, NULL)",
-			[],
-		)
-		.map_err(|e| e.to_string())?;
+	)
+	.map_err(|e| e.to_string())?;
+	conn.execute(
+		"INSERT OR IGNORE INTO startup_auth (id, password_hash) VALUES (1, NULL)",
+		[],
+	)
+	.map_err(|e| e.to_string())?;
 	Ok(())
 }
 
 fn run_admin_auth_migration(conn: &Connection) -> Result<(), String> {
-	conn
-		.execute_batch(
-			r#"
+	conn.execute_batch(
+		r#"
 			CREATE TABLE IF NOT EXISTS admin_auth (
 				id INTEGER PRIMARY KEY CHECK (id = 1),
 				password_hash TEXT
 			);
 			"#,
-		)
-		.map_err(|e| e.to_string())?;
-	conn
-		.execute(
-			"INSERT OR IGNORE INTO admin_auth (id, password_hash) VALUES (1, NULL)",
-			[],
-		)
-		.map_err(|e| e.to_string())?;
+	)
+	.map_err(|e| e.to_string())?;
+	conn.execute(
+		"INSERT OR IGNORE INTO admin_auth (id, password_hash) VALUES (1, NULL)",
+		[],
+	)
+	.map_err(|e| e.to_string())?;
 	Ok(())
 }
 
@@ -240,9 +226,8 @@ fn run_admin_auth_migration(conn: &Connection) -> Result<(), String> {
 /// 1) Por cita vinculada (`appointments.id`).
 /// 2) Por documento coincidente con la última cita del paciente (`updated_at`).
 fn backfill_ingresos_paciente_nombre(conn: &Connection) -> Result<(), String> {
-	conn
-		.execute(
-			r#"
+	conn.execute(
+		r#"
 			UPDATE ingresos
 			SET paciente_nombre = (
 				SELECT a.patient_full_name
@@ -254,13 +239,12 @@ fn backfill_ingresos_paciente_nombre(conn: &Connection) -> Result<(), String> {
 				AND TRIM(cita_id) != ''
 				AND EXISTS (SELECT 1 FROM appointments a WHERE a.id = ingresos.cita_id)
 			"#,
-			[],
-		)
-		.map_err(|e| e.to_string())?;
+		[],
+	)
+	.map_err(|e| e.to_string())?;
 
-	conn
-		.execute(
-			r#"
+	conn.execute(
+		r#"
 			UPDATE ingresos
 			SET paciente_nombre = (
 				SELECT a.patient_full_name
@@ -275,17 +259,16 @@ fn backfill_ingresos_paciente_nombre(conn: &Connection) -> Result<(), String> {
 					WHERE TRIM(a.document_number) = TRIM(ingresos.paciente_documento)
 				)
 			"#,
-			[],
-		)
-		.map_err(|e| e.to_string())?;
+		[],
+	)
+	.map_err(|e| e.to_string())?;
 
 	Ok(())
 }
 
 fn run_facturacion_migrations(conn: &Connection) -> Result<(), String> {
-	conn
-		.execute_batch(
-			r#"
+	conn.execute_batch(
+		r#"
 			CREATE TABLE IF NOT EXISTS facturas (
 				id TEXT PRIMARY KEY,
 				estado TEXT NOT NULL DEFAULT 'borrador',
@@ -334,25 +317,23 @@ fn run_facturacion_migrations(conn: &Connection) -> Result<(), String> {
 				ultimo_numero INTEGER NOT NULL DEFAULT 0
 			);
 		"#,
-		)
-		.map_err(|e| e.to_string())?;
+	)
+	.map_err(|e| e.to_string())?;
 
 	let _ = conn.execute(
 		"ALTER TABLE ingresos ADD COLUMN factura_id TEXT DEFAULT NULL",
 		[],
 	);
 
-	let _ = conn.execute_batch(
-		"CREATE INDEX IF NOT EXISTS idx_ingresos_factura ON ingresos(factura_id);",
-	);
+	let _ = conn
+		.execute_batch("CREATE INDEX IF NOT EXISTS idx_ingresos_factura ON ingresos(factura_id);");
 
 	Ok(())
 }
 
 fn run_eventos_migrations(conn: &Connection) -> Result<(), String> {
-	conn
-		.execute_batch(
-			r#"
+	conn.execute_batch(
+		r#"
 			CREATE TABLE IF NOT EXISTS eventos (
 				id TEXT PRIMARY KEY,
 				titulo TEXT NOT NULL,
@@ -368,8 +349,8 @@ fn run_eventos_migrations(conn: &Connection) -> Result<(), String> {
 
 			CREATE INDEX IF NOT EXISTS idx_eventos_fecha ON eventos(fecha);
 		"#,
-		)
-		.map_err(|e| e.to_string())?;
+	)
+	.map_err(|e| e.to_string())?;
 	Ok(())
 }
 
@@ -398,8 +379,7 @@ fn seed_settings_if_empty(conn: &Connection) -> Result<(), String> {
 #[cfg(test)]
 pub fn open_in_memory_test_database() -> Result<Connection, String> {
 	let conn = Connection::open_in_memory().map_err(|e| e.to_string())?;
-	conn
-		.execute_batch("PRAGMA foreign_keys = ON;")
+	conn.execute_batch("PRAGMA foreign_keys = ON;")
 		.map_err(|e| e.to_string())?;
 	run_migrations(&conn)?;
 	seed_settings_if_empty(&conn)?;
@@ -417,9 +397,8 @@ mod tests {
 		document_number: &str,
 		updated_at: &str,
 	) {
-		conn
-			.execute(
-				r#"
+		conn.execute(
+			r#"
 				INSERT INTO appointments (
 					id, patient_full_name, document_type, document_number,
 					phone_dial_code, phone_national_number, birthday_month,
@@ -429,31 +408,24 @@ mod tests {
 					'2026-01-01', '09:00', '09:30', 'consulta', 'confirmada',
 					'2026-01-01T10:00:00Z', ?4)
 				"#,
-				params![id, name, document_number, updated_at],
-			)
-			.unwrap();
+			params![id, name, document_number, updated_at],
+		)
+		.unwrap();
 	}
 
 	#[test]
 	fn backfill_paciente_nombre_desde_cita_id() {
 		let conn = open_in_memory_test_database().unwrap();
-		insert_appointment(
-			&conn,
-			"cita-1",
-			"Ana López",
-			"1090",
-			"2026-01-02T10:00:00Z",
-		);
-		conn
-			.execute(
-				r#"
+		insert_appointment(&conn, "cita-1", "Ana López", "1090", "2026-01-02T10:00:00Z");
+		conn.execute(
+			r#"
 				INSERT INTO ingresos (
 					id, cita_id, paciente_nombre, paciente_documento, concepto, monto, metodo_pago, fecha_pago
 				) VALUES ('ing-1', 'cita-1', '', '1090', 'Servicio', 50.0, 'Efectivo', '2026-01-03T12:00:00Z')
 				"#,
-				[],
-			)
-			.unwrap();
+			[],
+		)
+		.unwrap();
 
 		backfill_ingresos_paciente_nombre(&conn).unwrap();
 
@@ -477,16 +449,15 @@ mod tests {
 			"7711",
 			"2026-02-01T10:00:00Z",
 		);
-		conn
-			.execute(
-				r#"
+		conn.execute(
+			r#"
 				INSERT INTO ingresos (
 					id, cita_id, paciente_nombre, paciente_documento, concepto, monto, metodo_pago, fecha_pago
 				) VALUES ('ing-2', NULL, '', '7711', 'Otro', 20.0, 'Transferencia', '2026-02-02T12:00:00Z')
 				"#,
-				[],
-			)
-			.unwrap();
+			[],
+		)
+		.unwrap();
 
 		backfill_ingresos_paciente_nombre(&conn).unwrap();
 

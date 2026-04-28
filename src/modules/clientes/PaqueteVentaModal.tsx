@@ -31,9 +31,7 @@ export function PaqueteVentaModal({
 	onClose,
 	onContinueToPayment,
 }: PaqueteVentaModalProps) {
-	const [serviceType, setServiceType] = useState(
-		settings.serviceTypes[0]?.id ?? "",
-	);
+	const [serviceType, setServiceType] = useState(settings.serviceTypes[0]?.id ?? "");
 	const [planId, setPlanId] = useState("");
 	const [error, setError] = useState<string | null>(null);
 
@@ -115,9 +113,7 @@ export function PaqueteVentaModal({
 			totalSesiones: n,
 			precioTotalConIva: precio,
 			ingresoConcepto,
-			...(esClienteNuevo && nuevoCliente
-				? { nuevoCliente }
-				: { clienteId: cid }),
+			...(esClienteNuevo && nuevoCliente ? { nuevoCliente } : { clienteId: cid }),
 		};
 		onContinueToPayment(payload);
 		onClose();
@@ -131,10 +127,7 @@ export function PaqueteVentaModal({
 			aria-labelledby="paquete-venta-title"
 		>
 			<div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-				<h2
-					id="paquete-venta-title"
-					className="text-base font-semibold text-slate-800 mb-4"
-				>
+				<h2 id="paquete-venta-title" className="text-base font-semibold text-slate-800 mb-4">
 					Elegir plan de sesiones
 				</h2>
 				{esClienteNuevo && nuevoCliente ? (
@@ -143,8 +136,8 @@ export function PaqueteVentaModal({
 							Paciente nuevo (la ficha se creará al confirmar el cobro)
 						</p>
 						<p className="mt-1">
-							{nuevoCliente.nombres} {nuevoCliente.apellidos} ·{" "}
-							{nuevoCliente.documentType} {nuevoCliente.documentNumber}
+							{nuevoCliente.nombres} {nuevoCliente.apellidos} · {nuevoCliente.documentType}{" "}
+							{nuevoCliente.documentNumber}
 						</p>
 					</div>
 				) : null}
@@ -188,8 +181,7 @@ export function PaqueteVentaModal({
 							>
 								{plansForService.map((p) => (
 									<option key={p.id} value={p.id}>
-										{p.label} — {p.sessionCount} ses. ·{" "}
-										{formatCurrency(p.priceBeforeVat)} + IVA
+										{p.label} — {p.sessionCount} ses. · {formatCurrency(p.priceBeforeVat)} + IVA
 									</option>
 								))}
 							</select>
@@ -205,19 +197,15 @@ export function PaqueteVentaModal({
 							</div>
 							<div className="flex justify-between gap-2 text-slate-600">
 								<span>IVA ({ivaPct}%)</span>
-								<span className="tabular-nums shrink-0">
-									{formatCurrency(totales.iva)}
-								</span>
+								<span className="tabular-nums shrink-0">{formatCurrency(totales.iva)}</span>
 							</div>
 							<div className="flex justify-between gap-2 border-t border-slate-200 pt-1.5 text-slate-800 font-semibold">
 								<span>Total a cobrar (con IVA)</span>
-								<span className="tabular-nums shrink-0">
-									{formatCurrency(totales.total)}
-								</span>
+								<span className="tabular-nums shrink-0">{formatCurrency(totales.total)}</span>
 							</div>
 							<p className="text-[0.65rem] text-slate-500 pt-0.5 leading-snug">
-								En el siguiente paso confirmará método de pago y podrá ajustar el
-								monto si es necesario.
+								En el siguiente paso confirmará método de pago y podrá ajustar el monto si es
+								necesario.
 							</p>
 						</div>
 					) : null}

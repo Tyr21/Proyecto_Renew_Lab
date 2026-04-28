@@ -1,7 +1,7 @@
 //! Contraseña de inicio de sesión: hash Argon2 en tabla `startup_auth` (nunca expuesto al frontend).
 
-use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
 use argon2::password_hash::rand_core::OsRng;
+use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
 use argon2::Argon2;
 use rusqlite::params;
 use serde::Serialize;
@@ -107,22 +107,21 @@ pub fn set_startup_password(
 	let existing = load_hash(&conn)?;
 
 	if let Some(hash) = &existing {
- 			let cur = current_password.as_deref().unwrap_or("").trim();
- 			if cur.is_empty() {
- 				return Err("Indique la contraseña actual".into());
- 			}
- 			if !verify_password(hash, cur) {
- 				return Err("La contraseña actual no es correcta".into());
- 			}
- 		}
+		let cur = current_password.as_deref().unwrap_or("").trim();
+		if cur.is_empty() {
+			return Err("Indique la contraseña actual".into());
+		}
+		if !verify_password(hash, cur) {
+			return Err("La contraseña actual no es correcta".into());
+		}
+	}
 
 	let new_hash = hash_password(&new_trim)?;
-	conn
-		.execute(
-			"UPDATE startup_auth SET password_hash = ?1 WHERE id = 1",
-			params![new_hash],
-		)
-		.map_err(error::db)?;
+	conn.execute(
+		"UPDATE startup_auth SET password_hash = ?1 WHERE id = 1",
+		params![new_hash],
+	)
+	.map_err(error::db)?;
 	Ok(())
 }
 
@@ -137,12 +136,11 @@ pub fn clear_startup_password_with_admin(
 	let Some(_) = load_hash(&conn)? else {
 		return Err("No hay contraseña de inicio para quitar".into());
 	};
-	conn
-		.execute(
-			"UPDATE startup_auth SET password_hash = NULL WHERE id = 1",
-			[],
-		)
-		.map_err(error::db)?;
+	conn.execute(
+		"UPDATE startup_auth SET password_hash = NULL WHERE id = 1",
+		[],
+	)
+	.map_err(error::db)?;
 	Ok(())
 }
 
@@ -158,11 +156,10 @@ pub fn set_startup_password_with_admin(
 	let conn = db.lock().map_err(error::lock)?;
 	admin_auth::verify_admin_password_with_conn(&conn, admin_password.trim())?;
 	let new_hash = hash_password(&new_trim)?;
-	conn
-		.execute(
-			"UPDATE startup_auth SET password_hash = ?1 WHERE id = 1",
-			params![new_hash],
-		)
-		.map_err(error::db)?;
+	conn.execute(
+		"UPDATE startup_auth SET password_hash = ?1 WHERE id = 1",
+		params![new_hash],
+	)
+	.map_err(error::db)?;
 	Ok(())
 }

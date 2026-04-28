@@ -106,10 +106,7 @@ pub fn listar_eventos_rango(
 }
 
 #[tauri::command]
-pub fn crear_evento(
-	db: tauri::State<'_, DbConn>,
-	input: EventoInput,
-) -> Result<EventoRow, String> {
+pub fn crear_evento(db: tauri::State<'_, DbConn>, input: EventoInput) -> Result<EventoRow, String> {
 	validate_evento(&input)?;
 	let conn = db.lock().map_err(error::lock)?;
 	let id = Uuid::new_v4().to_string();
@@ -201,10 +198,7 @@ pub fn actualizar_evento(
 }
 
 #[tauri::command]
-pub fn eliminar_evento(
-	db: tauri::State<'_, DbConn>,
-	id: String,
-) -> Result<(), String> {
+pub fn eliminar_evento(db: tauri::State<'_, DbConn>, id: String) -> Result<(), String> {
 	let conn = db.lock().map_err(error::lock)?;
 	let affected = conn
 		.execute("DELETE FROM eventos WHERE id = ?1", params![id])
@@ -251,8 +245,18 @@ mod tests {
 			r#"INSERT INTO eventos (id, titulo, descripcion, fecha, todo_el_dia,
 				hora_inicio, hora_fin, color, created_at, updated_at)
 			VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)"#,
-			params![id, input.titulo.trim(), desc.trim(), input.fecha,
-				input.todo_el_dia as i64, hi, hf, color, now, now],
+			params![
+				id,
+				input.titulo.trim(),
+				desc.trim(),
+				input.fecha,
+				input.todo_el_dia as i64,
+				hi,
+				hf,
+				color,
+				now,
+				now
+			],
 		)
 		.unwrap();
 		load_evento_by_id(conn, &id).unwrap()

@@ -1,5 +1,5 @@
-use chrono::{DateTime, Duration, Local, NaiveDate, NaiveDateTime, NaiveTime, TimeZone};
 use chrono::Timelike;
+use chrono::{DateTime, Duration, Local, NaiveDate, NaiveDateTime, NaiveTime, TimeZone};
 
 pub const DAY_START_HOUR: u32 = 7;
 pub const DAY_END_HOUR: u32 = 20;
@@ -12,11 +12,7 @@ pub fn validate_grace_period_for_new_booking(
 	appointment_date: &str,
 	start_time_str: &str,
 ) -> Result<(), String> {
-	validate_grace_period_for_new_booking_at(
-		appointment_date,
-		start_time_str,
-		Local::now(),
-	)
+	validate_grace_period_for_new_booking_at(appointment_date, start_time_str, Local::now())
 }
 
 pub(crate) fn validate_grace_period_for_new_booking_at(
@@ -68,12 +64,7 @@ pub fn within_business_window(start: NaiveTime, end: NaiveTime) -> bool {
 	start_min >= open && end_min <= close && end_min > start_min
 }
 
-pub fn overlaps_intervals(
-	start_a: i32,
-	end_a: i32,
-	start_b: i32,
-	end_b: i32,
-) -> bool {
+pub fn overlaps_intervals(start_a: i32, end_a: i32, start_b: i32, end_b: i32) -> bool {
 	start_a < end_b && start_b < end_a
 }
 
@@ -81,10 +72,7 @@ pub fn now_local_naive() -> NaiveDateTime {
 	Local::now().naive_local()
 }
 
-pub fn is_appointment_past(
-	appointment_date: &str,
-	end_time_str: &str,
-) -> Result<bool, String> {
+pub fn is_appointment_past(appointment_date: &str, end_time_str: &str) -> Result<bool, String> {
 	let date = NaiveDate::parse_from_str(appointment_date, "%Y-%m-%d")
 		.map_err(|_| "Fecha inválida".to_string())?;
 	let end = parse_hh_mm(end_time_str)?;
@@ -130,9 +118,7 @@ mod tests {
 			))
 			.single()
 			.unwrap();
-		assert!(
-			validate_grace_period_for_new_booking_at("2025-06-15", "12:00", now).is_ok()
-		);
+		assert!(validate_grace_period_for_new_booking_at("2025-06-15", "12:00", now).is_ok());
 	}
 
 	#[test]
@@ -145,9 +131,7 @@ mod tests {
 			))
 			.single()
 			.unwrap();
-		assert!(
-			validate_grace_period_for_new_booking_at("2025-06-15", "12:00", now).is_ok()
-		);
+		assert!(validate_grace_period_for_new_booking_at("2025-06-15", "12:00", now).is_ok());
 	}
 
 	#[test]
@@ -160,8 +144,6 @@ mod tests {
 			))
 			.single()
 			.unwrap();
-		assert!(
-			validate_grace_period_for_new_booking_at("2025-06-15", "12:00", now).is_err()
-		);
+		assert!(validate_grace_period_for_new_booking_at("2025-06-15", "12:00", now).is_err());
 	}
 }

@@ -254,12 +254,18 @@ pub fn guardar_borrador_factura(
 			return Err(format!("La descripción de la línea {} está vacía", i + 1));
 		}
 		if l.cantidad <= 0.0 || !l.cantidad.is_finite() {
-			return Err(format!("La cantidad de la línea {} debe ser positiva", i + 1));
+			return Err(format!(
+				"La cantidad de la línea {} debe ser positiva",
+				i + 1
+			));
 		}
 		if l.precio_unitario < 0.0 || !l.precio_unitario.is_finite() {
 			return Err(format!("El precio de la línea {} no es válido", i + 1));
 		}
-		if l.tasa_impuesto_pct < 0.0 || l.tasa_impuesto_pct > 100.0 || !l.tasa_impuesto_pct.is_finite() {
+		if l.tasa_impuesto_pct < 0.0
+			|| l.tasa_impuesto_pct > 100.0
+			|| !l.tasa_impuesto_pct.is_finite()
+		{
 			return Err(format!("El IVA de la línea {} no es válido (0–100)", i + 1));
 		}
 	}
@@ -374,7 +380,11 @@ pub fn emitir_factura(
 	if factura.total <= 0.0 {
 		return Err("El total de la factura debe ser mayor que cero".into());
 	}
-	if input.crear_ingreso && !METODOS_VALIDOS.iter().any(|&v| v == input.metodo_pago.trim()) {
+	if input.crear_ingreso
+		&& !METODOS_VALIDOS
+			.iter()
+			.any(|&v| v == input.metodo_pago.trim())
+	{
 		return Err("Método de pago inválido".into());
 	}
 
@@ -471,11 +481,8 @@ pub fn anular_factura(
 	)
 	.map_err(error::db)?;
 
-	conn.execute(
-		"DELETE FROM ingresos WHERE factura_id = ?1",
-		params![id],
-	)
-	.map_err(error::db)?;
+	conn.execute("DELETE FROM ingresos WHERE factura_id = ?1", params![id])
+		.map_err(error::db)?;
 
 	load_factura_full(&conn, &id)
 }
@@ -506,7 +513,10 @@ mod tests {
 		}
 	}
 
-	fn guardar_borrador(conn: &Connection, input: GuardarBorradorInput) -> Result<FacturaRow, String> {
+	fn guardar_borrador(
+		conn: &Connection,
+		input: GuardarBorradorInput,
+	) -> Result<FacturaRow, String> {
 		let settings = load_settings(conn)?;
 		let serie = settings.billing.serie_default.clone();
 		let now = Utc::now().to_rfc3339();
@@ -535,10 +545,15 @@ mod tests {
 				VALUES (?1, 'borrador', ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
 			"#,
 				params![
-					new_id, serie,
-					input.cliente_nombre.trim(), input.cliente_documento_tipo.trim(),
-					input.cliente_documento_numero.trim(), input.notas.trim(),
-					input.cita_id, now, now,
+					new_id,
+					serie,
+					input.cliente_nombre.trim(),
+					input.cliente_documento_tipo.trim(),
+					input.cliente_documento_numero.trim(),
+					input.notas.trim(),
+					input.cita_id,
+					now,
+					now,
 				],
 			)
 			.map_err(|e| e.to_string())?;
@@ -558,8 +573,18 @@ mod tests {
 					precio_unitario, tasa_impuesto_pct, base_imponible, impuesto, total_linea)
 				VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
 			"#,
-				params![lid, factura_id, i as i64, l.descripcion.trim(), l.cantidad,
-					l.precio_unitario, l.tasa_impuesto_pct, base, imp, total_l],
+				params![
+					lid,
+					factura_id,
+					i as i64,
+					l.descripcion.trim(),
+					l.cantidad,
+					l.precio_unitario,
+					l.tasa_impuesto_pct,
+					base,
+					imp,
+					total_l
+				],
 			)
 			.map_err(|e| e.to_string())?;
 		}
@@ -571,9 +596,16 @@ mod tests {
 				subtotal = ?6, impuesto_total = ?7, total = ?8, updated_at = ?9
 			WHERE id = ?10"#,
 			params![
-				input.cliente_nombre.trim(), input.cliente_documento_tipo.trim(),
-				input.cliente_documento_numero.trim(), input.notas.trim(),
-				input.cita_id, subtotal, impuesto_total, total, now, factura_id,
+				input.cliente_nombre.trim(),
+				input.cliente_documento_tipo.trim(),
+				input.cliente_documento_numero.trim(),
+				input.notas.trim(),
+				input.cita_id,
+				subtotal,
+				impuesto_total,
+				total,
+				now,
+				factura_id,
 			],
 		)
 		.map_err(|e| e.to_string())?;
@@ -581,7 +613,12 @@ mod tests {
 		load_factura_full(conn, &factura_id)
 	}
 
-	fn emitir(conn: &Connection, factura_id: &str, metodo: &str, crear_ingreso: bool) -> Result<FacturaRow, String> {
+	fn emitir(
+		conn: &Connection,
+		factura_id: &str,
+		metodo: &str,
+		crear_ingreso: bool,
+	) -> Result<FacturaRow, String> {
 		let factura = load_factura_full(conn, factura_id)?;
 		if factura.estado != "borrador" {
 			return Err("Solo se puede emitir una factura en estado borrador".into());
@@ -604,10 +641,15 @@ mod tests {
 					concepto, monto, metodo_pago, fecha_pago, factura_id)
 				VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)"#,
 				params![
-					ingreso_id, factura.cita_id, factura.cliente_nombre.trim(),
+					ingreso_id,
+					factura.cita_id,
+					factura.cliente_nombre.trim(),
 					factura.cliente_documento_numero.trim(),
 					format!("Factura {}-{}", factura.serie, numero),
-					factura.total, metodo, now, factura.id,
+					factura.total,
+					metodo,
+					now,
+					factura.id,
 				],
 			)
 			.map_err(|e| e.to_string())?;

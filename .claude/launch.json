@@ -1,17 +1,17 @@
 {
-  "version": "0.0.1",
-  "configurations": [
-    {
-      "name": "Tauri Dev (app completa)",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "tauri", "dev"],
-      "port": 1420
-    },
-    {
-      "name": "Vite Dev (solo frontend)",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 1420
-    }
-  ]
+	"version": "0.0.1",
+	"configurations": [
+		{
+			"name": "Tauri Dev (app completa)",
+			"runtimeExecutable": "npm",
+			"runtimeArgs": ["run", "tauri", "dev"],
+			"port": 1420
+		},
+		{
+			"name": "Vite Dev (solo frontend)",
+			"runtimeExecutable": "npm",
+			"runtimeArgs": ["run", "dev"],
+			"port": 1420
+		}
+	]
 }

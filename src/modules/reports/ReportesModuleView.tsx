@@ -21,9 +21,7 @@ export function ReportesModuleView({ settings }: ReportesModuleViewProps) {
 				<button
 					type="button"
 					className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
-						subTab === "cierre"
-							? "bg-slate-800 text-white"
-							: "text-slate-600 hover:bg-slate-100"
+						subTab === "cierre" ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-100"
 					}`}
 					onClick={() => setSubTab("cierre")}
 				>
@@ -32,9 +30,7 @@ export function ReportesModuleView({ settings }: ReportesModuleViewProps) {
 				<button
 					type="button"
 					className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
-						subTab === "facturas"
-							? "bg-slate-800 text-white"
-							: "text-slate-600 hover:bg-slate-100"
+						subTab === "facturas" ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-100"
 					}`}
 					onClick={() => setSubTab("facturas")}
 				>
@@ -43,9 +39,7 @@ export function ReportesModuleView({ settings }: ReportesModuleViewProps) {
 				<button
 					type="button"
 					className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
-						subTab === "oxigeno"
-							? "bg-slate-800 text-white"
-							: "text-slate-600 hover:bg-slate-100"
+						subTab === "oxigeno" ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-100"
 					}`}
 					onClick={() => setSubTab("oxigeno")}
 				>

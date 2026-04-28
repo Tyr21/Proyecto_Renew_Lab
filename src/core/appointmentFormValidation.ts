@@ -14,18 +14,11 @@ export function validateAppointmentFormFields(
 		return "Tipo de documento no permitido";
 	}
 	const doc = input.documentNumber.trim();
-	if (
-		doc.length === 0 ||
-		![...doc].every((ch) => /^[\p{L}\p{N}]$/u.test(ch))
-	) {
+	if (doc.length === 0 || ![...doc].every((ch) => /^[\p{L}\p{N}]$/u.test(ch))) {
 		return "El documento debe ser alfanumérico";
 	}
 	const dial = normalizePhoneDialCode(input.phoneDialCode);
-	if (
-		dial.length > 5 ||
-		!dial.startsWith("+") ||
-		!/^\+[0-9]+$/.test(dial)
-	) {
+	if (dial.length > 5 || !dial.startsWith("+") || !/^\+[0-9]+$/.test(dial)) {
 		return "El prefijo del país debe ser como +57 (elija en la lista o use formato + y dígitos)";
 	}
 	const phone = input.phoneNationalNumber.trim();

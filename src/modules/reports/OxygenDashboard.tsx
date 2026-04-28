@@ -174,8 +174,9 @@ export function OxygenDashboard({ settings }: Props) {
 	const k = settings.oxygen?.perHyperbaricSession ?? 1;
 	const unidad = settings.oxygen?.unitsLabel?.trim() || "unidad(es)";
 	const svcLabel =
-		settings.serviceTypes.find((s) => s.id === (settings.oxygen?.serviceTypeId ?? ""))
-			?.label ?? settings.oxygen?.serviceTypeId ?? "cámara";
+		settings.serviceTypes.find((s) => s.id === (settings.oxygen?.serviceTypeId ?? ""))?.label ??
+		settings.oxygen?.serviceTypeId ??
+		"cámara";
 
 	return (
 		<div className="h-full overflow-y-auto bg-slate-50 p-4 md:p-6">
@@ -186,15 +187,17 @@ export function OxygenDashboard({ settings }: Props) {
 					</h1>
 					<p className="mt-1 text-sm text-slate-600">
 						Lecturas de medidores y foto de los medidores (JPG o PNG). El{" "}
-						<strong className="font-medium text-slate-800">día operativo</strong> del registro es el que
-						elija en “Día de operación”. Si la foto conserva EXIF con fecha de captura, esa fecha debe
-						coincidir con ese día; si no hay EXIF (p. ej. reenvíos por WhatsApp), la foto se guarda igual y
-						en la lista verá “Foto sin fecha EXIF registrada”. El consumo teórico en informes usa{" "}
+						<strong className="font-medium text-slate-800">día operativo</strong> del registro es el
+						que elija en “Día de operación”. Si la foto conserva EXIF con fecha de captura, esa
+						fecha debe coincidir con ese día; si no hay EXIF (p. ej. reenvíos por WhatsApp), la foto
+						se guarda igual y en la lista verá “Foto sin fecha EXIF registrada”. El consumo teórico
+						en informes usa{" "}
 						<strong className="font-medium text-slate-800">
 							{k} {unidad}
 						</strong>{" "}
-						por sesión atendida de <strong className="font-medium text-slate-800">{svcLabel}</strong>{" "}
-						(configurable en Ajustes → Oxígeno).
+						por sesión atendida de{" "}
+						<strong className="font-medium text-slate-800">{svcLabel}</strong> (configurable en
+						Ajustes → Oxígeno).
 					</p>
 				</header>
 
@@ -306,9 +309,9 @@ export function OxygenDashboard({ settings }: Props) {
 								Foto de medidores (obligatoria)
 							</span>
 							<p className="mt-0.5 text-xs text-slate-500">
-								JPG o PNG (la app comprueba la cabecera del archivo). Si la imagen trae fecha EXIF, debe
-								ser del mismo día que “Día de operación”. Sin EXIF (frecuente en fotos reenviadas) la
-								foto se acepta: el día operativo queda el del formulario.
+								JPG o PNG (la app comprueba la cabecera del archivo). Si la imagen trae fecha EXIF,
+								debe ser del mismo día que “Día de operación”. Sin EXIF (frecuente en fotos
+								reenviadas) la foto se acepta: el día operativo queda el del formulario.
 							</p>
 							<input
 								type="file"
@@ -346,11 +349,11 @@ export function OxygenDashboard({ settings }: Props) {
 
 				<section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
 					<div className="border-b border-slate-200 px-4 py-3">
-						<h2 className="text-sm font-medium text-slate-800">
-							Eventos del {fechaOperacion}
-						</h2>
+						<h2 className="text-sm font-medium text-slate-800">Eventos del {fechaOperacion}</h2>
 						<p className="text-xs text-slate-500">
-							{loadingLista ? "Cargando…" : `${eventos.length} registro${eventos.length === 1 ? "" : "s"}`}
+							{loadingLista
+								? "Cargando…"
+								: `${eventos.length} registro${eventos.length === 1 ? "" : "s"}`}
 						</p>
 					</div>
 					{errorLista ? (
@@ -362,15 +365,16 @@ export function OxygenDashboard({ settings }: Props) {
 					) : (
 						<ul className="divide-y divide-slate-100">
 							{eventos.map((ev) => (
-								<li key={ev.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-start">
+								<li
+									key={ev.id}
+									className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-start"
+								>
 									<div className="min-w-0 flex-1 space-y-1 text-sm">
 										<p className="font-medium text-slate-800">{etiquetaTipo(ev.tipo)}</p>
 										<p className="tabular-nums text-slate-700">
 											A: {ev.medidorA} · B: {ev.medidorB}
 										</p>
-										{ev.notas ? (
-											<p className="text-xs text-slate-600">{ev.notas}</p>
-										) : null}
+										{ev.notas ? <p className="text-xs text-slate-600">{ev.notas}</p> : null}
 										<p className="text-xs text-slate-400">
 											{ev.fotoExifFecha
 												? `EXIF fecha: ${ev.fotoExifFecha}`
@@ -379,9 +383,7 @@ export function OxygenDashboard({ settings }: Props) {
 													: "Sin foto"}
 										</p>
 									</div>
-									{ev.fotoRelativa ? (
-										<FotoMiniatura rutaRelativa={ev.fotoRelativa} />
-									) : null}
+									{ev.fotoRelativa ? <FotoMiniatura rutaRelativa={ev.fotoRelativa} /> : null}
 								</li>
 							))}
 						</ul>

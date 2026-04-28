@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
-use crate::commands::{DbConn, load_settings_json};
+use crate::commands::{load_settings_json, DbConn};
 use crate::error;
 
 /// Servicios completados recientes en el resumen (solo lectura).
@@ -274,12 +274,13 @@ mod format_tests {
 }
 
 #[tauri::command]
-pub fn buscar_clientes(
-	db: State<'_, DbConn>,
-	query: String,
-) -> Result<Vec<ClienteRow>, String> {
+pub fn buscar_clientes(db: State<'_, DbConn>, query: String) -> Result<Vec<ClienteRow>, String> {
 	let conn = db.lock().map_err(error::lock)?;
-	let escaped = query.trim().replace('\\', "\\\\").replace('%', "\\%").replace('_', "\\_");
+	let escaped = query
+		.trim()
+		.replace('\\', "\\\\")
+		.replace('%', "\\%")
+		.replace('_', "\\_");
 	let q = format!("%{escaped}%");
 
 	let mut stmt = conn
@@ -423,19 +424,13 @@ pub fn obtener_resumen_cliente_dashboard(
 }
 
 #[tauri::command]
-pub fn obtener_cliente(
-	db: State<'_, DbConn>,
-	id: String,
-) -> Result<ClienteRow, String> {
+pub fn obtener_cliente(db: State<'_, DbConn>, id: String) -> Result<ClienteRow, String> {
 	let conn = db.lock().map_err(error::lock)?;
 	load_cliente_by_id(&conn, id.trim())
 }
 
 #[tauri::command]
-pub fn eliminar_cliente(
-	db: State<'_, DbConn>,
-	id: String,
-) -> Result<(), String> {
+pub fn eliminar_cliente(db: State<'_, DbConn>, id: String) -> Result<(), String> {
 	let id = id.trim().to_string();
 	if id.is_empty() {
 		return Err("El id del cliente es obligatorio".into());

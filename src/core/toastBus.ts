@@ -43,8 +43,7 @@ export function subscribeToast(listener: Listener): () => void {
 }
 
 export function showToast(input: ToastInput | string): void {
-	const normalized: ToastInput =
-		typeof input === "string" ? { message: input } : input;
+	const normalized: ToastInput = typeof input === "string" ? { message: input } : input;
 	const level = normalized.level ?? "info";
 	const toast: Toast = {
 		id: nextId++,

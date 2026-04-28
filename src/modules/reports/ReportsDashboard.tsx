@@ -134,11 +134,12 @@ export function ReportsDashboard({ settings }: ReportsDashboardProps) {
 		}));
 	}, [ingresosPorMes]);
 
-	const obtenerLabelServicio = useCallback((serviceType: string): string => {
-		return (
-			settings.serviceTypes.find((s) => s.id === serviceType)?.label ?? serviceType
-		);
-	}, [settings.serviceTypes]);
+	const obtenerLabelServicio = useCallback(
+		(serviceType: string): string => {
+			return settings.serviceTypes.find((s) => s.id === serviceType)?.label ?? serviceType;
+		},
+		[settings.serviceTypes],
+	);
 
 	function aplicarCustom() {
 		if (desdeInput && hastaInput && desdeInput <= hastaInput) {
@@ -157,33 +158,49 @@ export function ReportsDashboard({ settings }: ReportsDashboardProps) {
 			<div class="card"><div class="card-label">Servicio m\u00e1s solicitado</div><div class="card-value">${esc(servicioMasSolicitado ? obtenerLabelServicio(servicioMasSolicitado.serviceType) : "\u2014")}</div>${servicioMasSolicitado ? `<div class="card-detail">${servicioMasSolicitado.totalCitas} citas</div>` : ""}</div>
 		</div>`;
 
-		const citasRows = citasPorMes.map((r) =>
-			`<tr><td>${esc(r.mes)}</td><td class="num bold">${r.totalCitas}</td><td class="num">${r.asistieron}</td><td class="num">${r.noAsistieron}</td><td class="num">${r.porcentajeAsistencia.toFixed(1)}%</td></tr>`
-		).join("");
-		const citasTable = citasPorMes.length > 0
-			? `<div class="section-title">Citas por mes</div><table><thead><tr><th>Mes</th><th class="num">Total</th><th class="num">Asistieron</th><th class="num">No asistieron</th><th class="num">% Asistencia</th></tr></thead><tbody>${citasRows}</tbody></table>`
-			: "";
+		const citasRows = citasPorMes
+			.map(
+				(r) =>
+					`<tr><td>${esc(r.mes)}</td><td class="num bold">${r.totalCitas}</td><td class="num">${r.asistieron}</td><td class="num">${r.noAsistieron}</td><td class="num">${r.porcentajeAsistencia.toFixed(1)}%</td></tr>`,
+			)
+			.join("");
+		const citasTable =
+			citasPorMes.length > 0
+				? `<div class="section-title">Citas por mes</div><table><thead><tr><th>Mes</th><th class="num">Total</th><th class="num">Asistieron</th><th class="num">No asistieron</th><th class="num">% Asistencia</th></tr></thead><tbody>${citasRows}</tbody></table>`
+				: "";
 
-		const ingresosRows = ingresosPorMes.map((r) =>
-			`<tr><td>${esc(r.mes)}</td><td class="num bold">${formatCurrency(r.montoTotal)}</td><td class="num">${r.cantidadTransacciones}</td><td class="num">${formatCurrency(r.montoPromedio)}</td></tr>`
-		).join("");
-		const ingresosTable = ingresosPorMes.length > 0
-			? `<div class="section-title">Ingresos por mes</div><table><thead><tr><th>Mes</th><th class="num">Monto total</th><th class="num">Transacciones</th><th class="num">Promedio</th></tr></thead><tbody>${ingresosRows}</tbody></table>`
-			: "";
+		const ingresosRows = ingresosPorMes
+			.map(
+				(r) =>
+					`<tr><td>${esc(r.mes)}</td><td class="num bold">${formatCurrency(r.montoTotal)}</td><td class="num">${r.cantidadTransacciones}</td><td class="num">${formatCurrency(r.montoPromedio)}</td></tr>`,
+			)
+			.join("");
+		const ingresosTable =
+			ingresosPorMes.length > 0
+				? `<div class="section-title">Ingresos por mes</div><table><thead><tr><th>Mes</th><th class="num">Monto total</th><th class="num">Transacciones</th><th class="num">Promedio</th></tr></thead><tbody>${ingresosRows}</tbody></table>`
+				: "";
 
-		const serviciosRows = servicios.map((r) =>
-			`<tr><td>${esc(obtenerLabelServicio(r.serviceType))}</td><td class="num bold">${r.totalCitas}</td><td class="num">${r.asistieron}</td><td class="num">${r.porcentajeAsistencia.toFixed(1)}%</td></tr>`
-		).join("");
-		const serviciosTable = servicios.length > 0
-			? `<div class="section-title">Servicios m\u00e1s solicitados</div><table><thead><tr><th>Servicio</th><th class="num">Total citas</th><th class="num">Asistieron</th><th class="num">% Asistencia</th></tr></thead><tbody>${serviciosRows}</tbody></table>`
-			: "";
+		const serviciosRows = servicios
+			.map(
+				(r) =>
+					`<tr><td>${esc(obtenerLabelServicio(r.serviceType))}</td><td class="num bold">${r.totalCitas}</td><td class="num">${r.asistieron}</td><td class="num">${r.porcentajeAsistencia.toFixed(1)}%</td></tr>`,
+			)
+			.join("");
+		const serviciosTable =
+			servicios.length > 0
+				? `<div class="section-title">Servicios m\u00e1s solicitados</div><table><thead><tr><th>Servicio</th><th class="num">Total citas</th><th class="num">Asistieron</th><th class="num">% Asistencia</th></tr></thead><tbody>${serviciosRows}</tbody></table>`
+				: "";
 
-		const metodosRows = metodosPago.map((r) =>
-			`<tr><td>${esc(r.metodoPago)}</td><td class="num bold">${formatCurrency(r.montoTotal)}</td><td class="num">${r.cantidadTransacciones}</td><td class="num">${r.porcentajeDelTotal.toFixed(1)}%</td></tr>`
-		).join("");
-		const metodosTable = metodosPago.length > 0
-			? `<div class="section-title">M\u00e9todos de pago</div><table><thead><tr><th>M\u00e9todo</th><th class="num">Monto total</th><th class="num">Transacciones</th><th class="num">% del total</th></tr></thead><tbody>${metodosRows}</tbody></table>`
-			: "";
+		const metodosRows = metodosPago
+			.map(
+				(r) =>
+					`<tr><td>${esc(r.metodoPago)}</td><td class="num bold">${formatCurrency(r.montoTotal)}</td><td class="num">${r.cantidadTransacciones}</td><td class="num">${r.porcentajeDelTotal.toFixed(1)}%</td></tr>`,
+			)
+			.join("");
+		const metodosTable =
+			metodosPago.length > 0
+				? `<div class="section-title">M\u00e9todos de pago</div><table><thead><tr><th>M\u00e9todo</th><th class="num">Monto total</th><th class="num">Transacciones</th><th class="num">% del total</th></tr></thead><tbody>${metodosRows}</tbody></table>`
+				: "";
 
 		const body = `
 		<h1>Reportes y Estad\u00edsticas</h1>
@@ -196,15 +213,24 @@ export function ReportsDashboard({ settings }: ReportsDashboardProps) {
 		<p class="footer">Generado el ${new Date().toLocaleString("es-CO")} &mdash; Consultorio Renew Lab</p>`;
 
 		openPrintWindow(`Reportes ${rangeLabel}`, body);
-	}, [rango, totalCitasRango, totalIngresosRango, metodoPagoMasUsado, servicioMasSolicitado, citasPorMes, ingresosPorMes, servicios, metodosPago, obtenerLabelServicio]);
+	}, [
+		rango,
+		totalCitasRango,
+		totalIngresosRango,
+		metodoPagoMasUsado,
+		servicioMasSolicitado,
+		citasPorMes,
+		ingresosPorMes,
+		servicios,
+		metodosPago,
+		obtenerLabelServicio,
+	]);
 
 	return (
 		<div className="h-full overflow-y-auto bg-slate-50 p-4 md:p-6">
 			<div className="mx-auto max-w-6xl space-y-6">
 				<header className="flex items-center justify-between">
-					<h1 className="text-xl font-semibold text-slate-800">
-						Reportes y Estadísticas
-					</h1>
+					<h1 className="text-xl font-semibold text-slate-800">Reportes y Estadísticas</h1>
 					<button
 						type="button"
 						onClick={handleExportPDF}
@@ -294,9 +320,7 @@ export function ReportsDashboard({ settings }: ReportsDashboardProps) {
 								<p className="text-xs font-medium uppercase tracking-wide text-slate-500">
 									Total citas
 								</p>
-								<p className="mt-2 text-2xl font-bold text-slate-900">
-									{totalCitasRango}
-								</p>
+								<p className="mt-2 text-2xl font-bold text-slate-900">{totalCitasRango}</p>
 							</div>
 
 							<div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -332,9 +356,7 @@ export function ReportsDashboard({ settings }: ReportsDashboardProps) {
 										: "—"}
 								</p>
 								<p className="mt-1 text-xs text-slate-500">
-									{servicioMasSolicitado
-										? `${servicioMasSolicitado.totalCitas} citas`
-										: ""}
+									{servicioMasSolicitado ? `${servicioMasSolicitado.totalCitas} citas` : ""}
 								</p>
 							</div>
 						</section>
@@ -378,9 +400,7 @@ export function ReportsDashboard({ settings }: ReportsDashboardProps) {
 													<td className="px-4 py-3 text-right text-emerald-700">
 														{row.asistieron}
 													</td>
-													<td className="px-4 py-3 text-right text-red-700">
-														{row.noAsistieron}
-													</td>
+													<td className="px-4 py-3 text-right text-red-700">{row.noAsistieron}</td>
 													<td className="px-4 py-3 text-right font-medium text-slate-900">
 														{row.porcentajeAsistencia.toFixed(1)}%
 													</td>
@@ -453,9 +473,7 @@ export function ReportsDashboard({ settings }: ReportsDashboardProps) {
 						{/* Tabla de Servicios más Solicitados */}
 						<section className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
 							<div className="border-b border-slate-200 px-4 py-3">
-								<h2 className="text-sm font-semibold text-slate-800">
-									Servicios Más Solicitados
-								</h2>
+								<h2 className="text-sm font-semibold text-slate-800">Servicios Más Solicitados</h2>
 								<p className="text-xs text-slate-500 mt-0.5">
 									{servicios.length} tipos de servicio
 								</p>
@@ -534,9 +552,7 @@ export function ReportsDashboard({ settings }: ReportsDashboardProps) {
 													key={row.metodoPago}
 													className="border-b border-slate-100 last:border-0 hover:bg-slate-50/80"
 												>
-													<td className="px-4 py-3 text-slate-800 font-medium">
-														{row.metodoPago}
-													</td>
+													<td className="px-4 py-3 text-slate-800 font-medium">{row.metodoPago}</td>
 													<td className="px-4 py-3 text-right font-bold tabular-nums text-emerald-900">
 														{formatCurrency(row.montoTotal)}
 													</td>

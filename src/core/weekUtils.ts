@@ -39,10 +39,7 @@ export function weekDayLabels(): { key: string; short: string }[] {
 	];
 }
 
-export function getWeekDates(
-	weekStartMonday: Date,
-	includeSunday: boolean,
-): Date[] {
+export function getWeekDates(weekStartMonday: Date, includeSunday: boolean): Date[] {
 	const days: Date[] = [];
 	const count = includeSunday ? 7 : 6;
 	for (let i = 0; i < count; i++) {
@@ -63,10 +60,7 @@ export function rangeLabelSpanish(dates: Date[]): string {
 	return `${a} – ${b}`;
 }
 
-export function isAppointmentPastEnd(
-	appointmentDate: string,
-	endTime: string,
-): boolean {
+export function isAppointmentPastEnd(appointmentDate: string, endTime: string): boolean {
 	const endM = endTime.split(":").map(Number);
 	const end = new Date(appointmentDate + "T00:00:00");
 	end.setHours(endM[0], endM[1], 0, 0);

@@ -1,11 +1,11 @@
 {
 	"folders": [
 		{
-			"path": "."
+			"path": ".",
 		},
 		{
-			"path": "../../AppData/Roaming/com.premex.consultorio-renew-lab"
-		}
+			"path": "../../AppData/Roaming/com.premex.consultorio-renew-lab",
+		},
 	],
-	"settings": {}
+	"settings": {},
 }

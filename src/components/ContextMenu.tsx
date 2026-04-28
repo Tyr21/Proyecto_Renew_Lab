@@ -70,9 +70,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
 						type="button"
 						disabled={item.disabled}
 						className={`w-full px-3 py-1.5 text-left text-sm transition-colors disabled:opacity-40 ${
-							item.danger
-								? "text-red-600 hover:bg-red-50"
-								: "text-slate-700 hover:bg-slate-100"
+							item.danger ? "text-red-600 hover:bg-red-50" : "text-slate-700 hover:bg-slate-100"
 						}`}
 						onClick={() => {
 							item.onClick();

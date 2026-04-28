@@ -64,7 +64,10 @@ fn detectar_jpeg_o_png(bytes: &[u8]) -> Result<FormatoImagenOxigeno, String> {
 	Err("La foto debe ser JPEG o PNG (cabecera no reconocida).".into())
 }
 
-fn extension_coincide_con_cabecera(fmt: FormatoImagenOxigeno, ext_normalizada: &str) -> Result<(), String> {
+fn extension_coincide_con_cabecera(
+	fmt: FormatoImagenOxigeno,
+	ext_normalizada: &str,
+) -> Result<(), String> {
 	match (fmt, ext_normalizada) {
 		(FormatoImagenOxigeno::Jpeg, "jpg") | (FormatoImagenOxigeno::Png, "png") => Ok(()),
 		_ => Err(
@@ -86,7 +89,10 @@ fn exif_fecha_captura_opcional(bytes: &[u8]) -> Option<String> {
 	let raw = match &field.value {
 		Value::Ascii(v) => {
 			let slice = v.first()?;
-			std::str::from_utf8(slice).ok()?.trim_end_matches('\0').to_string()
+			std::str::from_utf8(slice)
+				.ok()?
+				.trim_end_matches('\0')
+				.to_string()
 		}
 		_ => return None,
 	};
@@ -245,10 +251,7 @@ pub fn registrar_evento_oxigeno(
 ) -> Result<OxigenoEvento, String> {
 	let tipo = input.tipo.trim().to_string();
 	if !OXIGENO_TIPOS.contains(&tipo.as_str()) {
-		return Err(format!(
-			"Tipo inválido. Use: {}",
-			OXIGENO_TIPOS.join(", ")
-		));
+		return Err(format!("Tipo inválido. Use: {}", OXIGENO_TIPOS.join(", ")));
 	}
 	validate_fecha_ymd(&input.fecha_operacion)?;
 	if !input.medidor_a.is_finite() || !input.medidor_b.is_finite() {
@@ -303,26 +306,25 @@ pub fn registrar_evento_oxigeno(
 	let notas = input.notas.unwrap_or_default().trim().to_string();
 
 	let conn = db.lock().map_err(error::lock)?;
-	conn
-		.execute(
-			r#"INSERT INTO oxigeno_eventos (
+	conn.execute(
+		r#"INSERT INTO oxigeno_eventos (
 				id, fecha_operacion, tipo, medidor_a, medidor_b, saldo_enfermeria,
 				notas, foto_relativa, foto_exif_fecha, created_at
 			) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)"#,
-			params![
-				&id,
-				&input.fecha_operacion,
-				&tipo,
-				input.medidor_a,
-				input.medidor_b,
-				input.saldo_enfermeria,
-				&notas,
-				foto_relativa.as_deref(),
-				foto_exif_fecha.as_deref(),
-				&created_at,
-			],
-		)
-		.map_err(error::db)?;
+		params![
+			&id,
+			&input.fecha_operacion,
+			&tipo,
+			input.medidor_a,
+			input.medidor_b,
+			input.saldo_enfermeria,
+			&notas,
+			foto_relativa.as_deref(),
+			foto_exif_fecha.as_deref(),
+			&created_at,
+		],
+	)
+	.map_err(error::db)?;
 
 	Ok(OxigenoEvento {
 		id,
@@ -377,10 +379,7 @@ fn deltas_y_eventos_del_dia(
 	let (da, db) = if readings.len() >= 2 {
 		let first = readings.first().unwrap();
 		let last = readings.last().unwrap();
-		(
-			Some(last.0 - first.0),
-			Some(last.1 - first.1),
-		)
+		(Some(last.0 - first.0), Some(last.1 - first.1))
 	} else {
 		(None, None)
 	};
@@ -446,7 +445,9 @@ pub fn leer_foto_oxigeno(app: AppHandle, foto_relativa: String) -> Result<Vec<u8
 	let canonical_base = base
 		.canonicalize()
 		.map_err(|e| format!("No se pudo resolver carpeta de datos: {e}"))?;
-	let canonical_file = full.canonicalize().map_err(|_| "Archivo de foto no encontrado.".to_string())?;
+	let canonical_file = full
+		.canonicalize()
+		.map_err(|_| "Archivo de foto no encontrado.".to_string())?;
 	if !canonical_file.starts_with(&canonical_base) {
 		return Err("Ruta fuera del directorio de la aplicación.".into());
 	}

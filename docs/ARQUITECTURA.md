@@ -2,13 +2,13 @@
 
 ## Stack técnico
 
-| Capa | Tecnología |
-|------|------------|
-| Shell de escritorio | **Tauri 2** (Rust) |
-| Interfaz | **React** + **TypeScript**, empaquetado con **Vite** |
-| Estilos | **Tailwind CSS** (v4 con plugin Vite) |
-| Datos locales | **SQLite** vía **rusqlite** (feature `bundled`) en el proceso Rust |
-| Comunicación UI ↔ datos | Comandos Tauri (`invoke`), sin SQL expuesto al frontend |
+| Capa                    | Tecnología                                                         |
+| ----------------------- | ------------------------------------------------------------------ |
+| Shell de escritorio     | **Tauri 2** (Rust)                                                 |
+| Interfaz                | **React** + **TypeScript**, empaquetado con **Vite**               |
+| Estilos                 | **Tailwind CSS** (v4 con plugin Vite)                              |
+| Datos locales           | **SQLite** vía **rusqlite** (feature `bundled`) en el proceso Rust |
+| Comunicación UI ↔ datos | Comandos Tauri (`invoke`), sin SQL expuesto al frontend            |
 
 La base de datos reside en el directorio de datos de la aplicación (`app_data_dir`), archivo `consultorio.db`.
 
@@ -18,22 +18,22 @@ La base de datos reside en el directorio de datos de la aplicación (`app_data_d
 
 Representa una cita agendada. Los nombres de columna coinciden con el modelo persistido en Rust.
 
-| Campo (SQL) | Descripción |
-|-------------|-------------|
-| `id` | Identificador único (UUID en texto) |
-| `patient_full_name` | Nombre completo del paciente |
-| `document_type` | Tipo de documento (lista configurable, p. ej. CC, NIT) |
-| `document_number` | Número de documento (alfanumérico) |
-| `phone_dial_code` | Prefijo internacional sin `+` (p. ej. `57`) |
-| `phone_national_number` | Número nacional (dígitos) |
-| `birthday_month` | Mes de cumpleaños (1–12), uso comercial; puede ser NULL |
-| `appointment_date` | Fecha de la cita (`YYYY-MM-DD`, con año) |
-| `start_time` | Hora inicio (`HH:MM`, 24 h internamente) |
-| `end_time` | Hora fin (`HH:MM`) |
-| `service_type` | Identificador del tipo de servicio (p. ej. `camara_hiperbarica`, `sueroterapia`) |
-| `status` | `pendiente` \| `asistio` \| `no_asistio` |
-| `created_at` | Marca de creación (ISO-8601) |
-| `updated_at` | Marca de actualización (ISO-8601) |
+| Campo (SQL)             | Descripción                                                                      |
+| ----------------------- | -------------------------------------------------------------------------------- |
+| `id`                    | Identificador único (UUID en texto)                                              |
+| `patient_full_name`     | Nombre completo del paciente                                                     |
+| `document_type`         | Tipo de documento (lista configurable, p. ej. CC, NIT)                           |
+| `document_number`       | Número de documento (alfanumérico)                                               |
+| `phone_dial_code`       | Prefijo internacional sin `+` (p. ej. `57`)                                      |
+| `phone_national_number` | Número nacional (dígitos)                                                        |
+| `birthday_month`        | Mes de cumpleaños (1–12), uso comercial; puede ser NULL                          |
+| `appointment_date`      | Fecha de la cita (`YYYY-MM-DD`, con año)                                         |
+| `start_time`            | Hora inicio (`HH:MM`, 24 h internamente)                                         |
+| `end_time`              | Hora fin (`HH:MM`)                                                               |
+| `service_type`          | Identificador del tipo de servicio (p. ej. `camara_hiperbarica`, `sueroterapia`) |
+| `status`                | `pendiente` \| `asistio` \| `no_asistio`                                         |
+| `created_at`            | Marca de creación (ISO-8601)                                                     |
+| `updated_at`            | Marca de actualización (ISO-8601)                                                |
 
 Índice: `appointment_date` para consultas por rango (vista semanal).
 
@@ -47,10 +47,10 @@ Una fila (`id = 1`) con `settings_json`: configuración global (domingos, format
 
 Cada una con una fila fija (`id = 1`) y columna `password_hash` (nullable). Los hashes son **Argon2**; el frontend solo recibe flags del tipo `hasPassword`, nunca el hash.
 
-| Tabla | Uso |
-|-------|-----|
-| `startup_auth` | Contraseña opcional para desbloquear la app al arrancar (`verify_startup_password`, `set_startup_password`, etc.). |
-| `admin_auth` | Contraseña de administrador: acceso al tab Configuración, verificación al cambiar el modo administrador, y operaciones que exigen validar al admin (p. ej. quitar contraseña de inicio vía `clear_startup_password_with_admin`). |
+| Tabla          | Uso                                                                                                                                                                                                                              |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `startup_auth` | Contraseña opcional para desbloquear la app al arrancar (`verify_startup_password`, `set_startup_password`, etc.).                                                                                                               |
+| `admin_auth`   | Contraseña de administrador: acceso al tab Configuración, verificación al cambiar el modo administrador, y operaciones que exigen validar al admin (p. ej. quitar contraseña de inicio vía `clear_startup_password_with_admin`). |
 
 Migraciones en `db.rs` (`run_startup_auth_migration`, `run_admin_auth_migration`).
 
@@ -62,58 +62,58 @@ Si existe fila en `ingresos` con el `cita_id` de la cita, `update_appointment` r
 
 Registro de pagos/ingresos locales. `cita_id` opcional (texto UUID) para enlazar con una cita; el módulo de UI **no** invoca al calendario: el flujo típico es escuchar `cita_completada` y ofrecer registro con datos pre-rellenados.
 
-| Campo (SQL) | Descripción |
-|-------------|-------------|
-| `id` | PK (UUID en texto) |
-| `cita_id` | Opcional, referencia lógica a `appointments.id` |
-| `paciente_nombre` | Nombre del paciente (migración incremental, backfill) |
-| `paciente_documento` | Documento del paciente |
-| `concepto` | Texto (p. ej. etiqueta o id de servicio) |
-| `monto` | REAL |
-| `metodo_pago` | `Efectivo` \| `Tarjeta` \| `Transferencia` |
-| `fecha_pago` | ISO-8601 |
-| `factura_id` | Opcional, referencia lógica a `facturas.id` (agregada por migración) |
+| Campo (SQL)          | Descripción                                                          |
+| -------------------- | -------------------------------------------------------------------- |
+| `id`                 | PK (UUID en texto)                                                   |
+| `cita_id`            | Opcional, referencia lógica a `appointments.id`                      |
+| `paciente_nombre`    | Nombre del paciente (migración incremental, backfill)                |
+| `paciente_documento` | Documento del paciente                                               |
+| `concepto`           | Texto (p. ej. etiqueta o id de servicio)                             |
+| `monto`              | REAL                                                                 |
+| `metodo_pago`        | `Efectivo` \| `Tarjeta` \| `Transferencia`                           |
+| `fecha_pago`         | ISO-8601                                                             |
+| `factura_id`         | Opcional, referencia lógica a `facturas.id` (agregada por migración) |
 
 ### Tabla `facturas` (Fase 4 — facturación local)
 
 Documento de venta con snapshot de datos del cliente y totales persistidos (no recalculados tras emitir).
 
-| Campo (SQL) | Descripción |
-|-------------|-------------|
-| `id` | PK (UUID en texto) |
-| `estado` | `borrador` \| `emitida` \| `anulada` |
-| `serie` | Prefijo de la numeración (p. ej. `FV`) |
-| `numero` | Consecutivo entero dentro de la serie; NULL en borrador. **UNIQUE** `(serie, numero)` donde `numero IS NOT NULL` |
-| `cliente_nombre` | Nombre completo del cliente |
-| `cliente_documento_tipo` | Tipo de documento (CC, NIT, etc.) |
-| `cliente_documento_numero` | Número de documento |
-| `subtotal` | Suma de bases imponibles |
-| `impuesto_total` | Suma de impuestos |
-| `total` | subtotal + impuesto_total |
-| `notas` | Texto libre |
-| `cita_id` | Opcional, referencia lógica a `appointments.id` |
-| `fecha_emision` | ISO-8601, asignada al emitir |
-| `anulacion_motivo` | Texto de motivo (solo si anulada) |
-| `anulada_at` | ISO-8601 (solo si anulada) |
-| `dian_metadata_json` | Reservado para futura integración DIAN (NULL por ahora) |
-| `created_at` / `updated_at` | Marcas de auditoría |
+| Campo (SQL)                 | Descripción                                                                                                      |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `id`                        | PK (UUID en texto)                                                                                               |
+| `estado`                    | `borrador` \| `emitida` \| `anulada`                                                                             |
+| `serie`                     | Prefijo de la numeración (p. ej. `FV`)                                                                           |
+| `numero`                    | Consecutivo entero dentro de la serie; NULL en borrador. **UNIQUE** `(serie, numero)` donde `numero IS NOT NULL` |
+| `cliente_nombre`            | Nombre completo del cliente                                                                                      |
+| `cliente_documento_tipo`    | Tipo de documento (CC, NIT, etc.)                                                                                |
+| `cliente_documento_numero`  | Número de documento                                                                                              |
+| `subtotal`                  | Suma de bases imponibles                                                                                         |
+| `impuesto_total`            | Suma de impuestos                                                                                                |
+| `total`                     | subtotal + impuesto_total                                                                                        |
+| `notas`                     | Texto libre                                                                                                      |
+| `cita_id`                   | Opcional, referencia lógica a `appointments.id`                                                                  |
+| `fecha_emision`             | ISO-8601, asignada al emitir                                                                                     |
+| `anulacion_motivo`          | Texto de motivo (solo si anulada)                                                                                |
+| `anulada_at`                | ISO-8601 (solo si anulada)                                                                                       |
+| `dian_metadata_json`        | Reservado para futura integración DIAN (NULL por ahora)                                                          |
+| `created_at` / `updated_at` | Marcas de auditoría                                                                                              |
 
 ### Tabla `factura_lineas`
 
 Líneas ordenadas de cada factura. Totales calculados y persistidos al guardar/emitir para auditoría.
 
-| Campo | Descripción |
-|-------|-------------|
-| `id` | PK (UUID) |
-| `factura_id` | FK a `facturas.id` (CASCADE al eliminar) |
-| `orden` | Posición (0-based) |
-| `descripcion` | Texto del concepto |
-| `cantidad` | REAL > 0 |
-| `precio_unitario` | REAL >= 0 |
-| `tasa_impuesto_pct` | 0–100 |
-| `base_imponible` | cantidad × precio_unitario |
-| `impuesto` | base_imponible × (tasa/100) |
-| `total_linea` | base_imponible + impuesto |
+| Campo               | Descripción                              |
+| ------------------- | ---------------------------------------- |
+| `id`                | PK (UUID)                                |
+| `factura_id`        | FK a `facturas.id` (CASCADE al eliminar) |
+| `orden`             | Posición (0-based)                       |
+| `descripcion`       | Texto del concepto                       |
+| `cantidad`          | REAL > 0                                 |
+| `precio_unitario`   | REAL >= 0                                |
+| `tasa_impuesto_pct` | 0–100                                    |
+| `base_imponible`    | cantidad × precio_unitario               |
+| `impuesto`          | base_imponible × (tasa/100)              |
+| `total_linea`       | base_imponible + impuesto                |
 
 ### Tabla `facturacion_contadores`
 
@@ -123,17 +123,17 @@ Una fila por `serie` (PK). `ultimo_numero` se incrementa atómicamente bajo el `
 
 Eventos genéricos de calendario: mantenimiento programado, revisiones, alertas internas. No son citas de pacientes.
 
-| Campo | Descripción |
-|-------|-------------|
-| `id` | PK (UUID) |
-| `titulo` | Título del evento |
-| `descripcion` | Texto libre opcional |
-| `fecha` | `YYYY-MM-DD` |
-| `todo_el_dia` | `1` (todo el día) o `0` (hora específica) |
-| `hora_inicio` | `HH:MM`, NULL si todo el día |
-| `hora_fin` | `HH:MM`, NULL si todo el día |
-| `color` | Identificador de color: `amber` \| `rose` \| `violet` \| `teal` \| `sky` \| `slate` |
-| `created_at` / `updated_at` | Marcas de auditoría |
+| Campo                       | Descripción                                                                         |
+| --------------------------- | ----------------------------------------------------------------------------------- |
+| `id`                        | PK (UUID)                                                                           |
+| `titulo`                    | Título del evento                                                                   |
+| `descripcion`               | Texto libre opcional                                                                |
+| `fecha`                     | `YYYY-MM-DD`                                                                        |
+| `todo_el_dia`               | `1` (todo el día) o `0` (hora específica)                                           |
+| `hora_inicio`               | `HH:MM`, NULL si todo el día                                                        |
+| `hora_fin`                  | `HH:MM`, NULL si todo el día                                                        |
+| `color`                     | Identificador de color: `amber` \| `rose` \| `violet` \| `teal` \| `sky` \| `slate` |
+| `created_at` / `updated_at` | Marcas de auditoría                                                                 |
 
 Se cargan junto con las citas en `refreshAppointments` y se muestran en el calendario semanal (badges para todo-el-día, bloques con borde punteado para hora específica) y en la sidebar de hoy. El evento `evento_changed` en `window` refresca la vista.
 
@@ -176,12 +176,12 @@ Los eventos como `cita_creada`, `cita_actualizada`, `cita_completada` o `cita_ca
 
 ```json
 {
-  "cita_id": "<uuid>",
-  "paciente_nombre": "<nombre completo>",
-  "paciente_documento": "<documento>",
-  "tipo_servicio": "<id de servicio>",
-  "estado": "pendiente | asistio | no_asistio",
-  "timestamp": "<ISO-8601>"
+	"cita_id": "<uuid>",
+	"paciente_nombre": "<nombre completo>",
+	"paciente_documento": "<documento>",
+	"tipo_servicio": "<id de servicio>",
+	"estado": "pendiente | asistio | no_asistio",
+	"timestamp": "<ISO-8601>"
 }
 ```
 
@@ -219,12 +219,12 @@ Los eventos como `cita_creada`, `cita_actualizada`, `cita_completada` o `cita_ca
 
 - **Generación automática (al iniciar):** `run_startup_backup` (`backup.rs`) copia `consultorio.db` con prefijo `consultorio_<timestamp>.db` a `app_data_dir/backups` y, si está configurada en `BackupSettings.external_path`, también a una ruta externa (sincronizable con la nube). La retención (`retention_count`) se aplica por carpeta.
 - **Listado y restauración manual:** módulo `backup_commands.rs` con dos comandos Tauri:
-	- `listar_respaldos_locales`: devuelve `Vec<BackupFileInfo>` (nombre, ruta absoluta, tamaño y fecha de modificación) leyendo solo `app_data_dir/backups`. Para archivos fuera de esa carpeta el frontend usa el diálogo nativo (`@tauri-apps/plugin-dialog`, capability `dialog:allow-open`).
-	- `restaurar_respaldo`: recibe `source_path` y `admin_password`. Exige modo administrador activo (`settings.admin_mode == true`) y verifica el hash Argon2 con `verify_admin_password_with_conn`. La operación:
-		1. Hace checkpoint del WAL y reemplaza la `Connection` activa por una `open_in_memory` para liberar handles (Windows no permite renombrar un archivo abierto).
-		2. Valida la fuente (prefijo `consultorio_`, extensión `.db`, cabecera SQLite y `PRAGMA schema_version` legible).
-		3. Copia a `consultorio.db.restore.tmp`, elimina los archivos auxiliares `consultorio.db-wal` / `-shm` y hace `fs::rename` atómico sobre `consultorio.db`.
-		4. Reabre la BD restaurada con `db::open_connection` (aplica migraciones) y la reinstala en el `Mutex<Connection>` compartido.
+  - `listar_respaldos_locales`: devuelve `Vec<BackupFileInfo>` (nombre, ruta absoluta, tamaño y fecha de modificación) leyendo solo `app_data_dir/backups`. Para archivos fuera de esa carpeta el frontend usa el diálogo nativo (`@tauri-apps/plugin-dialog`, capability `dialog:allow-open`).
+  - `restaurar_respaldo`: recibe `source_path` y `admin_password`. Exige modo administrador activo (`settings.admin_mode == true`) y verifica el hash Argon2 con `verify_admin_password_with_conn`. La operación:
+    1. Hace checkpoint del WAL y reemplaza la `Connection` activa por una `open_in_memory` para liberar handles (Windows no permite renombrar un archivo abierto).
+    2. Valida la fuente (prefijo `consultorio_`, extensión `.db`, cabecera SQLite y `PRAGMA schema_version` legible).
+    3. Copia a `consultorio.db.restore.tmp`, elimina los archivos auxiliares `consultorio.db-wal` / `-shm` y hace `fs::rename` atómico sobre `consultorio.db`.
+    4. Reabre la BD restaurada con `db::open_connection` (aplica migraciones) y la reinstala en el `Mutex<Connection>` compartido.
 - **UX:** componente `BackupRestoreSection` en `Configuración → Respaldos`. Lista los respaldos locales, permite elegir un archivo externo, exige confirmación con contraseña de administrador y, tras la restauración exitosa, ofrece cerrar la aplicación para que cualquier estado en memoria se reconstruya al volver a abrirla.
 
 ## Consideraciones de seguridad

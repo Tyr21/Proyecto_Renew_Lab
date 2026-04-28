@@ -2,10 +2,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 import { suggestedPriceForServiceType } from "../core/serviceLabels";
 import type { AppSettings } from "../core/types";
-import {
-	PaymentModal,
-	type PaymentPrefill,
-} from "../modules/finances/PaymentModal";
+import { PaymentModal, type PaymentPrefill } from "../modules/finances/PaymentModal";
 
 interface FinanceEventListenerProps {
 	settings: AppSettings;
@@ -27,47 +24,29 @@ export function FinanceEventListener({ settings }: FinanceEventListenerProps) {
 
 		const setup = async () => {
 			try {
-				const u = await listen<Record<string, unknown>>(
-					"cita_completada",
-					(event) => {
-						const p = event.payload;
-						const estado =
-							typeof p?.estado === "string" ? p.estado : "";
-						// Solo cobro si hubo asistencia; `no_asistio` no abre modal (alineado con payload Rust).
-						if (estado !== "asistio") {
-							return;
-						}
-						const paqueteId =
-							typeof p?.paquete_id === "string" ? p.paquete_id.trim() : "";
-						if (paqueteId.length > 0) {
-							return;
-						}
-						const tipoServicio =
-							typeof p?.tipo_servicio === "string"
-								? p.tipo_servicio
-								: "";
-						const suggestedPrice = suggestedPriceForServiceType(
-							settingsRef.current,
-							tipoServicio,
-						);
-						setPrefill({
-							citaId:
-								typeof p?.cita_id === "string" ? p.cita_id : "",
-							pacienteNombre:
-								typeof p?.paciente_nombre === "string"
-									? p.paciente_nombre
-									: "",
-							pacienteDocumento:
-								typeof p?.paciente_documento === "string"
-									? p.paciente_documento
-									: "",
-							concepto: tipoServicio,
-							suggestedPrice:
-								suggestedPrice > 0 ? suggestedPrice : undefined,
-						});
-						setOpen(true);
-					},
-				);
+				const u = await listen<Record<string, unknown>>("cita_completada", (event) => {
+					const p = event.payload;
+					const estado = typeof p?.estado === "string" ? p.estado : "";
+					// Solo cobro si hubo asistencia; `no_asistio` no abre modal (alineado con payload Rust).
+					if (estado !== "asistio") {
+						return;
+					}
+					const paqueteId = typeof p?.paquete_id === "string" ? p.paquete_id.trim() : "";
+					if (paqueteId.length > 0) {
+						return;
+					}
+					const tipoServicio = typeof p?.tipo_servicio === "string" ? p.tipo_servicio : "";
+					const suggestedPrice = suggestedPriceForServiceType(settingsRef.current, tipoServicio);
+					setPrefill({
+						citaId: typeof p?.cita_id === "string" ? p.cita_id : "",
+						pacienteNombre: typeof p?.paciente_nombre === "string" ? p.paciente_nombre : "",
+						pacienteDocumento:
+							typeof p?.paciente_documento === "string" ? p.paciente_documento : "",
+						concepto: tipoServicio,
+						suggestedPrice: suggestedPrice > 0 ? suggestedPrice : undefined,
+					});
+					setOpen(true);
+				});
 				if (cancelled) {
 					u();
 					return;

@@ -5,7 +5,7 @@ use tauri::{AppHandle, Emitter, State};
 use uuid::Uuid;
 
 use crate::clientes::{self, CrearClienteInput};
-use crate::commands::{DbConn, load_settings_json};
+use crate::commands::{load_settings_json, DbConn};
 use crate::error;
 
 const METODOS_VALIDOS: &[&str] = &["Efectivo", "Tarjeta", "Transferencia"];
@@ -55,7 +55,8 @@ fn parse_expires_date(s: &str) -> Result<NaiveDate, String> {
 	if t.is_empty() {
 		return Err("Fecha de vencimiento vacía".into());
 	}
-	NaiveDate::parse_from_str(t, "%Y-%m-%d").map_err(|_| "Fecha de vencimiento inválida (use AAAA-MM-DD)".into())
+	NaiveDate::parse_from_str(t, "%Y-%m-%d")
+		.map_err(|_| "Fecha de vencimiento inválida (use AAAA-MM-DD)".into())
 }
 
 /// Cuenta sesiones consumidas (`asistio`) y reservadas (`pendiente`) del paquete.
@@ -133,7 +134,10 @@ pub(crate) fn sync_paquete_status(conn: &Connection, paquete_id: &str) -> Result
 	Ok(())
 }
 
-pub(crate) fn sync_paquetes_status_for_ids(conn: &Connection, ids: &[String]) -> Result<(), String> {
+pub(crate) fn sync_paquetes_status_for_ids(
+	conn: &Connection,
+	ids: &[String],
+) -> Result<(), String> {
 	let mut seen = std::collections::HashSet::<String>::new();
 	for id in ids {
 		let t = id.trim();
@@ -321,9 +325,7 @@ pub fn listar_paquetes_cliente(
 			let id: String = row.get(0)?;
 			let total: i64 = row.get(3)?;
 			let (cons, res) = contar_sesiones_paquete(&conn, &id).map_err(|e| {
-				rusqlite::Error::ToSqlConversionFailure(Box::new(std::io::Error::other(
-					e,
-				)))
+				rusqlite::Error::ToSqlConversionFailure(Box::new(std::io::Error::other(e)))
 			})?;
 			row_to_paquete_row(row, cons, res, total)
 		})
@@ -398,14 +400,10 @@ pub fn crear_paquete(
 		.as_ref()
 		.map(|s| s.trim().to_string())
 		.filter(|s| !s.is_empty())
-		.unwrap_or_else(|| {
-			format!(
-				"Paquete: {} ({} sesiones)",
-				label,
-				input.total_sesiones
-			)
-		});
-	let paciente_nombre = format!("{} {}", nombre_cliente.0.trim(), nombre_cliente.1.trim()).trim().to_string();
+		.unwrap_or_else(|| format!("Paquete: {} ({} sesiones)", label, input.total_sesiones));
+	let paciente_nombre = format!("{} {}", nombre_cliente.0.trim(), nombre_cliente.1.trim())
+		.trim()
+		.to_string();
 
 	let id = Uuid::new_v4().to_string();
 	let now = Utc::now().to_rfc3339();
@@ -558,13 +556,7 @@ pub fn crear_cliente_y_paquete(
 		.as_ref()
 		.map(|s| s.trim().to_string())
 		.filter(|s| !s.is_empty())
-		.unwrap_or_else(|| {
-			format!(
-				"Paquete: {} ({} sesiones)",
-				label,
-				input.total_sesiones
-			)
-		});
+		.unwrap_or_else(|| format!("Paquete: {} ({} sesiones)", label, input.total_sesiones));
 
 	let cliente_id = Uuid::new_v4().to_string();
 	let paquete_id = Uuid::new_v4().to_string();

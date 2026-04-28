@@ -8,10 +8,7 @@ function gracePeriodExpiredMessage(): string {
  * El slot es agendable si la hora local actual no supera el inicio del slot
  * más el periodo de gracia (walk-ins en franjas ya iniciadas).
  */
-export function isSlotBookableWithGracePeriod(
-	dateIso: string,
-	startHHMM: string,
-): boolean {
+export function isSlotBookableWithGracePeriod(dateIso: string, startHHMM: string): boolean {
 	if (!/^\d{4}-\d{2}-\d{2}$/.test(dateIso)) return false;
 	const m = /^(\d{1,2}):(\d{2})$/.exec(startHHMM.trim());
 	if (!m) return false;
@@ -21,16 +18,12 @@ export function isSlotBookableWithGracePeriod(
 	const h = Number(m[1]);
 	const min = Number(m[2]);
 	const startMs = new Date(y, mo - 1, d, h, min, 0, 0).getTime();
-	const deadlineMs =
-		startMs + MAX_GRACE_PERIOD_MINUTES * 60 * 1000;
+	const deadlineMs = startMs + MAX_GRACE_PERIOD_MINUTES * 60 * 1000;
 	return Date.now() <= deadlineMs;
 }
 
 /** `null` si válido; mismo criterio que el backend. */
-export function gracePeriodBookingErrorMessage(
-	dateIso: string,
-	startHHMM: string,
-): string | null {
+export function gracePeriodBookingErrorMessage(dateIso: string, startHHMM: string): string | null {
 	if (isSlotBookableWithGracePeriod(dateIso, startHHMM)) return null;
 	return gracePeriodExpiredMessage();
 }

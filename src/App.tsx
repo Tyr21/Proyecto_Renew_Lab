@@ -18,11 +18,7 @@ import {
 import { formatInvokeError } from "./core/errors";
 import { logger } from "./core/logger";
 import { showToast } from "./core/toastBus";
-import {
-	APP_VERSION,
-	EVENTO_CHANGED_EVENT,
-	INGRESO_REGISTRADO_EVENT,
-} from "./core/constants";
+import { APP_VERSION, EVENTO_CHANGED_EVENT, INGRESO_REGISTRADO_EVENT } from "./core/constants";
 import { isSlotBookableWithGracePeriod } from "./core/leadTime";
 import type { AppSettings, Appointment, Evento } from "./core/types";
 import { addDays, getWeekDates, startOfWeekMonday, toISODateLocal } from "./core/weekUtils";
@@ -48,9 +44,7 @@ function App() {
 	const [settings, setSettings] = useState<AppSettings | null>(null);
 	const [loadError, setLoadError] = useState<string | null>(null);
 	const [startupGate, setStartupGate] = useState<StartupGate>("checking");
-	const [weekStartMonday, setWeekStartMonday] = useState(() =>
-		startOfWeekMonday(new Date()),
-	);
+	const [weekStartMonday, setWeekStartMonday] = useState(() => startOfWeekMonday(new Date()));
 	const [appointments, setAppointments] = useState<Appointment[]>([]);
 	const [eventos, setEventos] = useState<Evento[]>([]);
 	const [calendarRefreshing, setCalendarRefreshing] = useState(false);
@@ -132,9 +126,7 @@ function App() {
 				}
 			} catch (e) {
 				void logger.invokeError("app.bootstrap", e);
-				setLoadError(
-					e instanceof Error ? e.message : "No se pudo cargar la configuración",
-				);
+				setLoadError(e instanceof Error ? e.message : "No se pudo cargar la configuración");
 				setStartupGate("ready");
 			}
 		})();
@@ -179,7 +171,9 @@ function App() {
 
 	function switchTab(next: Tab) {
 		if (tab === "configuracion" && next !== "configuracion" && settingsDirtyRef.current) {
-			if (!window.confirm("Hay cambios sin guardar en la configuración. ¿Desea salir sin guardar?")) {
+			if (
+				!window.confirm("Hay cambios sin guardar en la configuración. ¿Desea salir sin guardar?")
+			) {
 				return;
 			}
 		}
@@ -293,10 +287,9 @@ function App() {
 					setConfirmCloseOpen(true);
 				});
 			} catch (e) {
-				void logger.error(
-					`No se pudo registrar confirmación de cierre: ${formatInvokeError(e)}`,
-					{ target: "app.window" },
-				);
+				void logger.error(`No se pudo registrar confirmación de cierre: ${formatInvokeError(e)}`, {
+					target: "app.window",
+				});
 			}
 		})();
 		return () => {
@@ -309,10 +302,9 @@ function App() {
 			const { getCurrentWindow } = await import("@tauri-apps/api/window");
 			await getCurrentWindow().destroy();
 		} catch (e) {
-			void logger.error(
-				`No se pudo cerrar la ventana: ${formatInvokeError(e)}`,
-				{ target: "app.window" },
-			);
+			void logger.error(`No se pudo cerrar la ventana: ${formatInvokeError(e)}`, {
+				target: "app.window",
+			});
 			setConfirmCloseOpen(false);
 		}
 	}
@@ -324,8 +316,8 @@ function App() {
 					<p className="font-semibold">Error</p>
 					<p className="mt-2 text-sm">{loadError}</p>
 					<p className="mt-3 text-xs text-slate-600">
-						Esta aplicación requiere el runtime de Tauri y Rust compilado.
-						Ejecute <code className="bg-slate-100 px-1">npm run tauri dev</code>.
+						Esta aplicación requiere el runtime de Tauri y Rust compilado. Ejecute{" "}
+						<code className="bg-slate-100 px-1">npm run tauri dev</code>.
 					</p>
 				</div>
 			</div>
@@ -347,9 +339,7 @@ function App() {
 					try {
 						await loadSettingsAfterAuth();
 					} catch (e) {
-						setLoadError(
-							e instanceof Error ? e.message : "No se pudo cargar la configuración",
-						);
+						setLoadError(e instanceof Error ? e.message : "No se pudo cargar la configuración");
 					} finally {
 						setPostPasswordLoading(false);
 					}
@@ -369,9 +359,7 @@ function App() {
 					<button
 						type="button"
 						className={`rounded-lg px-4 py-2 text-sm font-medium ${
-							tab === "calendario"
-								? "bg-sky-600 text-white"
-								: "text-slate-700 hover:bg-slate-100"
+							tab === "calendario" ? "bg-sky-600 text-white" : "text-slate-700 hover:bg-slate-100"
 						}`}
 						onClick={() => switchTab("calendario")}
 					>
@@ -380,9 +368,7 @@ function App() {
 					<button
 						type="button"
 						className={`rounded-lg px-4 py-2 text-sm font-medium ${
-							tab === "reportes"
-								? "bg-sky-600 text-white"
-								: "text-slate-700 hover:bg-slate-100"
+							tab === "reportes" ? "bg-sky-600 text-white" : "text-slate-700 hover:bg-slate-100"
 						}`}
 						onClick={() => switchTab("reportes")}
 					>
@@ -391,9 +377,7 @@ function App() {
 					<button
 						type="button"
 						className={`rounded-lg px-4 py-2 text-sm font-medium ${
-							tab === "clientes"
-								? "bg-sky-600 text-white"
-								: "text-slate-700 hover:bg-slate-100"
+							tab === "clientes" ? "bg-sky-600 text-white" : "text-slate-700 hover:bg-slate-100"
 						}`}
 						onClick={() => switchTab("clientes")}
 					>
@@ -534,15 +518,10 @@ function App() {
 					aria-labelledby="confirm-close-title"
 				>
 					<div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl">
-						<h2
-							id="confirm-close-title"
-							className="text-lg font-semibold text-slate-800"
-						>
+						<h2 id="confirm-close-title" className="text-lg font-semibold text-slate-800">
 							Cerrar aplicación
 						</h2>
-						<p className="mt-2 text-sm text-slate-600">
-							¿Desea cerrar la aplicación?
-						</p>
+						<p className="mt-2 text-sm text-slate-600">¿Desea cerrar la aplicación?</p>
 						<div className="mt-5 flex justify-end gap-2">
 							<button
 								type="button"

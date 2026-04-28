@@ -30,12 +30,12 @@ Abra la aplicación desde el acceso directo o el menú de programas de Windows, 
 
 En la parte superior hay **cuatro pestañas** principales (de izquierda a derecha), más un botón de **Ayuda**:
 
-| Pestaña | Contenido |
-|---------|-----------|
-| **Calendario** | Vista semanal de citas y panel del día. |
-| **Reportes** | Varios apartados en **subpestañas**: **Cierre de caja** (ingresos y resumen de oxígeno en el mismo rango de fechas), **Facturas**, **Oxígeno** (registro diario de lecturas y fotos), **Estadísticas**, **Movimientos detallados**. |
-| **Clientes** | Búsqueda y ficha de clientes. |
-| **Configuración** | Ajustes generales (requiere contraseña de administrador; véase la sección **7** y el resumen de contraseñas en la sección **8**). |
+| Pestaña           | Contenido                                                                                                                                                                                                                           |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Calendario**    | Vista semanal de citas y panel del día.                                                                                                                                                                                             |
+| **Reportes**      | Varios apartados en **subpestañas**: **Cierre de caja** (ingresos y resumen de oxígeno en el mismo rango de fechas), **Facturas**, **Oxígeno** (registro diario de lecturas y fotos), **Estadísticas**, **Movimientos detallados**. |
+| **Clientes**      | Búsqueda y ficha de clientes.                                                                                                                                                                                                       |
+| **Configuración** | Ajustes generales (requiere contraseña de administrador; véase la sección **7** y el resumen de contraseñas en la sección **8**).                                                                                                   |
 
 La pestaña activa aparece resaltada en azul.
 
@@ -201,9 +201,9 @@ Con el modo administrador activo puede **cambiar** o **eliminar** la contraseña
 
 ## 8. Seguridad: resumen de contraseñas
 
-| Concepto | Función |
-|----------|---------|
-| **Contraseña de inicio** | Opcional. Si existe, se pide **una vez** al abrir la aplicación, antes del calendario. |
+| Concepto                        | Función                                                                                                                                                                           |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Contraseña de inicio**        | Opcional. Si existe, se pide **una vez** al abrir la aplicación, antes del calendario.                                                                                            |
 | **Contraseña de administrador** | Protege el acceso a **Configuración** y la activación del **modo administrador**. Quien la conozca puede gestionar también las contraseñas y opciones sensibles descritas arriba. |
 
 - Use contraseñas **largas y fáciles de recordar para usted** (por ejemplo una frase), no solo palabras cortas.
@@ -216,13 +216,13 @@ Con el modo administrador activo puede **cambiar** o **eliminar** la contraseña
 - Toda la información principal reside en un **archivo de base de datos** en el equipo. Haga **copias de respaldo** según la sección **Respaldos** y, si es posible, mantenga copias en otro medio o ubicación segura.
 - **El archivo de base de datos no está cifrado:** quien tenga acceso al equipo (con privilegios de administrador del sistema o si el equipo se pierde sin protección) podría abrir el archivo. Las contraseñas de inicio y de administrador se almacenan con técnicas que dificultan adivinarlas (Argon2), pero **no protegen el contenido del resto de la base si alguien copia el archivo**.
 - **Proteja el equipo:**
-	- Active el **cifrado de disco** del sistema operativo (en Windows: **BitLocker**). Esto protege todo el contenido del equipo si se pierde o se lo roban estando apagado.
-	- Use **contraseña de sesión de Windows** y bloqueo automático al ausentarse.
-	- Si comparte el equipo con personal del consultorio, considere crear sesiones de Windows separadas.
+  - Active el **cifrado de disco** del sistema operativo (en Windows: **BitLocker**). Esto protege todo el contenido del equipo si se pierde o se lo roban estando apagado.
+  - Use **contraseña de sesión de Windows** y bloqueo automático al ausentarse.
+  - Si comparte el equipo con personal del consultorio, considere crear sesiones de Windows separadas.
 - **Proteja los respaldos:**
-	- El archivo de respaldo (`consultorio_*.db`) **es una copia exacta de la base, igualmente sin cifrar**. Guárdelo en un medio confiable.
-	- Para respaldos externos en USB, prefiera unidades con **BitLocker To Go** o equivalente.
-	- Para respaldos en la nube, use carpetas en servicios donde usted controla la cuenta y, idealmente, con cifrado en cliente.
+  - El archivo de respaldo (`consultorio_*.db`) **es una copia exacta de la base, igualmente sin cifrar**. Guárdelo en un medio confiable.
+  - Para respaldos externos en USB, prefiera unidades con **BitLocker To Go** o equivalente.
+  - Para respaldos en la nube, use carpetas en servicios donde usted controla la cuenta y, idealmente, con cifrado en cliente.
 - **Si pierde una contraseña**, la aplicación **no puede recuperarla**: solo restablecerla con los procedimientos de Configuración (que a su vez requieren la contraseña de administrador, o pasos guiados si se perdió esta). Guarde sus contraseñas en un lugar seguro fuera de la aplicación.
 
 ---
@@ -244,4 +244,4 @@ Para desarrolladores o personal de soporte IT:
 
 ---
 
-*Documento alineado con la versión actual de la aplicación. Si tras una actualización alguna pantalla cambia de nombre o ubicación, consulte las notas de la versión o a su proveedor de soporte.*
+_Documento alineado con la versión actual de la aplicación. Si tras una actualización alguna pantalla cambia de nombre o ubicación, consulte las notas de la versión o a su proveedor de soporte._

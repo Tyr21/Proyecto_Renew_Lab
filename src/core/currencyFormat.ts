@@ -27,7 +27,10 @@ export function parseCurrencyDigits(raw: string): number {
 }
 
 /** Total con IVA a partir del subtotal antes de IVA (mismo redondeo que el modal de planes). */
-export function totalConIva(priceBeforeVat: number, ivaPct: number): {
+export function totalConIva(
+	priceBeforeVat: number,
+	ivaPct: number,
+): {
 	base: number;
 	iva: number;
 	total: number;

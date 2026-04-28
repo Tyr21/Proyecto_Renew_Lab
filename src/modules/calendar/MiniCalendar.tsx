@@ -89,12 +89,14 @@ export function MiniCalendar({
 					aria-label="Mes anterior"
 				>
 					<svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-						<path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+						<path
+							fillRule="evenodd"
+							d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+							clipRule="evenodd"
+						/>
 					</svg>
 				</button>
-				<span className="text-[0.7rem] font-semibold capitalize text-slate-700">
-					{monthLabel}
-				</span>
+				<span className="text-[0.7rem] font-semibold capitalize text-slate-700">{monthLabel}</span>
 				<button
 					type="button"
 					onClick={goNext}
@@ -102,7 +104,11 @@ export function MiniCalendar({
 					aria-label="Mes siguiente"
 				>
 					<svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-						<path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+						<path
+							fillRule="evenodd"
+							d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+							clipRule="evenodd"
+						/>
 					</svg>
 				</button>
 			</div>
@@ -137,7 +143,13 @@ export function MiniCalendar({
 							].join(" ")}
 							title={cell.iso}
 						>
-							<span className={isToday ? "flex h-[18px] w-[18px] items-center justify-center rounded-full bg-sky-600 text-white text-[0.6rem]" : ""}>
+							<span
+								className={
+									isToday
+										? "flex h-[18px] w-[18px] items-center justify-center rounded-full bg-sky-600 text-white text-[0.6rem]"
+										: ""
+								}
+							>
 								{cell.dayNum}
 							</span>
 							{hasAppt && cell.isCurrentMonth ? (

@@ -44,7 +44,9 @@ export function FacturasDashboard({ settings }: FacturasDashboardProps) {
 
 	useEffect(() => {
 		void loadFacturas();
-		const onChange = () => { void loadFacturas(); };
+		const onChange = () => {
+			void loadFacturas();
+		};
 		window.addEventListener(FACTURA_CHANGED_EVENT, onChange);
 		return () => window.removeEventListener(FACTURA_CHANGED_EVENT, onChange);
 	}, [loadFacturas]);
@@ -111,18 +113,37 @@ export function FacturasDashboard({ settings }: FacturasDashboardProps) {
 									: `Facturas del ${dateFrom} al ${dateTo}.`}
 							</p>
 							<p className="mt-2 max-w-2xl text-xs leading-relaxed text-slate-500">
-								<strong className="font-medium text-slate-600">Planes de sesiones:</strong> el cobro del plan
-								se registra como <strong className="font-medium text-slate-600">ingreso</strong> al venderlo
-								(desde el cliente, «Vender plan»). Ese movimiento aparece en Movimientos detallados y en el
-								cierre, con o sin factura. Si emite aquí una factura por la misma venta ya cobrada, desmarque
-								«Registrar pago al emitir» para no duplicar el ingreso.
+								<strong className="font-medium text-slate-600">Planes de sesiones:</strong> el cobro
+								del plan se registra como{" "}
+								<strong className="font-medium text-slate-600">ingreso</strong> al venderlo (desde
+								el cliente, «Vender plan»). Ese movimiento aparece en Movimientos detallados y en el
+								cierre, con o sin factura. Si emite aquí una factura por la misma venta ya cobrada,
+								desmarque «Registrar pago al emitir» para no duplicar el ingreso.
 							</p>
 						</div>
 						<div className="flex flex-col gap-2">
 							<div className="flex gap-1 flex-wrap">
-								<button type="button" onClick={setHoy} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 shadow-sm">Hoy</button>
-								<button type="button" onClick={setEstaSemana} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 shadow-sm">Esta semana</button>
-								<button type="button" onClick={setEsteMes} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 shadow-sm">Este mes</button>
+								<button
+									type="button"
+									onClick={setHoy}
+									className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 shadow-sm"
+								>
+									Hoy
+								</button>
+								<button
+									type="button"
+									onClick={setEstaSemana}
+									className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 shadow-sm"
+								>
+									Esta semana
+								</button>
+								<button
+									type="button"
+									onClick={setEsteMes}
+									className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 shadow-sm"
+								>
+									Este mes
+								</button>
 								<select
 									className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 shadow-sm"
 									value={filtroEstado}
@@ -165,7 +186,10 @@ export function FacturasDashboard({ settings }: FacturasDashboardProps) {
 					</header>
 
 					{error ? (
-						<div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+						<div
+							className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+							role="alert"
+						>
 							{error}
 						</div>
 					) : null}
@@ -173,13 +197,17 @@ export function FacturasDashboard({ settings }: FacturasDashboardProps) {
 					{/* Tarjetas resumen */}
 					<section className="grid grid-cols-1 gap-4 md:grid-cols-3">
 						<div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 shadow-sm">
-							<p className="text-xs font-medium uppercase tracking-wide text-emerald-800">Emitidas</p>
+							<p className="text-xs font-medium uppercase tracking-wide text-emerald-800">
+								Emitidas
+							</p>
 							<p className="mt-1 text-2xl font-semibold tabular-nums text-emerald-900">
 								{loading ? "…" : formatCurrency(totals.emitidas)}
 							</p>
 						</div>
 						<div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-							<p className="text-xs font-medium uppercase tracking-wide text-amber-700">Borradores</p>
+							<p className="text-xs font-medium uppercase tracking-wide text-amber-700">
+								Borradores
+							</p>
 							<p className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">
 								{loading ? "…" : formatCurrency(totals.borradores)}
 							</p>
@@ -196,7 +224,9 @@ export function FacturasDashboard({ settings }: FacturasDashboardProps) {
 					<section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
 						<div className="border-b border-slate-200 px-4 py-3">
 							<h2 className="text-sm font-medium text-slate-800">Listado</h2>
-							<p className="text-xs text-slate-500">{facturas.length} factura{facturas.length === 1 ? "" : "s"}</p>
+							<p className="text-xs text-slate-500">
+								{facturas.length} factura{facturas.length === 1 ? "" : "s"}
+							</p>
 						</div>
 						<div className="overflow-x-auto">
 							<table className="w-full min-w-[700px] text-left text-sm">
@@ -214,7 +244,9 @@ export function FacturasDashboard({ settings }: FacturasDashboardProps) {
 								<tbody>
 									{loading ? (
 										<tr>
-											<td colSpan={7} className="px-4 py-8 text-center text-slate-500">Cargando…</td>
+											<td colSpan={7} className="px-4 py-8 text-center text-slate-500">
+												Cargando…
+											</td>
 										</tr>
 									) : facturas.length === 0 ? (
 										<tr>
@@ -230,10 +262,16 @@ export function FacturasDashboard({ settings }: FacturasDashboardProps) {
 												onClick={() => openView(f)}
 											>
 												<td className="px-4 py-3 tabular-nums text-slate-800">
-													{f.numero ? `${f.serie}-${f.numero}` : <span className="italic text-slate-400">—</span>}
+													{f.numero ? (
+														`${f.serie}-${f.numero}`
+													) : (
+														<span className="italic text-slate-400">—</span>
+													)}
 												</td>
 												<td className="px-4 py-3">
-													<span className={`rounded-full px-2 py-0.5 text-xs font-medium ${ESTADO_BADGE[f.estado]}`}>
+													<span
+														className={`rounded-full px-2 py-0.5 text-xs font-medium ${ESTADO_BADGE[f.estado]}`}
+													>
 														{f.estado}
 													</span>
 												</td>

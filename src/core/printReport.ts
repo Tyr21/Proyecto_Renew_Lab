@@ -47,7 +47,7 @@ export function openPrintWindow(title: string, bodyHtml: string): void {
 	doc.open();
 	doc.write(
 		`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title>` +
-		`<style>${BASE_STYLES}</style></head><body>${bodyHtml}</body></html>`,
+			`<style>${BASE_STYLES}</style></head><body>${bodyHtml}</body></html>`,
 	);
 	doc.close();
 

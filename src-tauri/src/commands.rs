@@ -11,9 +11,8 @@ use crate::error;
 use crate::paquetes;
 use crate::settings_model::AppSettings;
 use crate::time_rules::{
-	is_duration_multiple_30, is_half_hour_aligned, is_appointment_past, minutes_since_midnight,
-	overlaps_intervals, parse_hh_mm, validate_grace_period_for_new_booking,
-	within_business_window,
+	is_appointment_past, is_duration_multiple_30, is_half_hour_aligned, minutes_since_midnight,
+	overlaps_intervals, parse_hh_mm, validate_grace_period_for_new_booking, within_business_window,
 };
 
 pub type DbConn = Mutex<rusqlite::Connection>;
@@ -67,12 +66,11 @@ pub(crate) fn load_settings_json(conn: &rusqlite::Connection) -> Result<AppSetti
 
 fn save_settings_json(conn: &rusqlite::Connection, settings: &AppSettings) -> Result<(), String> {
 	let json = serde_json::to_string(settings).map_err(error::config)?;
-	conn
-		.execute(
-			"UPDATE app_config SET settings_json = ?1 WHERE id = 1",
-			params![json],
-		)
-		.map_err(error::db)?;
+	conn.execute(
+		"UPDATE app_config SET settings_json = ?1 WHERE id = 1",
+		params![json],
+	)
+	.map_err(error::db)?;
 	Ok(())
 }
 
@@ -94,8 +92,13 @@ pub fn get_settings(db: tauri::State<'_, DbConn>) -> Result<AppSettings, String>
 }
 
 #[tauri::command]
-pub fn save_settings(db: tauri::State<'_, DbConn>, settings: AppSettings) -> Result<AppSettings, String> {
-	if settings.default_duration_minutes == 0 || !settings.default_duration_minutes.is_multiple_of(30) {
+pub fn save_settings(
+	db: tauri::State<'_, DbConn>,
+	settings: AppSettings,
+) -> Result<AppSettings, String> {
+	if settings.default_duration_minutes == 0
+		|| !settings.default_duration_minutes.is_multiple_of(30)
+	{
 		return Err("La duración por defecto debe ser múltiplo de 30 minutos".into());
 	}
 	if settings.document_types.is_empty() {
@@ -126,7 +129,8 @@ pub fn save_settings(db: tauri::State<'_, DbConn>, settings: AppSettings) -> Res
 			if plan.id.trim().is_empty() {
 				return Err(format!(
 					"Servicio «{}»: cada plan requiere un id (plan #{})",
-					st.label, pi + 1
+					st.label,
+					pi + 1
 				));
 			}
 			if !seen_plan_ids.insert(plan.id.trim().to_string()) {
@@ -147,8 +151,7 @@ pub fn save_settings(db: tauri::State<'_, DbConn>, settings: AppSettings) -> Res
 			if plan.session_count < 1 {
 				return Err(format!(
 					"Servicio «{}»: el plan «{}» debe tener al menos 1 sesión",
-					st.label,
-					plan.label
+					st.label, plan.label
 				));
 			}
 			if plan.price_before_vat <= 0.0 || !plan.price_before_vat.is_finite() {
@@ -264,7 +267,9 @@ pub fn list_appointments_range(
 	Ok(rows)
 }
 
-fn validate_input_times(input: &AppointmentInput) -> Result<(chrono::NaiveTime, chrono::NaiveTime), String> {
+fn validate_input_times(
+	input: &AppointmentInput,
+) -> Result<(chrono::NaiveTime, chrono::NaiveTime), String> {
 	let start = parse_hh_mm(&input.start_time)?;
 	let end = parse_hh_mm(&input.end_time)?;
 	if !is_half_hour_aligned(start) || !is_half_hour_aligned(end) {
@@ -279,7 +284,10 @@ fn validate_input_times(input: &AppointmentInput) -> Result<(chrono::NaiveTime, 
 	Ok((start, end))
 }
 
-fn validate_against_settings(settings: &AppSettings, input: &AppointmentInput) -> Result<(), String> {
+fn validate_against_settings(
+	settings: &AppSettings,
+	input: &AppointmentInput,
+) -> Result<(), String> {
 	let name = input.patient_full_name.trim();
 	if name.is_empty() {
 		return Err("El nombre completo es obligatorio".into());
@@ -506,16 +514,16 @@ pub fn update_appointment(
 		let next_pkg = normalized_paquete_id_from_input(&input);
 		let paquete_changed = next_pkg != existing.paquete_id;
 		if status_changed || schedule_changed || service_changed || paquete_changed {
-			return Err(
-				"No se puede modificar una cita que ya tiene un pago registrado.".into(),
-			);
+			return Err("No se puede modificar una cita que ya tiene un pago registrado.".into());
 		}
 	}
 
 	if past {
 		let status = input.status.as_deref().unwrap_or(&existing.status);
 		if status != "asistio" && status != "no_asistio" {
-			return Err("Solo puede marcarse asistencia (asistió / no asistió) en citas pasadas".into());
+			return Err(
+				"Solo puede marcarse asistencia (asistió / no asistió) en citas pasadas".into(),
+			);
 		}
 		if clientes::format_nombre_propio(input.patient_full_name.trim())
 			!= clientes::format_nombre_propio(existing.patient_full_name.trim())
@@ -658,12 +666,12 @@ pub fn delete_appointment(
 	let conn = db.lock().map_err(error::lock)?;
 	let existing = load_appointment_by_id(&conn, &id)?;
 	let settings = load_settings_json(&conn)?;
-	if !settings.admin_mode && is_appointment_past(&existing.appointment_date, &existing.end_time)? {
+	if !settings.admin_mode && is_appointment_past(&existing.appointment_date, &existing.end_time)?
+	{
 		return Err("No se pueden eliminar citas pasadas".into());
 	}
 	let pkg_sync = existing.paquete_id.clone();
-	conn
-		.execute("DELETE FROM appointments WHERE id = ?1", params![id])
+	conn.execute("DELETE FROM appointments WHERE id = ?1", params![id])
 		.map_err(error::db)?;
 	if let Some(ref p) = pkg_sync {
 		paquetes::sync_paquete_status(&conn, p)?;
@@ -711,13 +719,7 @@ mod integration_tests {
 	#[test]
 	fn create_rejects_third_concurrent_same_service() {
 		let conn = open_in_memory_test_database().unwrap();
-		let inp = sample_input(
-			"2099-01-01",
-			"10:00",
-			"11:00",
-			"camara_hiperbarica",
-			"A",
-		);
+		let inp = sample_input("2099-01-01", "10:00", "11:00", "camara_hiperbarica", "A");
 		create_appointment_core(&conn, inp.clone()).unwrap();
 		create_appointment_core(
 			&conn,

@@ -39,14 +39,10 @@ export function StartupLoginScreen({ onSuccess }: StartupLoginScreenProps) {
 				<h1 id="startup-login-title" className="text-lg font-semibold text-slate-800">
 					Consultorio Renew Lab
 				</h1>
-				<p className="mt-2 text-sm text-slate-600">
-					Introduzca la contraseña para continuar.
-				</p>
+				<p className="mt-2 text-sm text-slate-600">Introduzca la contraseña para continuar.</p>
 				<form onSubmit={submit} className="mt-5 space-y-4">
 					{error ? (
-						<div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
-							{error}
-						</div>
+						<div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{error}</div>
 					) : null}
 					<label className="block text-sm">
 						<span className="font-medium text-slate-700">Contraseña</span>

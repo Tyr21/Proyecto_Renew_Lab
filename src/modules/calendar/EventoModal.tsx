@@ -1,9 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-	actualizarEvento,
-	crearEvento,
-	eliminarEvento,
-} from "../../core/api";
+import { actualizarEvento, crearEvento, eliminarEvento } from "../../core/api";
 import { EVENTO_CHANGED_EVENT } from "../../core/constants";
 import { formatInvokeError } from "../../core/errors";
 import type { Evento, EventoColor, EventoInput } from "../../core/types";
@@ -141,25 +137,15 @@ export function EventoModal({
 				aria-labelledby="evento-modal-title"
 			>
 				<header className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
-					<h2
-						id="evento-modal-title"
-						className="text-base font-semibold text-slate-800"
-					>
+					<h2 id="evento-modal-title" className="text-base font-semibold text-slate-800">
 						{isEdit ? "Editar evento" : "Nuevo evento / recordatorio"}
 					</h2>
-					<button
-						type="button"
-						className="text-slate-400 hover:text-slate-700"
-						onClick={onClose}
-					>
+					<button type="button" className="text-slate-400 hover:text-slate-700" onClick={onClose}>
 						✕
 					</button>
 				</header>
 
-				<form
-					onSubmit={(e) => void handleSubmit(e)}
-					className="space-y-4 px-5 py-4"
-				>
+				<form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 px-5 py-4">
 					{error ? (
 						<p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
 							{error}
@@ -237,7 +223,9 @@ export function EventoModal({
 										}}
 									>
 										{SLOT_OPTIONS.map((s) => (
-											<option key={s} value={s}>{s}</option>
+											<option key={s} value={s}>
+												{s}
+											</option>
 										))}
 									</select>
 								</label>
@@ -249,7 +237,9 @@ export function EventoModal({
 										onChange={(e) => setHoraFin(e.target.value)}
 									>
 										{SLOT_OPTIONS.filter((s) => s > horaInicio).map((s) => (
-											<option key={s} value={s}>{s}</option>
+											<option key={s} value={s}>
+												{s}
+											</option>
 										))}
 										<option value="20:00">20:00</option>
 									</select>

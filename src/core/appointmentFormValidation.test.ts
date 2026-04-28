@@ -57,28 +57,19 @@ describe("validateAppointmentFormFields", () => {
 
 	it("rechaza nombre vacío", () => {
 		expect(
-			validateAppointmentFormFields(
-				{ ...baseInput, patientFullName: "   " },
-				baseSettings,
-			),
+			validateAppointmentFormFields({ ...baseInput, patientFullName: "   " }, baseSettings),
 		).toMatch(/obligatorio/);
 	});
 
 	it("rechaza documento no alfanumérico", () => {
 		expect(
-			validateAppointmentFormFields(
-				{ ...baseInput, documentNumber: "12-34" },
-				baseSettings,
-			),
+			validateAppointmentFormFields({ ...baseInput, documentNumber: "12-34" }, baseSettings),
 		).toMatch(/alfanumérico/);
 	});
 
 	it("rechaza teléfono con letras", () => {
 		expect(
-			validateAppointmentFormFields(
-				{ ...baseInput, phoneNationalNumber: "abc" },
-				baseSettings,
-			),
+			validateAppointmentFormFields({ ...baseInput, phoneNationalNumber: "abc" }, baseSettings),
 		).toMatch(/dígitos/);
 	});
 });

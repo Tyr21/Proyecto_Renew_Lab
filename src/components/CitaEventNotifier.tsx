@@ -3,11 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { CitaEventName } from "../core/types";
 
 /** `cita_completada` lo gestiona `FinanceEventListener` (modal de pago). */
-const CITA_EVENTS: CitaEventName[] = [
-	"cita_creada",
-	"cita_actualizada",
-	"cita_cancelada",
-];
+const CITA_EVENTS: CitaEventName[] = ["cita_creada", "cita_actualizada", "cita_cancelada"];
 
 const TOAST_MS = 4500;
 
@@ -25,30 +21,23 @@ export function CitaEventNotifier() {
 		const setup = async () => {
 			try {
 				for (const eventName of CITA_EVENTS) {
-					const unlisten = await listen<Record<string, unknown>>(
-						eventName,
-						(event) => {
-							const tipo =
-								typeof event.payload?.tipo_servicio === "string"
-									? event.payload.tipo_servicio
-									: "?";
-							if (import.meta.env.DEV) {
-								console.log(
-									`[CitaEvent] ${eventName} | servicio=${tipo} | payload=${JSON.stringify(event.payload)}`,
-								);
-							}
-							if (hideTimer.current) {
-								clearTimeout(hideTimer.current);
-							}
-							setToast(
-								`📢 Evento ${eventName} emitido para servicio: ${tipo}`,
+					const unlisten = await listen<Record<string, unknown>>(eventName, (event) => {
+						const tipo =
+							typeof event.payload?.tipo_servicio === "string" ? event.payload.tipo_servicio : "?";
+						if (import.meta.env.DEV) {
+							console.log(
+								`[CitaEvent] ${eventName} | servicio=${tipo} | payload=${JSON.stringify(event.payload)}`,
 							);
-							hideTimer.current = setTimeout(() => {
-								setToast(null);
-								hideTimer.current = null;
-							}, TOAST_MS);
-						},
-					);
+						}
+						if (hideTimer.current) {
+							clearTimeout(hideTimer.current);
+						}
+						setToast(`📢 Evento ${eventName} emitido para servicio: ${tipo}`);
+						hideTimer.current = setTimeout(() => {
+							setToast(null);
+							hideTimer.current = null;
+						}, TOAST_MS);
+					});
 					if (cancelled) {
 						unlisten();
 						return;

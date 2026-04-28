@@ -5,10 +5,7 @@ import {
 	setStartupPassword,
 	setStartupPasswordWithAdmin,
 } from "../../core/api";
-import {
-	STARTUP_PASSWORD_MAX_LENGTH,
-	STARTUP_PASSWORD_MIN_LENGTH,
-} from "../../core/constants";
+import { STARTUP_PASSWORD_MAX_LENGTH, STARTUP_PASSWORD_MIN_LENGTH } from "../../core/constants";
 import { formatInvokeError } from "../../core/errors";
 
 function stopEnterFromSubmittingParent(e: KeyboardEvent) {
@@ -23,9 +20,7 @@ interface StartupPasswordAdminSectionProps {
 	adminModeActive: boolean;
 }
 
-export function StartupPasswordAdminSection({
-	adminModeActive,
-}: StartupPasswordAdminSectionProps) {
+export function StartupPasswordAdminSection({ adminModeActive }: StartupPasswordAdminSectionProps) {
 	const [hasPassword, setHasPassword] = useState<boolean | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [info, setInfo] = useState<string | null>(null);
@@ -83,7 +78,9 @@ export function StartupPasswordAdminSection({
 			await setStartupPassword(null, firstNew.trim());
 			setFirstNew("");
 			setFirstConfirm("");
-			setInfo("Contraseña de inicio guardada. La próxima vez que abra la app se pedirá al iniciar.");
+			setInfo(
+				"Contraseña de inicio guardada. La próxima vez que abra la app se pedirá al iniciar.",
+			);
 			await refresh();
 		} catch (err) {
 			setError(formatInvokeError(err));
@@ -172,7 +169,8 @@ export function StartupPasswordAdminSection({
 			<div className="mt-6 rounded-lg border border-amber-200/80 bg-white/60 p-4 text-sm text-amber-900/95">
 				<p className="font-medium">Contraseña al iniciar la aplicación</p>
 				<p className="mt-2 text-xs text-amber-800/90">
-					Active el modo administrador más abajo y guarde la configuración para poder establecer, cambiar o quitar la contraseña de inicio (gestionado solo por administradores).
+					Active el modo administrador más abajo y guarde la configuración para poder establecer,
+					cambiar o quitar la contraseña de inicio (gestionado solo por administradores).
 				</p>
 			</div>
 		);
@@ -191,7 +189,8 @@ export function StartupPasswordAdminSection({
 			<div>
 				<h3 className="text-sm font-medium text-amber-900">Contraseña al iniciar la aplicación</h3>
 				<p className="mt-1 text-xs text-amber-800/90">
-					Se guarda de forma segura (Argon2) en la base de datos local. Quitar la protección o restablecerla sin la contraseña de inicio requiere la contraseña de administrador.
+					Se guarda de forma segura (Argon2) en la base de datos local. Quitar la protección o
+					restablecerla sin la contraseña de inicio requiere la contraseña de administrador.
 				</p>
 			</div>
 
@@ -204,7 +203,10 @@ export function StartupPasswordAdminSection({
 
 			{!hasPassword ? (
 				<div className="space-y-3">
-					<p className="text-sm text-amber-900">Aún no hay contraseña de inicio. Establezca una para proteger el acceso al abrir la aplicación.</p>
+					<p className="text-sm text-amber-900">
+						Aún no hay contraseña de inicio. Establezca una para proteger el acceso al abrir la
+						aplicación.
+					</p>
 					<label className="block text-sm">
 						<span className="font-medium text-slate-800">Nueva contraseña</span>
 						<input
@@ -296,7 +298,8 @@ export function StartupPasswordAdminSection({
 							Restablecer con contraseña de administrador
 						</h4>
 						<p className="text-xs text-amber-800/90">
-							Si no recuerda la contraseña de inicio, puede definir una nueva validando con la contraseña de administrador.
+							Si no recuerda la contraseña de inicio, puede definir una nueva validando con la
+							contraseña de administrador.
 						</p>
 						<label className="block text-sm">
 							<span className="font-medium text-slate-800">Contraseña de administrador</span>
@@ -349,7 +352,8 @@ export function StartupPasswordAdminSection({
 							Quitar protección de inicio
 						</h4>
 						<p className="text-xs text-amber-800/90">
-							Elimina la contraseña de inicio. No se pide la contraseña de inicio; debe confirmar con la contraseña de administrador.
+							Elimina la contraseña de inicio. No se pide la contraseña de inicio; debe confirmar
+							con la contraseña de administrador.
 						</p>
 						<button
 							type="button"
@@ -378,7 +382,8 @@ export function StartupPasswordAdminSection({
 							Confirmar con contraseña de administrador
 						</h2>
 						<p className="mt-2 text-sm text-slate-600">
-							Se eliminará la contraseña de inicio de la aplicación. Introduzca la contraseña de administrador.
+							Se eliminará la contraseña de inicio de la aplicación. Introduzca la contraseña de
+							administrador.
 						</p>
 						<label className="mt-4 block text-sm">
 							<span className="font-medium text-slate-700">Contraseña de administrador</span>

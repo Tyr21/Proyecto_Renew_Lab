@@ -9,11 +9,7 @@ import {
 } from "../../core/constants";
 import { serviceLabelFromSettings } from "../../core/serviceLabels";
 import type { AppSettings, Appointment, Evento } from "../../core/types";
-import {
-	formatTimeLabel,
-	generateSlotStarts,
-	minutesFromHHMM,
-} from "../../core/timeFormat";
+import { formatTimeLabel, generateSlotStarts, minutesFromHHMM } from "../../core/timeFormat";
 import {
 	getWeekDates,
 	rangeLabelSpanish,
@@ -80,10 +76,7 @@ export function WeekCalendarView({
 
 	useEffect(() => {
 		setNowForTimeLine(new Date());
-		const id = window.setInterval(
-			() => setNowForTimeLine(new Date()),
-			CALENDAR_NOW_LINE_TICK_MS,
-		);
+		const id = window.setInterval(() => setNowForTimeLine(new Date()), CALENDAR_NOW_LINE_TICK_MS);
 		return () => window.clearInterval(id);
 	}, []);
 	const isCurrentWeek = days.some((d) => toISODateLocal(d) === todayIso);
@@ -116,7 +109,12 @@ export function WeekCalendarView({
 		return layoutDayAppointments(dayAppts);
 	}
 
-	function openSlotContextMenu(e: React.MouseEvent, dateIso: string, slot: string, creatable: boolean) {
+	function openSlotContextMenu(
+		e: React.MouseEvent,
+		dateIso: string,
+		slot: string,
+		creatable: boolean,
+	) {
 		e.preventDefault();
 		e.stopPropagation();
 		const items: ContextMenuEntry[] = [];
@@ -134,10 +132,16 @@ export function WeekCalendarView({
 			{ label: "Editar cita", onClick: () => onAppointmentClick(a) },
 		];
 		if (onAppointmentStatusChange && a.status !== "asistio") {
-			items.push({ label: "Marcar: Asistió", onClick: () => onAppointmentStatusChange(a.id, "asistio") });
+			items.push({
+				label: "Marcar: Asistió",
+				onClick: () => onAppointmentStatusChange(a.id, "asistio"),
+			});
 		}
 		if (onAppointmentStatusChange && a.status !== "no_asistio") {
-			items.push({ label: "Marcar: No asistió", onClick: () => onAppointmentStatusChange(a.id, "no_asistio") });
+			items.push({
+				label: "Marcar: No asistió",
+				onClick: () => onAppointmentStatusChange(a.id, "no_asistio"),
+			});
 		}
 		setCtxMenu({ x: e.clientX, y: e.clientY, items });
 	}
@@ -172,9 +176,7 @@ export function WeekCalendarView({
 						Hoy
 					</button>
 				</div>
-				<h1 className="text-lg font-semibold text-slate-800">
-					{rangeLabelSpanish(days)}
-				</h1>
+				<h1 className="text-lg font-semibold text-slate-800">{rangeLabelSpanish(days)}</h1>
 				{isRefreshing ? (
 					<span className="text-xs text-sky-600" aria-live="polite">
 						Actualizando citas…
@@ -229,8 +231,7 @@ export function WeekCalendarView({
 						const layouts = layoutsForDate(iso);
 						const dayAllDay = allDayByDate.get(iso) ?? [];
 						const dayTimed = timedByDate.get(iso) ?? [];
-						const nowLineTopPx =
-							iso === todayIso ? calendarNowLineTopPx(nowForTimeLine) : null;
+						const nowLineTopPx = iso === todayIso ? calendarNowLineTopPx(nowForTimeLine) : null;
 
 						return (
 							<div
@@ -241,18 +242,22 @@ export function WeekCalendarView({
 									className="sticky top-0 z-30 shrink-0 border-b border-slate-200 bg-slate-100 px-1"
 									style={{ height: HEADER_TOP_H + ALL_DAY_ROW_H }}
 								>
-									<div className="flex flex-col items-center justify-center" style={{ height: HEADER_TOP_H }}>
+									<div
+										className="flex flex-col items-center justify-center"
+										style={{ height: HEADER_TOP_H }}
+									>
 										<span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
 											{short}
 										</span>
-										<span className="text-sm font-bold text-slate-800">
-											{d.getDate()}
-										</span>
+										<span className="text-sm font-bold text-slate-800">{d.getDate()}</span>
 									</div>
 									{hasAnyAllDay ? (
-										<div className="flex gap-0.5 overflow-hidden px-0.5" style={{ height: ALL_DAY_ROW_H }}>
-											{dayAllDay.length > 0
-												? dayAllDay.map((ev) => (
+										<div
+											className="flex gap-0.5 overflow-hidden px-0.5"
+											style={{ height: ALL_DAY_ROW_H }}
+										>
+											{dayAllDay.length > 0 ? (
+												dayAllDay.map((ev) => (
 													<button
 														key={ev.id}
 														type="button"
@@ -266,18 +271,16 @@ export function WeekCalendarView({
 														{ev.titulo}
 													</button>
 												))
-												: <span className="text-[0.6rem] text-transparent select-none">&nbsp;</span>}
+											) : (
+												<span className="text-[0.6rem] text-transparent select-none">&nbsp;</span>
+											)}
 										</div>
 									) : null}
 								</div>
 
-								<div
-									className="relative flex shrink-0 flex-col"
-									style={{ height: gridBodyHeight }}
-								>
+								<div className="relative flex shrink-0 flex-col" style={{ height: gridBodyHeight }}>
 									{SLOT_LABELS.map((slot) => {
-										const slotCreatable =
-											isSlotCreatable?.(iso, slot) ?? true;
+										const slotCreatable = isSlotCreatable?.(iso, slot) ?? true;
 										return (
 											<button
 												key={`${iso}-${slot}`}
@@ -305,28 +308,20 @@ export function WeekCalendarView({
 
 									<div className="pointer-events-none absolute inset-0 z-0">
 										{layouts.map(({ appointment: a, column, columnCount }) => {
-											const sm =
-												minutesFromHHMM(a.startTime) ?? dayStartMinutes();
-											const em =
-												minutesFromHHMM(a.endTime) ?? sm + 30;
+											const sm = minutesFromHHMM(a.startTime) ?? dayStartMinutes();
+											const em = minutesFromHHMM(a.endTime) ?? sm + 30;
 											const open = dayStartMinutes();
 											const top = ((sm - open) / 30) * SLOT_HEIGHT_PX;
 											const height = ((em - sm) / 30) * SLOT_HEIGHT_PX;
-											const bandPct =
-												APPOINTMENT_BLOCK_WIDTH_FRACTION * 100;
+											const bandPct = APPOINTMENT_BLOCK_WIDTH_FRACTION * 100;
 											const widthPct = bandPct / columnCount;
 											const leftPct = column * widthPct;
 											const colors = serviceColorClasses(a.serviceType);
-											const serviceLabel = serviceLabelFromSettings(
-												settings,
-												a.serviceType,
-											);
+											const serviceLabel = serviceLabelFromSettings(settings, a.serviceType);
 											const edgeRound = [
 												columnCount === 1 && "rounded-md",
 												columnCount > 1 && column === 0 && "rounded-l-md",
-												columnCount > 1 &&
-													column === columnCount - 1 &&
-													"rounded-r-md",
+												columnCount > 1 && column === columnCount - 1 && "rounded-r-md",
 											]
 												.filter(Boolean)
 												.join(" ");
@@ -367,15 +362,8 @@ export function WeekCalendarView({
 															) : null}
 														</div>
 														<div className="truncate tabular-nums opacity-90">
-															{formatTimeLabel(
-																a.startTime,
-																settings.timeDisplay,
-															)}{" "}
-															–{" "}
-															{formatTimeLabel(
-																a.endTime,
-																settings.timeDisplay,
-															)}
+															{formatTimeLabel(a.startTime, settings.timeDisplay)} –{" "}
+															{formatTimeLabel(a.endTime, settings.timeDisplay)}
 														</div>
 														<div className="truncate text-[0.65rem] font-medium opacity-80">
 															{serviceLabel}

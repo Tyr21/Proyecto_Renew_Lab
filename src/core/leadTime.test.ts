@@ -1,9 +1,6 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { MAX_GRACE_PERIOD_MINUTES } from "./constants";
-import {
-	gracePeriodBookingErrorMessage,
-	isSlotBookableWithGracePeriod,
-} from "./leadTime";
+import { gracePeriodBookingErrorMessage, isSlotBookableWithGracePeriod } from "./leadTime";
 
 describe("grace period (agendamiento)", () => {
 	afterEach(() => {

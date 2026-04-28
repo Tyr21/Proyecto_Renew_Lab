@@ -59,8 +59,6 @@ flowchart LR
 	CMD --> LOG
 ```
 
-
-
 - **EventBus interno (frontend):** `EventTarget` nativo o un `EventEmitter` mínimo en TypeScript; los componentes de dominio (calendario / citas) publican `cita_creada`, `cita_completada`, `cita_cancelada` con el **payload acordado**.
 - **Terminal:** un comando Tauri `log_domain_event` recibe el payload (JSON) y hace `println!`/tracing con el contenido para verificar en la consola del proceso.
 - **No** se implementan módulos de inventario ni finanzas; solo el hook de observabilidad.
@@ -69,13 +67,11 @@ flowchart LR
 
 **Disparadores propuestos:**
 
-
 | Evento            | Cuándo                                                                                                                      |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `cita_creada`     | Tras persistir creación correcta                                                                                            |
 | `cita_completada` | Tras cambiar asistencia a **asistió** o **no asistió** (estado final de la cita)                                            |
 | `cita_cancelada`  | Tras eliminar una cita **no pasada** (soft-delete opcional; puede ser borrado físico si no necesitas historial legal en v1) |
-
 
 Si quieres que `cita_completada` solo dispare con “asistió” y no con “no asistió”, se cambia en una sola condición.
 
@@ -106,7 +102,7 @@ Si quieres que `cita_completada` solo dispare con “asistió” y no con “no 
 **Tabla `settings` (clave-valor JSON o columnas tipadas):** almacenar en un solo lugar:
 
 - `show_sundays` (bool)
-- `time_display` (`12h`  `24h`)
+- `time_display` (`12h` `24h`)
 - `default_duration_minutes` (múltiplo de 30, default 60)
 - `document_types` (JSON array; inicial sugerido: **CC** (default), **CE**, **TI**, **PA**, **RC**, **NIT** — alineado a lista cerrada editable)
 - `service_types` (JSON array de `{ id | name, label, concurrent_capacity }`; inicial: Cámara Hiperbárica y Sueroterapia con capacidades 2)
@@ -153,4 +149,3 @@ Valores por defecto se insertan en migración inicial si la tabla está vacía.
 
 - **Solapes y capacidad:** la capacidad limita **cuántas citas del mismo tipo** pueden existir en el mismo intervalo; el layout solo las muestra lado a lado hasta ese límite; intentos por encima fallan en guardado.
 - **i18n:** textos en español fijos en v1; estructura de strings si se desea extraer después.
-

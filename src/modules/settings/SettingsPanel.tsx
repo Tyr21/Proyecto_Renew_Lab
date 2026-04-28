@@ -145,7 +145,9 @@ export function SettingsPanel({
 
 	function handleCancel() {
 		if (isDirty()) {
-			if (!window.confirm("Hay cambios sin guardar en la configuración. ¿Desea salir sin guardar?")) {
+			if (
+				!window.confirm("Hay cambios sin guardar en la configuración. ¿Desea salir sin guardar?")
+			) {
 				return;
 			}
 		}
@@ -277,15 +279,10 @@ export function SettingsPanel({
 				</p>
 			</header>
 
-			<nav
-				className="shrink-0 md:w-56"
-				aria-label="Secciones de configuración"
-			>
+			<nav className="shrink-0 md:w-56" aria-label="Secciones de configuración">
 				<div className="hidden md:block md:sticky md:top-4">
 					<h1 className="text-lg font-semibold text-slate-800">Configuración</h1>
-					<p className="mt-1 text-xs text-slate-500">
-						Datos locales en SQLite.
-					</p>
+					<p className="mt-1 text-xs text-slate-500">Datos locales en SQLite.</p>
 					<ul className="mt-4 flex flex-col gap-1 border-b border-slate-200 pb-4 md:border-b-0 md:pb-0">
 						{SECTIONS.map((s) => (
 							<li key={s.id}>
@@ -331,9 +328,7 @@ export function SettingsPanel({
 			<div className="min-w-0 flex-1">
 				<form onSubmit={handleSave} className="space-y-6">
 					{error && (
-						<div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
-							{error}
-						</div>
+						<div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{error}</div>
 					)}
 
 					{activeSection === "calendario" && (
@@ -341,7 +336,10 @@ export function SettingsPanel({
 							className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5"
 							aria-labelledby="settings-calendario-heading"
 						>
-							<h2 id="settings-calendario-heading" className="text-base font-semibold text-slate-800">
+							<h2
+								id="settings-calendario-heading"
+								className="text-base font-semibold text-slate-800"
+							>
 								Calendario
 							</h2>
 							<p className="mt-1 text-xs text-slate-500">
@@ -407,9 +405,7 @@ export function SettingsPanel({
 										<input
 											type="checkbox"
 											checked={draft.showSundays}
-											onChange={(e) =>
-												setDraft((d) => ({ ...d, showSundays: e.target.checked }))
-											}
+											onChange={(e) => setDraft((d) => ({ ...d, showSundays: e.target.checked }))}
 										/>
 										Mostrar domingos en la vista semanal
 									</label>
@@ -423,11 +419,15 @@ export function SettingsPanel({
 							className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5"
 							aria-labelledby="settings-documentos-heading"
 						>
-							<h2 id="settings-documentos-heading" className="text-base font-semibold text-slate-800">
+							<h2
+								id="settings-documentos-heading"
+								className="text-base font-semibold text-slate-800"
+							>
 								Tipos de documento
 							</h2>
 							<p className="mt-1 text-xs text-slate-500">
-								Usados en citas y clientes. Debe existir al menos un tipo y el valor por defecto debe estar en la lista.
+								Usados en citas y clientes. Debe existir al menos un tipo y el valor por defecto
+								debe estar en la lista.
 							</p>
 
 							<div className="mt-6 space-y-6">
@@ -480,11 +480,17 @@ export function SettingsPanel({
 						>
 							<div className="flex flex-wrap items-start justify-between gap-3">
 								<div>
-									<h2 id="settings-servicios-heading" className="text-base font-semibold text-slate-800">
+									<h2
+										id="settings-servicios-heading"
+										className="text-base font-semibold text-slate-800"
+									>
 										Tipos de servicio
 									</h2>
 									<p className="mt-1 text-xs text-slate-500">
-										<code className="text-xs">id</code> estable para enlazar con citas; capacidad = citas concurrentes del mismo tipo. El precio sugerido se usa al registrar pagos tras completar una cita. Los planes de paquete definen precio total antes de IVA por cantidad de sesiones para la venta de prepagos.
+										<code className="text-xs">id</code> estable para enlazar con citas; capacidad =
+										citas concurrentes del mismo tipo. El precio sugerido se usa al registrar pagos
+										tras completar una cita. Los planes de paquete definen precio total antes de IVA
+										por cantidad de sesiones para la venta de prepagos.
 									</p>
 								</div>
 								<button
@@ -511,9 +517,7 @@ export function SettingsPanel({
 												<input
 													className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
 													value={s.id}
-													onChange={(e) =>
-														updateService(i, { id: e.target.value.trim() })
-													}
+													onChange={(e) => updateService(i, { id: e.target.value.trim() })}
 												/>
 											</label>
 											<label className="md:col-span-5 text-sm">
@@ -521,9 +525,7 @@ export function SettingsPanel({
 												<input
 													className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
 													value={s.label}
-													onChange={(e) =>
-														updateService(i, { label: e.target.value })
-													}
+													onChange={(e) => updateService(i, { label: e.target.value })}
 												/>
 											</label>
 											<label className="md:col-span-2 text-sm">
@@ -562,16 +564,10 @@ export function SettingsPanel({
 												inputMode="numeric"
 												autoComplete="off"
 												className="mt-1 w-full rounded border border-slate-300 px-2 py-1.5 text-sm tabular-nums"
-												value={
-													s.suggestedPrice === 0
-														? ""
-														: formatCurrency(s.suggestedPrice)
-												}
+												value={s.suggestedPrice === 0 ? "" : formatCurrency(s.suggestedPrice)}
 												onChange={(e) =>
 													updateService(i, {
-														suggestedPrice: parseCurrencyDigits(
-															e.target.value,
-														),
+														suggestedPrice: parseCurrencyDigits(e.target.value),
 													})
 												}
 											/>
@@ -590,11 +586,14 @@ export function SettingsPanel({
 												</button>
 											</div>
 											<p className="text-[0.65rem] text-slate-500 leading-snug">
-												Defina el precio total <strong>antes de IVA</strong> por el número de sesiones. En el modal de venta solo se elegirá el plan; el cobro se confirma después.
+												Defina el precio total <strong>antes de IVA</strong> por el número de
+												sesiones. En el modal de venta solo se elegirá el plan; el cobro se confirma
+												después.
 											</p>
 											{(s.packagePlans ?? []).length === 0 ? (
 												<p className="text-xs text-slate-400 italic">
-													Sin planes. Añada uno para ofrecerlo al vender un paquete de este servicio.
+													Sin planes. Añada uno para ofrecerlo al vender un paquete de este
+													servicio.
 												</p>
 											) : (
 												<ul className="space-y-3">
@@ -634,19 +633,14 @@ export function SettingsPanel({
 																				updatePackagePlan(i, pi, {
 																					sessionCount: Math.max(
 																						1,
-																						Number.parseInt(
-																							e.target.value,
-																							10,
-																						) || 1,
+																						Number.parseInt(e.target.value, 10) || 1,
 																					),
 																				})
 																			}
 																		/>
 																	</label>
 																	<label className="min-w-[9rem] flex-1 text-xs">
-																		<span className="text-slate-600">
-																			Total antes IVA (COP)
-																		</span>
+																		<span className="text-slate-600">Total antes IVA (COP)</span>
 																		<input
 																			type="text"
 																			inputMode="numeric"
@@ -659,9 +653,7 @@ export function SettingsPanel({
 																			}
 																			onChange={(e) =>
 																				updatePackagePlan(i, pi, {
-																					priceBeforeVat: parseCurrencyDigits(
-																						e.target.value,
-																					),
+																					priceBeforeVat: parseCurrencyDigits(e.target.value),
 																				})
 																			}
 																		/>
@@ -677,8 +669,7 @@ export function SettingsPanel({
 																{dPct !== null && dPct > 0.009 ? (
 																	<p className="text-[0.65rem] text-slate-500">
 																		≈ {dPct.toFixed(1)}% menos vs.{" "}
-																		{formatCurrency(s.suggestedPrice)} ×{" "}
-																		{p.sessionCount} sesiones
+																		{formatCurrency(s.suggestedPrice)} × {p.sessionCount} sesiones
 																	</p>
 																) : dPct !== null && dPct <= 0.009 ? (
 																	<p className="text-[0.65rem] text-slate-500">
@@ -702,11 +693,15 @@ export function SettingsPanel({
 							className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5"
 							aria-labelledby="settings-facturacion-heading"
 						>
-							<h2 id="settings-facturacion-heading" className="text-base font-semibold text-slate-800">
+							<h2
+								id="settings-facturacion-heading"
+								className="text-base font-semibold text-slate-800"
+							>
 								Facturación
 							</h2>
 							<p className="mt-1 text-xs text-slate-500">
-								Datos del consultorio en documentos de venta. La serie y el IVA por defecto se aplican al crear nuevas facturas.
+								Datos del consultorio en documentos de venta. La serie y el IVA por defecto se
+								aplican al crear nuevas facturas.
 							</p>
 
 							<div className="mt-6 space-y-6">
@@ -749,7 +744,9 @@ export function SettingsPanel({
 								</div>
 
 								<div className="border-t border-slate-100 pt-5">
-									<h3 className="text-sm font-medium text-slate-700">Valores por defecto en facturas</h3>
+									<h3 className="text-sm font-medium text-slate-700">
+										Valores por defecto en facturas
+									</h3>
 									<div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
 										<label className="block text-sm">
 											<span className="font-medium text-slate-700">Serie / prefijo</span>
@@ -790,7 +787,9 @@ export function SettingsPanel({
 								Oxígeno (cámara hiperbárica)
 							</h2>
 							<p className="mt-1 text-xs text-slate-500">
-								Estos valores alimentan el resumen en cierre de caja y el registro diario de lecturas. El consumo teórico del día es sesiones atendidas (estado “asistió”) del tipo de servicio elegido, multiplicado por la cantidad indicada.
+								Estos valores alimentan el resumen en cierre de caja y el registro diario de
+								lecturas. El consumo teórico del día es sesiones atendidas (estado “asistió”) del
+								tipo de servicio elegido, multiplicado por la cantidad indicada.
 							</p>
 							<div className="mt-6 space-y-5">
 								<label className="block text-sm md:max-w-md">
@@ -803,9 +802,7 @@ export function SettingsPanel({
 									/>
 								</label>
 								<label className="block text-sm md:max-w-xs">
-									<span className="font-medium text-slate-700">
-										Consumo teórico por sesión (K)
-									</span>
+									<span className="font-medium text-slate-700">Consumo teórico por sesión (K)</span>
 									<input
 										type="number"
 										min={0}
@@ -814,10 +811,7 @@ export function SettingsPanel({
 										value={draft.oxygen?.perHyperbaricSession ?? 1}
 										onChange={(e) =>
 											updateOxygen({
-												perHyperbaricSession: Math.max(
-													0,
-													Number.parseFloat(e.target.value) || 0,
-												),
+												perHyperbaricSession: Math.max(0, Number.parseFloat(e.target.value) || 0),
 											})
 										}
 									/>
@@ -847,11 +841,16 @@ export function SettingsPanel({
 							className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5"
 							aria-labelledby="settings-respaldos-heading"
 						>
-							<h2 id="settings-respaldos-heading" className="text-base font-semibold text-slate-800">
+							<h2
+								id="settings-respaldos-heading"
+								className="text-base font-semibold text-slate-800"
+							>
 								Respaldos automáticos
 							</h2>
 							<p className="mt-1 text-xs text-slate-500">
-								Al iniciar la aplicación se copia la base de datos en la carpeta local de respaldos. Si configura una carpeta externa (por ejemplo sincronizada con la nube), también se guardará allí.
+								Al iniciar la aplicación se copia la base de datos en la carpeta local de respaldos.
+								Si configura una carpeta externa (por ejemplo sincronizada con la nube), también se
+								guardará allí.
 							</p>
 
 							<div className="mt-6 space-y-6">
@@ -873,7 +872,9 @@ export function SettingsPanel({
 										Número de copias recientes que se conservan en cada ubicación.
 									</p>
 									<label className="mt-3 block text-sm">
-										<span className="font-medium text-slate-700">Cantidad de respaldos a conservar</span>
+										<span className="font-medium text-slate-700">
+											Cantidad de respaldos a conservar
+										</span>
 										<input
 											type="number"
 											min={1}
@@ -881,7 +882,9 @@ export function SettingsPanel({
 											className="mt-1 w-full max-w-[120px] rounded border border-slate-300 px-2 py-2 text-sm"
 											value={draft.backup?.retentionCount ?? 7}
 											onChange={(e) =>
-												updateBackup({ retentionCount: Math.max(1, Math.min(90, Number(e.target.value) || 7)) })
+												updateBackup({
+													retentionCount: Math.max(1, Math.min(90, Number(e.target.value) || 7)),
+												})
 											}
 											disabled={!draft.backup?.enabled}
 										/>
@@ -891,7 +894,8 @@ export function SettingsPanel({
 								<div className="border-t border-slate-100 pt-5">
 									<h3 className="text-sm font-medium text-slate-700">Carpeta externa (opcional)</h3>
 									<p className="mt-0.5 text-xs text-slate-500">
-										Ruta absoluta a una carpeta adicional, por ejemplo una sincronizada con OneDrive, Google Drive o Dropbox.
+										Ruta absoluta a una carpeta adicional, por ejemplo una sincronizada con
+										OneDrive, Google Drive o Dropbox.
 									</p>
 									<label className="mt-3 block text-sm">
 										<span className="sr-only">Carpeta externa</span>
@@ -929,14 +933,14 @@ export function SettingsPanel({
 										type="checkbox"
 										className="mt-0.5"
 										checked={draft.adminMode ?? false}
-										onChange={() =>
-											openAdminModeToggle(!(draft.adminMode ?? false))
-										}
+										onChange={() => openAdminModeToggle(!(draft.adminMode ?? false))}
 									/>
 									<span>
 										<span className="font-medium">Activar modo administrador</span>
 										<span className="mt-1 block text-amber-800/95">
-											Permite eliminar citas pasadas, ingresos, clientes y anular facturas según las reglas de la aplicación. Al marcar la casilla se pide la contraseña de administrador; al desmarcarla no.
+											Permite eliminar citas pasadas, ingresos, clientes y anular facturas según las
+											reglas de la aplicación. Al marcar la casilla se pide la contraseña de
+											administrador; al desmarcarla no.
 										</span>
 									</span>
 								</label>
@@ -985,11 +989,12 @@ export function SettingsPanel({
 							Contraseña de administrador
 						</h2>
 						<p className="mt-2 text-sm text-slate-600">
-							Introduzca la contraseña de administrador para activar el modo
-							administrador.
+							Introduzca la contraseña de administrador para activar el modo administrador.
 						</p>
 						{adminModeErr ? (
-							<div className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{adminModeErr}</div>
+							<div className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
+								{adminModeErr}
+							</div>
 						) : null}
 						<label className="mt-4 block text-sm">
 							<span className="font-medium text-slate-700">Contraseña</span>

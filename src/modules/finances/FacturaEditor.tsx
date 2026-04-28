@@ -229,7 +229,9 @@ export function FacturaEditor({ settings, factura, onClose }: FacturaEditorProps
 								onChange={(e) => setClienteDocTipo(e.target.value)}
 							>
 								{settings.documentTypes.map((t) => (
-									<option key={t} value={t}>{t}</option>
+									<option key={t} value={t}>
+										{t}
+									</option>
 								))}
 							</select>
 						</label>
@@ -309,7 +311,9 @@ export function FacturaEditor({ settings, factura, onClose }: FacturaEditorProps
 										>
 											<option value="">— Seleccionar —</option>
 											{settings.serviceTypes.map((s) => (
-												<option key={s.id} value={s.label}>{s.label}</option>
+												<option key={s.id} value={s.label}>
+													{s.label}
+												</option>
 											))}
 										</select>
 									</label>
@@ -354,7 +358,9 @@ export function FacturaEditor({ settings, factura, onClose }: FacturaEditorProps
 									</label>
 									<div className="col-span-2 flex items-end gap-1">
 										<span className="mb-1 text-sm font-medium tabular-nums text-slate-800">
-											{formatCurrency(l.cantidad * l.precioUnitario * (1 + l.tasaImpuestoPct / 100))}
+											{formatCurrency(
+												l.cantidad * l.precioUnitario * (1 + l.tasaImpuestoPct / 100),
+											)}
 										</span>
 										{!readonly && lineas.length > 1 ? (
 											<button
@@ -377,7 +383,9 @@ export function FacturaEditor({ settings, factura, onClose }: FacturaEditorProps
 						<div className="w-56 space-y-1 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
 							<div className="flex justify-between">
 								<span className="text-slate-500">Subtotal</span>
-								<span className="tabular-nums text-slate-800">{formatCurrency(totals.subtotal)}</span>
+								<span className="tabular-nums text-slate-800">
+									{formatCurrency(totals.subtotal)}
+								</span>
 							</div>
 							<div className="flex justify-between">
 								<span className="text-slate-500">IVA</span>
@@ -425,7 +433,9 @@ export function FacturaEditor({ settings, factura, onClose }: FacturaEditorProps
 										onChange={(e) => setMetodoPago(e.target.value)}
 									>
 										{PAYMENT_METHODS.map((m) => (
-											<option key={m} value={m}>{m}</option>
+											<option key={m} value={m}>
+												{m}
+											</option>
 										))}
 									</select>
 								</label>
@@ -434,7 +444,9 @@ export function FacturaEditor({ settings, factura, onClose }: FacturaEditorProps
 					) : null}
 
 					{error ? (
-						<p className="text-sm text-red-600" role="alert">{error}</p>
+						<p className="text-sm text-red-600" role="alert">
+							{error}
+						</p>
 					) : null}
 
 					{/* Acciones */}

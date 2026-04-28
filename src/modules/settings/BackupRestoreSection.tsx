@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
 import { listarRespaldosLocales, restaurarRespaldo } from "../../core/api";
-import {
-	BACKUP_FILE_EXTENSION,
-	BACKUP_FILE_PREFIX,
-} from "../../core/constants";
+import { BACKUP_FILE_EXTENSION, BACKUP_FILE_PREFIX } from "../../core/constants";
 import { formatInvokeError } from "../../core/errors";
 import { logger } from "../../core/logger";
 import type { BackupFileInfo } from "../../core/types";
@@ -40,10 +37,7 @@ function formatDateTime(iso: string): string {
 
 function isPlausibleBackupName(name: string): boolean {
 	const lower = name.toLowerCase();
-	return (
-		lower.startsWith(BACKUP_FILE_PREFIX) &&
-		lower.endsWith(`.${BACKUP_FILE_EXTENSION}`)
-	);
+	return lower.startsWith(BACKUP_FILE_PREFIX) && lower.endsWith(`.${BACKUP_FILE_EXTENSION}`);
 }
 
 function basename(fullPath: string): string {
@@ -162,14 +156,14 @@ export function BackupRestoreSection({ adminModeActive }: BackupRestoreSectionPr
 		<div className="border-t border-slate-100 pt-5">
 			<h3 className="text-sm font-medium text-slate-700">Restaurar desde respaldo</h3>
 			<p className="mt-0.5 text-xs text-slate-500">
-				Reemplaza la base de datos activa con una copia previa. Esta operación es destructiva
-				y solo está disponible con el modo administrador activo.
+				Reemplaza la base de datos activa con una copia previa. Esta operación es destructiva y solo
+				está disponible con el modo administrador activo.
 			</p>
 
 			{!adminModeActive ? (
 				<div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-					Active primero el modo administrador en Configuración → Administración para
-					restaurar un respaldo.
+					Active primero el modo administrador en Configuración → Administración para restaurar un
+					respaldo.
 				</div>
 			) : null}
 
@@ -243,8 +237,8 @@ export function BackupRestoreSection({ adminModeActive }: BackupRestoreSectionPr
 							Confirmar restauración
 						</h2>
 						<p className="mt-2 text-sm text-slate-700">
-							Va a reemplazar la base de datos activa con el respaldo seleccionado. Se
-							perderán los cambios posteriores a la fecha del respaldo.
+							Va a reemplazar la base de datos activa con el respaldo seleccionado. Se perderán los
+							cambios posteriores a la fecha del respaldo.
 						</p>
 						<div className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-700">
 							<p className="font-mono break-all">
@@ -258,7 +252,9 @@ export function BackupRestoreSection({ adminModeActive }: BackupRestoreSectionPr
 							Esta operación es irreversible. Confirme con la contraseña de administrador.
 						</p>
 						{restoreError ? (
-							<div className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{restoreError}</div>
+							<div className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
+								{restoreError}
+							</div>
 						) : null}
 						<label className="mt-4 block text-sm">
 							<span className="font-medium text-slate-700">Contraseña de administrador</span>
@@ -313,16 +309,12 @@ export function BackupRestoreSection({ adminModeActive }: BackupRestoreSectionPr
 						aria-modal="true"
 						aria-labelledby="backup-restore-done-title"
 					>
-						<h2
-							id="backup-restore-done-title"
-							className="text-base font-semibold text-emerald-700"
-						>
+						<h2 id="backup-restore-done-title" className="text-base font-semibold text-emerald-700">
 							Restauración completada
 						</h2>
 						<p className="mt-2 text-sm text-slate-700">
-							La base de datos se reemplazó correctamente. Para garantizar que toda la
-							aplicación trabaje con los datos restaurados, se cerrará ahora; vuelva a
-							abrirla para continuar.
+							La base de datos se reemplazó correctamente. Para garantizar que toda la aplicación
+							trabaje con los datos restaurados, se cerrará ahora; vuelva a abrirla para continuar.
 						</p>
 						<div className="mt-5 flex justify-end">
 							<button

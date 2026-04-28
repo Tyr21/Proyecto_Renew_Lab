@@ -76,15 +76,15 @@ export function TodayAgendaSidebar({
 				/>
 			</div>
 			<div className="border-b border-slate-200 px-3 py-2">
-				<h2 className="text-sm font-semibold capitalize text-slate-800">
-					Hoy
-				</h2>
+				<h2 className="text-sm font-semibold capitalize text-slate-800">Hoy</h2>
 				<p className="text-xs text-slate-500">{todayLabel}</p>
 			</div>
 			<div className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
 				{todayEventos.length > 0 ? (
 					<div className="mb-3 space-y-1.5">
-						<p className="px-1 text-[0.65rem] font-semibold uppercase tracking-wider text-slate-400">Eventos</p>
+						<p className="px-1 text-[0.65rem] font-semibold uppercase tracking-wider text-slate-400">
+							Eventos
+						</p>
 						{todayEventos.map((ev) => (
 							<button
 								key={ev.id}
@@ -110,7 +110,9 @@ export function TodayAgendaSidebar({
 				) : todayList.length > 0 ? (
 					<>
 						{todayEventos.length > 0 ? (
-							<p className="px-1 mb-1.5 text-[0.65rem] font-semibold uppercase tracking-wider text-slate-400">Citas</p>
+							<p className="px-1 mb-1.5 text-[0.65rem] font-semibold uppercase tracking-wider text-slate-400">
+								Citas
+							</p>
 						) : null}
 						<ul className="space-y-2">
 							{todayList.map((a) => (

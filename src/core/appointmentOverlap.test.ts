@@ -14,13 +14,7 @@ describe("intervalsOverlapMinutes", () => {
 	});
 });
 
-function apt(
-	id: string,
-	date: string,
-	service: string,
-	start: string,
-	end: string,
-): Appointment {
+function apt(id: string, date: string, service: string, start: string, end: string): Appointment {
 	return {
 		id,
 		patientFullName: "X",
@@ -45,26 +39,10 @@ describe("countOverlappingSameService", () => {
 	const svc = "camara_hiperbarica";
 
 	it("excluye el id indicado al editar", () => {
-		const list = [
-			apt("a", day, svc, "09:00", "10:00"),
-			apt("b", day, svc, "09:30", "10:30"),
-		];
-		const without = countOverlappingSameService(
-			list,
-			day,
-			svc,
-			"09:00",
-			"10:00",
-			"a",
-		);
+		const list = [apt("a", day, svc, "09:00", "10:00"), apt("b", day, svc, "09:30", "10:30")];
+		const without = countOverlappingSameService(list, day, svc, "09:00", "10:00", "a");
 		expect(without).toBe(1);
-		const withSelf = countOverlappingSameService(
-			list,
-			day,
-			svc,
-			"09:00",
-			"10:00",
-		);
+		const withSelf = countOverlappingSameService(list, day, svc, "09:00", "10:00");
 		expect(withSelf).toBe(2);
 	});
 
@@ -74,8 +52,6 @@ describe("countOverlappingSameService", () => {
 			apt("b", day, "otro", "09:00", "10:00"),
 			apt("c", "2025-03-11", svc, "09:00", "10:00"),
 		];
-		expect(
-			countOverlappingSameService(list, day, svc, "09:30", "10:30"),
-		).toBe(1);
+		expect(countOverlappingSameService(list, day, svc, "09:30", "10:30")).toBe(1);
 	});
 });

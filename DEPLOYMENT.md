@@ -15,6 +15,7 @@ git push origin vX.X.X
 ```
 
 **Convención de versiones:**
+
 - `v1.0.1` → corrección de bug pequeño
 - `v1.1.0` → nueva función
 - `v2.0.0` → cambio grande
@@ -28,6 +29,7 @@ npm run tauri build
 ```
 
 El instalador queda en:
+
 ```
 src-tauri/target/release/bundle/
 ```

@@ -1,13 +1,6 @@
 import { useCallback, useEffect, useState, type KeyboardEvent } from "react";
-import {
-	clearAdminPassword,
-	getAdminAuthStatus,
-	setAdminPassword,
-} from "../../core/api";
-import {
-	ADMIN_PASSWORD_MAX_LENGTH,
-	ADMIN_PASSWORD_MIN_LENGTH,
-} from "../../core/constants";
+import { clearAdminPassword, getAdminAuthStatus, setAdminPassword } from "../../core/api";
+import { ADMIN_PASSWORD_MAX_LENGTH, ADMIN_PASSWORD_MIN_LENGTH } from "../../core/constants";
 import { formatInvokeError } from "../../core/errors";
 
 function stopEnterFromSubmittingParent(e: KeyboardEvent) {
@@ -96,7 +89,9 @@ export function AdminPasswordAdminSection() {
 		try {
 			await clearAdminPassword(clearPwd);
 			setClearPwd("");
-			setInfo("Contraseña de administrador eliminada. La próxima vez que abra Configuración podrá crear una nueva.");
+			setInfo(
+				"Contraseña de administrador eliminada. La próxima vez que abra Configuración podrá crear una nueva.",
+			);
 			await refresh();
 		} catch (err) {
 			setError(formatInvokeError(err));
@@ -116,7 +111,8 @@ export function AdminPasswordAdminSection() {
 	if (!hasPassword) {
 		return (
 			<div className="mt-6 rounded-lg border border-amber-200/80 bg-amber-50/80 p-4 text-sm text-amber-900">
-				No hay contraseña de administrador en la base de datos. Cierre Configuración y vuelva a entrar para crearla.
+				No hay contraseña de administrador en la base de datos. Cierre Configuración y vuelva a
+				entrar para crearla.
 			</div>
 		);
 	}
@@ -126,7 +122,8 @@ export function AdminPasswordAdminSection() {
 			<div>
 				<h3 className="text-sm font-medium text-amber-900">Contraseña de administrador</h3>
 				<p className="mt-1 text-xs text-amber-800/90">
-					Protege el acceso a este módulo y la activación del modo administrador. Distinta de la contraseña de inicio de la aplicación.
+					Protege el acceso a este módulo y la activación del modo administrador. Distinta de la
+					contraseña de inicio de la aplicación.
 				</p>
 			</div>
 
@@ -138,7 +135,9 @@ export function AdminPasswordAdminSection() {
 			) : null}
 
 			<div className="space-y-3">
-				<h4 className="text-xs font-semibold uppercase tracking-wide text-amber-900/80">Cambiar contraseña</h4>
+				<h4 className="text-xs font-semibold uppercase tracking-wide text-amber-900/80">
+					Cambiar contraseña
+				</h4>
 				<label className="block text-sm">
 					<span className="font-medium text-slate-800">Contraseña actual</span>
 					<input
@@ -186,9 +185,12 @@ export function AdminPasswordAdminSection() {
 			</div>
 
 			<div className="space-y-3 border-t border-amber-200/60 pt-6">
-				<h4 className="text-xs font-semibold uppercase tracking-wide text-amber-900/80">Quitar contraseña de administrador</h4>
+				<h4 className="text-xs font-semibold uppercase tracking-wide text-amber-900/80">
+					Quitar contraseña de administrador
+				</h4>
 				<p className="text-xs text-amber-800/90">
-					Elimina la contraseña de administrador. Cualquiera podrá entrar a Configuración hasta que cree una nueva al entrar.
+					Elimina la contraseña de administrador. Cualquiera podrá entrar a Configuración hasta que
+					cree una nueva al entrar.
 				</p>
 				<label className="block text-sm">
 					<span className="font-medium text-slate-800">Contraseña actual de administrador</span>

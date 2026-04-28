@@ -23,8 +23,18 @@ interface ClienteModalProps {
 }
 
 const MESES = [
-	"Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-	"Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+	"Enero",
+	"Febrero",
+	"Marzo",
+	"Abril",
+	"Mayo",
+	"Junio",
+	"Julio",
+	"Agosto",
+	"Septiembre",
+	"Octubre",
+	"Noviembre",
+	"Diciembre",
 ];
 
 export function ClienteModal({
@@ -50,8 +60,9 @@ export function ClienteModal({
 	const [paquetesLoading, setPaquetesLoading] = useState(false);
 	const [paquetesError, setPaquetesError] = useState<string | null>(null);
 	const [ventaPaqueteOpen, setVentaPaqueteOpen] = useState(false);
-	const [packagePaymentContext, setPackagePaymentContext] =
-		useState<PackagePaymentContext | null>(null);
+	const [packagePaymentContext, setPackagePaymentContext] = useState<PackagePaymentContext | null>(
+		null,
+	);
 
 	function handlePaqueteContinueToPayment(payload: PaqueteVentaContinuePayload) {
 		if (mode !== "edit" || !initial) return;
@@ -162,10 +173,7 @@ export function ClienteModal({
 			aria-labelledby="modal-cliente-title"
 		>
 			<div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl overflow-y-auto max-h-[90vh]">
-				<h2
-					id="modal-cliente-title"
-					className="text-base font-semibold text-slate-800 mb-4"
-				>
+				<h2 id="modal-cliente-title" className="text-base font-semibold text-slate-800 mb-4">
 					{mode === "create" ? "Crear cliente" : "Editar cliente"}
 				</h2>
 
@@ -277,14 +285,10 @@ export function ClienteModal({
 							/>
 						</label>
 						<label className="flex flex-col gap-1">
-							<span className="text-xs font-medium text-slate-700">
-								Mes de cumpleaños
-							</span>
+							<span className="text-xs font-medium text-slate-700">Mes de cumpleaños</span>
 							<select
 								value={birthdayMonth ?? ""}
-								onChange={(e) =>
-									setBirthdayMonth(e.target.value ? Number(e.target.value) : null)
-								}
+								onChange={(e) => setBirthdayMonth(e.target.value ? Number(e.target.value) : null)}
 								className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
 							>
 								<option value="">— Sin especificar —</option>
@@ -324,19 +328,16 @@ export function ClienteModal({
 								</button>
 							</div>
 							<p className="text-xs text-slate-600">
-								Los planes ligados a este paciente aparecen al crear o editar una
-								cita del mismo tratamiento, para descontar sesiones sin cobrar de
-								nuevo cada visita.
+								Los planes ligados a este paciente aparecen al crear o editar una cita del mismo
+								tratamiento, para descontar sesiones sin cobrar de nuevo cada visita.
 							</p>
-							{paquetesError ? (
-								<p className="text-xs text-red-600">{paquetesError}</p>
-							) : null}
+							{paquetesError ? <p className="text-xs text-red-600">{paquetesError}</p> : null}
 							{paquetesLoading ? (
 								<p className="text-xs text-slate-500">Cargando…</p>
 							) : paquetes.length === 0 ? (
 								<p className="text-xs text-slate-500">
-									Aún no hay planes. Use «Vender plan» para registrar un prepago;
-									luego podrá enlazarlo en las citas de ese tratamiento.
+									Aún no hay planes. Use «Vender plan» para registrar un prepago; luego podrá
+									enlazarlo en las citas de ese tratamiento.
 								</p>
 							) : (
 								<ul className="space-y-2 max-h-40 overflow-y-auto">
@@ -350,17 +351,13 @@ export function ClienteModal({
 											</div>
 											<div className="mt-0.5 tabular-nums">
 												Progreso: {p.consumidas}/{p.totalSesiones} consumidas
-												{p.reservadas > 0
-													? ` · ${p.reservadas} reservada(s)`
-													: ""}
+												{p.reservadas > 0 ? ` · ${p.reservadas} reservada(s)` : ""}
 												{" · "}
 												<span className="font-medium">{p.restantes}</span> disponibles
 											</div>
 											<div className="mt-0.5 flex flex-wrap gap-x-2 text-slate-500">
 												<span>Estado: {p.status}</span>
-												{p.expiresAt ? (
-													<span>Vence: {p.expiresAt}</span>
-												) : null}
+												{p.expiresAt ? <span>Vence: {p.expiresAt}</span> : null}
 											</div>
 										</li>
 									))}

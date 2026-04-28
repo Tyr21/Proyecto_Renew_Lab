@@ -31,10 +31,9 @@ fn try_startup_backup(app_data_dir: &std::path::Path) {
 	if !db_path.exists() {
 		return;
 	}
-	let Ok(tmp_conn) = rusqlite::Connection::open_with_flags(
-		&db_path,
-		rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
-	) else {
+	let Ok(tmp_conn) =
+		rusqlite::Connection::open_with_flags(&db_path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+	else {
 		return;
 	};
 	let settings_json: Option<String> = tmp_conn
@@ -85,12 +84,12 @@ pub fn run() {
 		.plugin(build_log_plugin())
 		.plugin(tauri_plugin_dialog::init())
 		.setup(|app| {
-			let dir = app.handle().path().app_data_dir().map_err(|e| {
-				std::io::Error::other(e.to_string())
-			})?;
-			std::fs::create_dir_all(&dir).map_err(|e| {
-				std::io::Error::other(e.to_string())
-			})?;
+			let dir = app
+				.handle()
+				.path()
+				.app_data_dir()
+				.map_err(|e| std::io::Error::other(e.to_string()))?;
+			std::fs::create_dir_all(&dir).map_err(|e| std::io::Error::other(e.to_string()))?;
 
 			try_startup_backup(&dir);
 
