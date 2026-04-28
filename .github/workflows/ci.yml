@@ -38,6 +38,9 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      - name: Check version coherence
+        run: npm run release:check
+
       - name: Lint frontend (ESLint)
         run: npm run lint
 
@@ -89,6 +92,9 @@ jobs:
 
       - name: Install npm dependencies
         run: npm ci
+
+      - name: Check version coherence
+        run: npm run release:check
 
       - name: Build Tauri (MSI + NSIS)
         run: npm run tauri build

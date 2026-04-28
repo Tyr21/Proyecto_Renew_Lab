@@ -17,6 +17,8 @@
 		"lint:fix": "eslint . --fix",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
+		"version:bump": "node scripts/version-bump.mjs",
+		"release:check": "node scripts/release-check.mjs",
 		"tauri": "tauri"
 	},
 	"dependencies": {

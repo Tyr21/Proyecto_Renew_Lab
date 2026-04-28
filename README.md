@@ -66,6 +66,22 @@ Los criterios de producto de la Fase 2 y la lista de comandos de prueba están r
 
 - [VS Code](https://code.visualstudio.com/) + [extensión Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
 
+## Releases
+
+La versión del producto vive en **`package.json`** (única fuente de verdad).
+`src-tauri/tauri.conf.json` la lee automáticamente (`"version": "../package.json"`, feature nativa de Tauri 2) y `src-tauri/Cargo.toml` se sincroniza con un script. La versión visible en la UI (HelpModal → "Acerca de") se importa de `package.json` en build, así que coincide con el instalador siempre que `release:check` pase.
+
+### Publicar una nueva versión
+
+1. `npm run version:bump -- X.Y.Z` — actualiza `package.json` y `src-tauri/Cargo.toml` (admite SemVer con pre-release, p. ej. `1.0.0-rc.1`).
+2. Editar [`CHANGELOG.md`](CHANGELOG.md): mover lo aplicable de `[Unreleased]` a una nueva sección `[X.Y.Z] — YYYY-MM-DD` y actualizar los enlaces de comparación al final.
+3. `npm run release:check` — valida que las tres versiones sean coherentes.
+4. `git add -A && git commit -m "chore(release): vX.Y.Z"`.
+5. `git tag vX.Y.Z`.
+6. `git push && git push --tags`.
+
+El push del tag dispara [`.github/workflows/ci.yml`](.github/workflows/ci.yml): tras pasar lint/tests/`clippy`, el job `release-build` construye los instaladores Windows (MSI + NSIS) y los publica como artifact `tauri-installers-vX.Y.Z`.
+
 ## Soporte
 
 - **Logs**: archivo rotado por tamaño (5 MB, mantiene históricos) en el `LogDir` del sistema; en Windows: `%LOCALAPPDATA%\com.premex.consultorio-renew-lab\logs\renew-lab.log` (más rotaciones `renew-lab_<timestamp>.log`). Adjuntar el archivo más reciente al reportar incidencias.
