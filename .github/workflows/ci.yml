@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
-    tags: ['v*']
+    tags: ["v*"]
   pull_request:
     branches: [main]
 
@@ -22,13 +22,13 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy
+          components: clippy, rustfmt
 
       - name: Cache Rust workspace (~/.cargo + target)
         uses: Swatinem/rust-cache@v2
@@ -38,11 +38,21 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      - name: Lint frontend (ESLint)
+        run: npm run lint
+
+      - name: Check frontend formatting (Prettier)
+        run: npm run format:check
+
       - name: Run frontend tests (Vitest)
         run: npm test
 
       - name: Build frontend (tsc + Vite)
         run: npm run build
+
+      - name: Check Rust formatting
+        working-directory: src-tauri
+        run: cargo fmt --check
 
       - name: Run Rust tests
         working-directory: src-tauri
@@ -65,8 +75,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable

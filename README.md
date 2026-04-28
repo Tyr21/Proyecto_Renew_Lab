@@ -33,6 +33,26 @@ npm run test         # Pruebas Vitest (validación y solapes en TS)
 npm run tauri build  # Empaquetado de la app de escritorio
 ```
 
+### Calidad de código
+
+El frontend usa **ESLint** (TypeScript + React) y **Prettier**; ambos integrados sin conflictos vía `eslint-config-prettier`. El backend usa **`cargo fmt`** (configuración en `src-tauri/rustfmt.toml`, tabs duros) y **`cargo clippy`** estricto.
+
+```bash
+npm run lint           # ESLint sobre TS/TSX (sin auto-fix)
+npm run lint:fix       # ESLint con auto-fix
+npm run format         # Prettier --write sobre todo el repo
+npm run format:check   # Prettier --check (no modifica archivos; falla si hay diferencias)
+```
+
+```bash
+cd src-tauri
+cargo fmt              # Aplica formato según rustfmt.toml
+cargo fmt --check      # Verifica formato sin modificar (lo que corre CI)
+cargo clippy --all-targets --locked -- -D warnings   # Lints como errores
+```
+
+Antes de un commit no trivial, conviene ejecutar `npm run lint && npm run format:check` en la raíz y `cargo fmt --check && cargo clippy --all-targets -- -D warnings` en `src-tauri/`. El CI de GitHub Actions ejecuta exactamente esos pasos.
+
 Pruebas Rust (reglas de tiempo en el backend):
 
 ```bash
