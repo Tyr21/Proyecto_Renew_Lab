@@ -125,13 +125,14 @@ export function ClienteModal({
 		setError(null);
 	}, [open, mode, initial, settings.defaultDocumentType]);
 
+	const initialId = initial?.id ?? null;
 	useEffect(() => {
-		if (!open || mode !== "edit" || !initial) {
+		if (!open || mode !== "edit" || !initialId) {
 			setPaquetes([]);
 			return;
 		}
-		void cargarPaquetes(initial.id);
-	}, [open, mode, initial?.id, cargarPaquetes]);
+		void cargarPaquetes(initialId);
+	}, [open, mode, initialId, cargarPaquetes]);
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();

@@ -292,15 +292,17 @@ export function AppointmentModal({
 		}
 	}, [open, mode, initial, preset, settings]);
 
+	const initialId = initial?.id ?? null;
+	const initialPaqueteId = initial?.paqueteId ?? null;
 	useEffect(() => {
 		if (!open) return;
-		if (mode === "edit" && initial) {
-			const pid = initial.paqueteId?.trim();
+		if (mode === "edit" && initialId) {
+			const pid = initialPaqueteId?.trim();
 			setSelectedPaqueteId(pid && pid.length > 0 ? pid : null);
 		} else {
 			setSelectedPaqueteId(null);
 		}
-	}, [open, mode, initial?.id, initial?.paqueteId]);
+	}, [open, mode, initialId, initialPaqueteId]);
 
 	useEffect(() => {
 		if (!open) {
