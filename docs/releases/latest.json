@@ -1,0 +1,6 @@
+{
+	"version": "0.1.0",
+	"notes": "Estado inicial del canal de actualizaciones. Sustituir `version`, `platforms`, `pub_date` y notas al publicar una versión mayor.",
+	"pub_date": "2026-04-27T00:00:00Z",
+	"platforms": {}
+}

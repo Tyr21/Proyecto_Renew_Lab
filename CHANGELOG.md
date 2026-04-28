@@ -18,6 +18,8 @@ Las entradas se escriben en español. Tipos de cambio admitidos por sección:
 ### Añadido
 
 - **CI (tags `v*`):** firma Authenticode opcional para instaladores Windows (MSI/NSIS) vía GitHub Secrets y [`scripts/ci-release-windows-build.ps1`](scripts/ci-release-windows-build.ps1); verificación con `Get-AuthenticodeSignature`. Documentado en [README](README.md) (sección _Firma de código_).
+- **Actualizaciones in-app:** `tauri-plugin-updater` + UI en Configuración; manifiesto en [docs/releases/latest.json](docs/releases/latest.json) y guía en [docs/UPDATES.md](docs/UPDATES.md). El job `release-build` exige `TAURI_SIGNING_PRIVATE_KEY` y sube `.sig` junto a los instaladores.
+- **Manual de usuario:** secciones [7.7](docs/MANUAL_USUARIO.md) (Actualizaciones in-app) y [12](docs/MANUAL_USUARIO.md) (roles y datos tras actualizar).
 
 ### Cambiado
 

@@ -8,6 +8,7 @@ import {
 import { formatInvokeError } from "../../core/errors";
 import { logger } from "../../core/logger";
 import { AdminPasswordAdminSection } from "./AdminPasswordAdminSection";
+import { AppUpdateSection } from "./AppUpdateSection";
 import { BackupRestoreSection } from "./BackupRestoreSection";
 import { StartupPasswordAdminSection } from "./StartupPasswordAdminSection";
 import { formatCurrency, parseCurrencyDigits } from "../../core/currencyFormat";
@@ -37,6 +38,7 @@ type SettingsSectionId =
 	| "servicios"
 	| "facturacion"
 	| "respaldos"
+	| "actualizaciones"
 	| "oxigeno"
 	| "administracion";
 
@@ -46,6 +48,11 @@ const SECTIONS: { id: SettingsSectionId; label: string; description: string }[] 
 	{ id: "servicios", label: "Tipos de servicio", description: "Capacidad y precios sugeridos" },
 	{ id: "facturacion", label: "Facturación", description: "Datos del consultorio en facturas" },
 	{ id: "respaldos", label: "Respaldos", description: "Copias automáticas de la base de datos" },
+	{
+		id: "actualizaciones",
+		label: "Actualizaciones",
+		description: "Descargas seguras de nuevas versiones",
+	},
 	{
 		id: "oxigeno",
 		label: "Oxígeno",
@@ -913,6 +920,8 @@ export function SettingsPanel({
 							</div>
 						</section>
 					)}
+
+					{activeSection === "actualizaciones" && <AppUpdateSection />}
 
 					{activeSection === "administracion" && (
 						<section

@@ -18,6 +18,7 @@ import {
 import { formatInvokeError } from "./core/errors";
 import { logger } from "./core/logger";
 import { showToast } from "./core/toastBus";
+import { check } from "@tauri-apps/plugin-updater";
 import { APP_VERSION, EVENTO_CHANGED_EVENT, INGRESO_REGISTRADO_EVENT } from "./core/constants";
 import { isSlotBookableWithGracePeriod } from "./core/leadTime";
 import type { AppSettings, Appointment, Evento } from "./core/types";
@@ -131,6 +132,27 @@ function App() {
 			}
 		})();
 	}, [loadSettingsAfterAuth]);
+
+	useEffect(() => {
+		if (startupGate !== "ready" || import.meta.env.DEV) return;
+		let cancelled = false;
+		(async () => {
+			try {
+				const update = await check({ timeout: 12_000 });
+				if (cancelled || !update) return;
+				showToast({
+					level: "info",
+					message: `Hay una nueva versión (${update.version}). Abra Configuración → Actualizaciones para instalarla.`,
+					durationMs: 8000,
+				});
+			} catch {
+				/* modo degradado: no bloquear arranque */
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [startupGate]);
 
 	useEffect(() => {
 		void refreshAppointments();

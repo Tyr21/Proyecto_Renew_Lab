@@ -1,6 +1,6 @@
-# Build de release Windows (MSI + NSIS) con firma opcional Authenticode en CI.
-# Requisitos (GitHub Secrets): ver README sección "Firma de código (Windows)".
-# Uso: desde la raíz del repo, con variables de entorno ya definidas por el workflow.
+# Build de release Windows (MSI + NSIS) con artefactos de updater (minisign) y firma opcional Authenticode.
+# Requisitos: TAURI_SIGNING_PRIVATE_KEY (minisign para .sig del updater). Opcional: GitHub Secrets de PFX (README).
+# Fusiona siempre `createUpdaterArtifacts: true` vía JSON efímero (ignorado por git).
 
 $ErrorActionPreference = "Stop"
 
@@ -9,24 +9,44 @@ function Write-NoticeCI {
 	Write-Host "::notice::$Message"
 }
 
+if ([string]::IsNullOrWhiteSpace($env:TAURI_SIGNING_PRIVATE_KEY)) {
+	throw 'Falta TAURI_SIGNING_PRIVATE_KEY. El job release-build debe definir este secreto (clave privada minisign) para generar firmas .sig del updater. Ver README, sección Actualizaciones in-app.'
+}
+
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+Set-Location $repoRoot
+$mergePath = Join-Path $repoRoot "src-tauri\tauri-release.ci.json"
+
+function Invoke-TauriReleaseBuild {
+	try {
+		npm run tauri -- build --ci -c $mergePath
+		return $LASTEXITCODE
+	} finally {
+		Remove-Item $mergePath -Force -ErrorAction SilentlyContinue
+	}
+}
+
 if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE)) {
-	Write-NoticeCI "WINDOWS_CERTIFICATE no configurado: tauri build sin firma Authenticode (esperado en forks o antes de comprar certificado)."
-	npm run tauri -- build --ci
-	exit $LASTEXITCODE
+	Write-NoticeCI "WINDOWS_CERTIFICATE no configurado: build sin firma Authenticode (solo minisign del updater)."
+	$minimal = @'
+{
+  "bundle": {
+    "createUpdaterArtifacts": true
+  }
+}
+'@
+	Set-Content -Path $mergePath -Value $minimal.TrimStart() -Encoding utf8
+	exit (Invoke-TauriReleaseBuild)
 }
 
 if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PASSWORD)) {
 	throw "WINDOWS_CERTIFICATE está definido pero falta WINDOWS_CERTIFICATE_PASSWORD."
 }
 
-$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-Set-Location $repoRoot
-
 $certDir = Join-Path $repoRoot "certificate"
 New-Item -ItemType Directory -Path $certDir -Force | Out-Null
 $pfxPath = Join-Path $certDir "certificate.pfx"
 $tempTxt = Join-Path $certDir "_secret_b64.txt"
-$mergePath = Join-Path $repoRoot "src-tauri\tauri-signing.ci.json"
 
 try {
 	Remove-Item $pfxPath -Force -ErrorAction SilentlyContinue
@@ -62,6 +82,7 @@ try {
 	$mergeJson = @"
 {
   "bundle": {
+    "createUpdaterArtifacts": true,
     "windows": {
       "certificateThumbprint": "$thumb",
       "digestAlgorithm": "sha256",
@@ -72,9 +93,9 @@ try {
 "@
 	Set-Content -Path $mergePath -Value $mergeJson.TrimStart() -Encoding utf8
 
-	npm run tauri -- build --ci -c $mergePath
-	if ($LASTEXITCODE -ne 0) {
-		exit $LASTEXITCODE
+	$code = Invoke-TauriReleaseBuild
+	if ($code -ne 0) {
+		exit $code
 	}
 
 	$toVerify = [System.Collections.Generic.List[System.IO.FileInfo]]::new()
@@ -112,5 +133,4 @@ try {
 	Remove-Item $tempTxt -Force -ErrorAction SilentlyContinue
 	Remove-Item $pfxPath -Force -ErrorAction SilentlyContinue
 	Remove-Item $certDir -Recurse -Force -ErrorAction SilentlyContinue
-	Remove-Item $mergePath -Force -ErrorAction SilentlyContinue
 }

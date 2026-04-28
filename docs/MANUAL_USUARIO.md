@@ -1,6 +1,6 @@
 # Manual de usuario — Consultorio Renew Lab
 
-Guía para el uso diario de la aplicación de escritorio **Consultorio Renew Lab**: gestión de citas, finanzas, clientes y configuración. Los datos se guardan **en el equipo del consultorio** (base de datos local); no es necesaria conexión a Internet para el funcionamiento normal.
+Guía para el uso diario de la aplicación de escritorio **Consultorio Renew Lab**: gestión de citas, finanzas, clientes y configuración. Los datos se guardan **en el equipo del consultorio** (base de datos local); no es necesaria conexión a Internet para el funcionamiento normal, salvo al usar funciones opcionales como la **búsqueda de actualizaciones** del programa.
 
 ---
 
@@ -133,7 +133,7 @@ Al pulsar **Configuración**, la aplicación le pedirá la **contraseña de admi
 
 Al **salir** de la pestaña Configuración y volver a entrar, **se volverá a pedir** la contraseña de administrador.
 
-El panel de configuración está organizado en **secciones** (menú lateral en pantallas grandes o lista desplegable en pantallas pequeñas):
+El panel de configuración está organizado en **secciones** (menú lateral en pantallas grandes o lista desplegable en pantallas pequeñas), entre ellas: Calendario, documentos, servicios, facturación, respaldos, **actualizaciones**, oxígeno y administración:
 
 ### 7.1 Calendario
 
@@ -170,7 +170,17 @@ El panel de configuración está organizado en **secciones** (menú lateral en p
 - **Consumo teórico por sesión (K)** multiplicado por las citas **atendidas** del tipo de servicio elegido.
 - **Tipo de servicio** cuyas sesiones con estado “asistió” se cuentan para el teórico (por defecto, cámara hiperbárica).
 
-### 7.7 Administración
+### 7.7 Actualizaciones in-app
+
+En esta sección la aplicación puede **comprobar** si existe una versión más nueva del programa publicada por quien la distribuye. **Solo en ese momento** hace falta **conexión a Internet**; el funcionamiento diario del consultorio sigue siendo **local** y no envía citas ni datos de clientes a ningún servidor al buscar actualizaciones.
+
+- Verá la **versión instalada** y un botón **Buscar actualizaciones**. Si hay una versión publicada de forma correcta, podrá usar **Descargar e instalar** (o el texto equivalente en su versión). El proceso puede abrir el instalador de Windows y, al terminar, pedir **reiniciar** la aplicación.
+- Si no hay actualización disponible, verá un mensaje indicando que está al día. Si hay **fallo de red** o el servicio del proveedor no responde, verá un mensaje de error: puede **seguir trabajando** con normalidad hasta la próxima vez que intente actualizar.
+- **Windows SmartScreen** u otros avisos de seguridad pueden aparecer al ejecutar un instalador, sobre todo si no está firmado con un certificado de código costumbre; eso depende de Microsoft y de la política del consultorio, no del contenido de la base de datos.
+- **Datos del consultorio (citas, clientes, facturas, etc.):** la información se guarda en un **archivo de base de datos en el equipo**, en una carpeta de datos de usuario **independiente** de donde se instala el programa. En una **actualización normal por este mecanismo**, esa base **suele conservarse**; no por ello debe dejar de usar **Respaldos** (sección 7.5) y copias externas antes de cambios importantes.
+- Detalle técnico del canal (manifiesto HTTPS, publicación de versiones): [UPDATES.md](./UPDATES.md). Resumen para quien mantiene el despliegue: sección **12** de este manual.
+
+### 7.8 Administración
 
 Aquí se gestionan el **modo administrador** y las **contraseñas de seguridad**.
 
@@ -192,7 +202,7 @@ Si el **modo administrador** está activado en el borrador de configuración (ca
 
 Con el modo administrador activo puede **cambiar** o **eliminar** la contraseña de administrador. Si la elimina, la próxima vez que entre en Configuración se le pedirá **definir una nueva**.
 
-### 7.8 Guardar y cancelar
+### 7.9 Guardar y cancelar
 
 - **Guardar configuración** escribe los cambios en la base de datos local y puede cerrar el panel según el comportamiento de la versión.
 - **Cancelar** descarta cambios no guardados (puede pedir confirmación si hay modificaciones pendientes).
@@ -241,6 +251,33 @@ Para desarrolladores o personal de soporte IT:
 
 - [PROJECT.md](./PROJECT.md) — visión del producto y fases.
 - [ARQUITECTURA.md](./ARQUITECTURA.md) — detalle técnico de datos y comportamiento del sistema.
+
+## 12. Actualizaciones del programa: roles y datos
+
+Esta sección aclara **quién hace qué** cuando existe el canal de **actualización in-app** descrito en **7.7**.
+
+### 12.1 Personal del consultorio (usuario de la aplicación)
+
+- Entra en **Configuración** (con la contraseña de administrador del consultorio, como en el resto de ajustes).
+- Abre la sección **Actualizaciones** y usa **Buscar actualizaciones** cuando quiera comprobar si hay versión nueva.
+- Si el proveedor ha publicado una actualización, sigue las indicaciones en pantalla (**descargar / instalar** y **reinicio** si aplica).
+- **No** tiene que descargar manualmente un instalador desde un correo o carpeta compartida, salvo que su proveedor IT le indique un procedimiento distinto (por ejemplo entornos sin Internet).
+
+### 12.2 Quien mantiene o distribuye la aplicación (IT / desarrollador)
+
+- Publica una **nueva versión** según el flujo del repositorio: versión en `package.json`, cambios en registro de versiones, tag `vX.Y.Z`, artefactos de instalador y firma de actualización (minisign), y **manifiesto JSON** servido por **HTTPS** con la URL y firma del paquete adecuado para Windows. Guía detallada: [UPDATES.md](./UPDATES.md) y sección _Releases_ del [README.md](../README.md).
+- Se asegura de que el **identificador** de la aplicación en Tauri **no cambie** entre versiones si se desea conservar la **misma carpeta de datos** en cada equipo (misma “identidad” de app = misma ruta de base de datos por defecto).
+- Opcionalmente firma el instalador con **certificado de código** (Authenticode) para mejorar la experiencia con **SmartScreen**; es independiente de la firma minisign del canal updater.
+
+### 12.3 ¿Qué pasa con citas, clientes y demás datos al actualizar?
+
+- Los datos operativos viven en un **archivo SQLite** en la carpeta de datos de la aplicación del usuario de Windows (identificador de app, p. ej. `com.premex.consultorio-renew-lab`), no dentro del programa instalado en `Program Files`.
+- Una actualización **in-app** típica **reemplaza el ejecutable / instalador** y **mantiene** esa carpeta de datos: **citas, clientes, configuración y facturas guardadas suelen seguir disponibles** tras reiniciar la nueva versión.
+- **Riesgos** de pérdida o desalineación (como con cualquier software):
+  - **Desinstalar** la aplicación y marcar opciones que **borren datos de usuario**.
+  - Cambiar el **identificador** de la app (Tauri la trataría como otra aplicación, con otra carpeta de datos vacía).
+  - Un fallo en **migraciones** de base de datos en una versión concreta (el proveedor debe probar releases y ofrecer respaldo).
+- Por ello se recomienda **Respaldos automáticos y carpeta externa** (sección 7.5) y, antes de un despliegue masivo, probar en un equipo de prueba con copia de la base.
 
 ---
 

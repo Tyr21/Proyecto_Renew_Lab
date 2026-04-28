@@ -6,7 +6,8 @@ Aplicación de **escritorio local** para gestionar citas de **cámaras hiperbár
 
 - **[docs/PROJECT.md](docs/PROJECT.md)** — visión del producto, fases e hitos.
 - **[docs/ARQUITECTURA.md](docs/ARQUITECTURA.md)** — stack, esquema de datos y eventos de dominio.
-- **[docs/MANUAL_USUARIO.md](docs/MANUAL_USUARIO.md)** — manual de uso para personal del consultorio.
+- **[docs/MANUAL_USUARIO.md](docs/MANUAL_USUARIO.md)** — manual de uso (consultorio); incluye **7.7** y **12** sobre actualizaciones y datos.
+- **[docs/UPDATES.md](docs/UPDATES.md)** — actualizaciones in-app (manifiesto HTTPS, minisign, publicación).
 
 ## Requisitos
 
@@ -24,12 +25,25 @@ npm run tauri dev
 
 Esto levanta Vite en `http://localhost:1420/` y ejecuta el binario de Tauri en modo depuración.
 
+### Windows: error al crear el webview (`WebView2` / `0x80070057`)
+
+Si en consola aparece `failed to create webview` y _«El parámetro no es correcto»_, suele ser el **runtime WebView2** o el **perfil de datos** (no React ni SQLite). Pruebe en este orden:
+
+1. **No ejecute** el terminal ni Cursor **como administrador** (WebView2 puede fallar al crearse con privilegios elevados).
+2. Borre la caché del webview del proyecto: carpeta `webview2-data` (y si existía, `EBWebView`) bajo `%LOCALAPPDATA%\com.premex.consultorio-renew-lab\`.
+3. Ejecute el arranque con perfil en `%TEMP%`: **`npm run tauri:dev:win`** (usa [`scripts/tauri-dev-windows.ps1`](scripts/tauri-dev-windows.ps1) y define `WEBVIEW2_USER_DATA_FOLDER`).
+4. Repare o reinstale el **Microsoft Edge WebView2 Runtime** (Evergreen) desde el sitio de Microsoft.
+
+La ventana principal usa un `dataDirectory` dedicado (`webview2-data` en `tauri.conf.json`) para aislar el perfil de WebView2.
+
 Otros comandos útiles:
 
 ```bash
 npm run dev          # Solo frontend (Vite)
 npm run build        # Compilar frontend (tsc + vite build)
 npm run test         # Pruebas Vitest (validación y solapes en TS)
+npm run tauri dev    # Tauri + Vite (depuración)
+npm run tauri:dev:win   # Windows: Tauri + Vite con perfil WebView2 en %TEMP%
 npm run tauri build  # Empaquetado de la app de escritorio
 ```
 
@@ -80,7 +94,16 @@ La versión del producto vive en **`package.json`** (única fuente de verdad).
 5. `git tag vX.Y.Z`.
 6. `git push && git push --tags`.
 
-El push del tag dispara [`.github/workflows/ci.yml`](.github/workflows/ci.yml): tras pasar lint/tests/`clippy`, el job `release-build` construye los instaladores Windows (MSI + NSIS) y los publica como artifact `tauri-installers-vX.Y.Z`. Si están configurados los GitHub Secrets de **firma de código** (Authenticode), los artefactos salen firmados; si no, el build sigue siendo válido pero Windows puede mostrar advertencias de SmartScreen en descargas (ver más abajo).
+El push del tag dispara [`.github/workflows/ci.yml`](.github/workflows/ci.yml): tras pasar lint/tests/`clippy`, el job `release-build` construye los instaladores Windows (MSI + NSIS), genera firmas **minisign** (`.sig`) para el updater y publica como artifact `tauri-installers-vX.Y.Z` (instaladores + `.sig`). Ese job **requiere** el secreto `TAURI_SIGNING_PRIVATE_KEY` (par alineado con `plugins.updater.pubkey` en `tauri.conf.json`); véase [docs/UPDATES.md](docs/UPDATES.md). Si están configurados los GitHub Secrets de **firma de código** (Authenticode), los artefactos salen firmados; si no, el build sigue siendo válido pero Windows puede mostrar advertencias de SmartScreen en descargas (ver más abajo).
+
+### Actualizaciones in-app (opcional para usuarios finales)
+
+La aplicación integra el **Tauri Updater**: puede avisar de una versión nueva y descargar/instalar el instalador NSIS desde la sección **Configuración → Actualizaciones**. El manifiesto JSON de referencia vive en [docs/releases/latest.json](docs/releases/latest.json) y se sirve por HTTPS (p. ej. raw de GitHub); al publicar una versión nueva hay que **subir el `.exe` y el `.sig`** del release y **actualizar** ese JSON (`version`, `platforms.windows-x86_64.url` y `signature`). Detalle, rotación de claves y límites: [docs/UPDATES.md](docs/UPDATES.md).
+
+| Secreto (Actions)                    | Obligatorio en `release-build` | Descripción                                                                                              |
+| ------------------------------------ | ------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `TAURI_SIGNING_PRIVATE_KEY`          | Sí                             | Clave privada **minisign** para firmar actualizaciones (mismo par que la `pubkey` en `tauri.conf.json`). |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | No                             | Si la clave privada está protegida con contraseña.                                                       |
 
 ### Firma de código (Windows / Authenticode)
 
@@ -108,7 +131,7 @@ Este repositorio documenta el camino **estándar con PFX (OV u OV-compatible)** 
 En el job `release-build`, el paso **Build Tauri (MSI + NSIS)** ejecuta [`scripts/ci-release-windows-build.ps1`](scripts/ci-release-windows-build.ps1):
 
 1. Si **no** existe `WINDOWS_CERTIFICATE`, corre `tauri build` sin firma (aviso en el log).
-2. Si existe, decodifica el PFX, lo importa al almacén **CurrentUser\\My** del runner, obtiene el **thumbprint** y fusiona la config con `npm run tauri -- build --ci -c src-tauri/tauri-signing.ci.json` (fichero efímero, ignorado por git), como describe Tauri para CI.
+2. Si existe, decodifica el PFX, lo importa al almacén **CurrentUser\\My** del runner, obtiene el **thumbprint** y fusiona la config con `npm run tauri -- build --ci -c src-tauri/tauri-release.ci.json` (fichero efímero, ignorado por git), incluyendo `bundle.createUpdaterArtifacts: true` y, si aplica, el thumbprint para Authenticode.
 3. Tras el build, comprueba con `Get-AuthenticodeSignature` que los `.exe` relevantes y los `.msi` tengan estado **Valid**.
 
 #### Certificado y exportación PFX (resumen)

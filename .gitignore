@@ -36,3 +36,8 @@ dist-ssr
 # Certificados locales / merge efímero de firma en CI (no commitear)
 /certificate/
 src-tauri/tauri-signing.ci.json
+src-tauri/tauri-release.ci.json
+
+# Claves minisign del updater (solo la pública va en tauri.conf.json versionado)
+src-tauri/.updater-key.local
+src-tauri/.updater-key.local.pub

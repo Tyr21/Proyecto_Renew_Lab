@@ -78,11 +78,22 @@ fn build_log_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
 		.build()
 }
 
+fn build_tauri_app() -> tauri::Builder<tauri::Wry> {
+	let builder = tauri::Builder::default()
+		.plugin(build_log_plugin())
+		.plugin(tauri_plugin_dialog::init());
+
+	#[cfg(not(any(target_os = "android", target_os = "ios")))]
+	let builder = builder
+		.plugin(tauri_plugin_process::init())
+		.plugin(tauri_plugin_updater::Builder::new().build());
+
+	builder
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-	tauri::Builder::default()
-		.plugin(build_log_plugin())
-		.plugin(tauri_plugin_dialog::init())
+	build_tauri_app()
 		.setup(|app| {
 			let dir = app
 				.handle()
