@@ -94,12 +94,8 @@ pub fn run() {
 
 			try_startup_backup(&dir);
 
-			let conn = db::open_connection(app.handle()).map_err(|e| {
-				std::io::Error::other(e)
-			})?;
-			commands::ensure_persisted_admin_mode_off(&conn).map_err(|e| {
-				std::io::Error::other(e)
-			})?;
+			let conn = db::open_connection(app.handle()).map_err(std::io::Error::other)?;
+			commands::ensure_persisted_admin_mode_off(&conn).map_err(std::io::Error::other)?;
 			app.manage(Mutex::new(conn));
 			Ok(())
 		})
