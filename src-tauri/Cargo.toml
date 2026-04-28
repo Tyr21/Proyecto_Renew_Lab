@@ -1,9 +1,11 @@
 [package]
 name = "tauri-app"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "Consultorio Renew Lab — app de escritorio local (Tauri + SQLite) para gestionar citas, clientes, finanzas y facturación de consultorios de cámaras hiperbáricas y sueroterapia."
+authors = ["Lucas Peláez Ospina <lucasp19@hotmail.com>"]
 edition = "2021"
+repository = "https://github.com/Tyr21/Proyecto_Renew_Lab"
+homepage = "https://github.com/Tyr21/Proyecto_Renew_Lab"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
