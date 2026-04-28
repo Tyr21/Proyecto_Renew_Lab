@@ -17,6 +17,8 @@ Las entradas se escriben en español. Tipos de cambio admitidos por sección:
 
 ### Añadido
 
+- **CI (tags `v*`):** firma Authenticode opcional para instaladores Windows (MSI/NSIS) vía GitHub Secrets y [`scripts/ci-release-windows-build.ps1`](scripts/ci-release-windows-build.ps1); verificación con `Get-AuthenticodeSignature`. Documentado en [README](README.md) (sección _Firma de código_).
+
 ### Cambiado
 
 ### Corregido

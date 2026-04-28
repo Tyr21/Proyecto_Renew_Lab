@@ -80,7 +80,49 @@ La versión del producto vive en **`package.json`** (única fuente de verdad).
 5. `git tag vX.Y.Z`.
 6. `git push && git push --tags`.
 
-El push del tag dispara [`.github/workflows/ci.yml`](.github/workflows/ci.yml): tras pasar lint/tests/`clippy`, el job `release-build` construye los instaladores Windows (MSI + NSIS) y los publica como artifact `tauri-installers-vX.Y.Z`.
+El push del tag dispara [`.github/workflows/ci.yml`](.github/workflows/ci.yml): tras pasar lint/tests/`clippy`, el job `release-build` construye los instaladores Windows (MSI + NSIS) y los publica como artifact `tauri-installers-vX.Y.Z`. Si están configurados los GitHub Secrets de **firma de código** (Authenticode), los artefactos salen firmados; si no, el build sigue siendo válido pero Windows puede mostrar advertencias de SmartScreen en descargas (ver más abajo).
+
+### Firma de código (Windows / Authenticode)
+
+Los instaladores **no están firmados** por defecto. En equipos de usuarios finales, **SmartScreen** y algunos antivirus pueden mostrar mensajes del tipo _aplicación no reconocida_ / _publicador desconocido_ hasta que la aplicación gane reputación o se distribuya con un **certificado de firma de código** emitido por una CA de confianza para Windows.
+
+| Tipo                            | Notas                                                                                                                                                                                            |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **OV** (Organization Validated) | Suele bastar para muchos despliegues internos; SmartScreen puede seguir siendo estricto al principio hasta acumular descargas/reputación.                                                        |
+| **EV** (Extended Validation)    | Mejor experiencia inicial con SmartScreen en muchos casos; a menudo implica **hardware (token)** o firma en la nube (**Azure Key Vault**, **Trusted Signing**, etc.) más que un único PFX en CI. |
+
+Este repositorio documenta el camino **estándar con PFX (OV u OV-compatible)** y GitHub Actions, alineado con la guía oficial de Tauri: [Windows Code Signing](https://v2.tauri.app/distribute/sign/windows/).
+
+#### Secretos en GitHub (repo → _Settings_ → _Secrets and variables_ → _Actions_)
+
+| Secreto                        | Obligatorio si hay firma | Descripción                                                                                                                                                                                                                                       |
+| ------------------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WINDOWS_CERTIFICATE`          | Sí                       | Contenido **Base64** del fichero `.pfx`. Recomendado: en Windows, `certutil -encode mi-certificado.pfx gh-secret.txt` y pegar **todo** el contenido de `gh-secret.txt` en el secreto. Alternativa: Base64 de una sola línea del PFX (sin saltos). |
+| `WINDOWS_CERTIFICATE_PASSWORD` | Sí                       | Contraseña de exportación del PFX.                                                                                                                                                                                                                |
+| `WINDOWS_SIGN_TIMESTAMP_URL`   | No                       | Servidor de sellado de tiempo RFC3161. Por defecto se usa `http://timestamp.digicert.com`. Su CA puede indicar otra URL (`timestamp.sectigo.com`, etc.).                                                                                          |
+
+**No** subas el `.pfx` ni contraseñas al repositorio; solo en GitHub Secrets (o en un gestor tipo HSM, y entonces ver la guía Tauri para `signCommand` / Azure).
+
+#### Qué hace el CI
+
+En el job `release-build`, el paso **Build Tauri (MSI + NSIS)** ejecuta [`scripts/ci-release-windows-build.ps1`](scripts/ci-release-windows-build.ps1):
+
+1. Si **no** existe `WINDOWS_CERTIFICATE`, corre `tauri build` sin firma (aviso en el log).
+2. Si existe, decodifica el PFX, lo importa al almacén **CurrentUser\\My** del runner, obtiene el **thumbprint** y fusiona la config con `npm run tauri -- build --ci -c src-tauri/tauri-signing.ci.json` (fichero efímero, ignorado por git), como describe Tauri para CI.
+3. Tras el build, comprueba con `Get-AuthenticodeSignature` que los `.exe` relevantes y los `.msi` tengan estado **Valid**.
+
+#### Certificado y exportación PFX (resumen)
+
+1. Adquirir un **certificado de firma de código** (no un certificado SSL de web). Referencia Microsoft: [Code signing certificate management](https://learn.microsoft.com/en-us/windows-hardware/drivers/dashboard/code-signing-cert-manage).
+2. Obtener `.pfx` (PKCS#12) con clave privada y contraseña de exportación (OpenSSL u herramientas de la CA).
+3. Probar localmente: importar el PFX, copiar el **thumbprint** desde `certmgr.msc` y opcionalmente añadirlo en `src-tauri/tauri.conf.json` bajo `bundle.windows`, o usar el mismo flujo que CI con `-c` y un JSON de fusión.
+4. Renovar antes del vencimiento: generar nuevo certificado, actualizar secretos y volver a etiquetar un release.
+
+#### Límites y expectativas
+
+- **SmartScreen** no es solo “¿va firmado?”. Puede seguir avisando la primera vez o con poca reputación; EV y uso continuo suelen mejorar la percepción del usuario.
+- **Certificados EV** en token / HSM no suelen exponerse como PFX en GitHub; en ese caso hay que usar **comando de firma personalizado** (`bundle.windows.signCommand` en Tauri) con Azure Key Vault, Trusted Signing u otra herramienta recomendada por la CA.
+- Los runners de GitHub son efímeros; el certificado se importa solo durante ese job y no queda en el artefacto subido (solo los instaladores firmados).
 
 ## Soporte
 
