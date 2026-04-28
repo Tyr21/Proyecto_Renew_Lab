@@ -195,7 +195,7 @@ export function ClientesDashboard({ settings }: ClientesDashboardProps) {
 					</div>
 				) : resultados.length === 0 && !searching ? (
 					<div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center text-slate-400 text-sm">
-						No se encontraron clientes para <strong>"{query}"</strong>
+						No se encontraron clientes para <strong>&ldquo;{query}&rdquo;</strong>
 					</div>
 				) : (
 					<div
