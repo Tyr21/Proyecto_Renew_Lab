@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CitaEventNotifier } from "./components/CitaEventNotifier";
 import { FinanceEventListener } from "./components/FinanceEventListener";
+import { ConfirmDialog } from "./components/ConfirmDialog";
 import { HelpModal } from "./components/HelpModal";
+import { UnsavedSettingsLeaveDialog } from "./components/UnsavedSettingsLeaveDialog";
 import { StartupSplash } from "./components/StartupSplash";
 import { ToastHost } from "./components/ToastHost";
 import { ConfigAdminGate } from "./components/ConfigAdminGate";
@@ -65,6 +67,8 @@ function App() {
 	const [eventoPresetTime, setEventoPresetTime] = useState<string | null>(null);
 	const [helpOpen, setHelpOpen] = useState(false);
 	const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
+	const [unsavedSettingsLeaveOpen, setUnsavedSettingsLeaveOpen] = useState(false);
+	const pendingTabRef = useRef<Tab | null>(null);
 	/** Tras contraseña de inicio correcta, mientras se obtiene `getSettings`. */
 	const [postPasswordLoading, setPostPasswordLoading] = useState(false);
 
@@ -193,11 +197,9 @@ function App() {
 
 	function switchTab(next: Tab) {
 		if (tab === "configuracion" && next !== "configuracion" && settingsDirtyRef.current) {
-			if (
-				!window.confirm("Hay cambios sin guardar en la configuración. ¿Desea salir sin guardar?")
-			) {
-				return;
-			}
+			pendingTabRef.current = next;
+			setUnsavedSettingsLeaveOpen(true);
+			return;
 		}
 		setTab(next);
 	}
@@ -532,37 +534,29 @@ function App() {
 			<FinanceEventListener settings={settings} />
 			<ToastHost />
 			<HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
-			{confirmCloseOpen && (
-				<div
-					className="fixed inset-0 z-[130] flex items-center justify-center bg-black/40 p-4"
-					role="dialog"
-					aria-modal="true"
-					aria-labelledby="confirm-close-title"
-				>
-					<div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl">
-						<h2 id="confirm-close-title" className="text-lg font-semibold text-slate-800">
-							Cerrar aplicación
-						</h2>
-						<p className="mt-2 text-sm text-slate-600">¿Desea cerrar la aplicación?</p>
-						<div className="mt-5 flex justify-end gap-2">
-							<button
-								type="button"
-								onClick={() => setConfirmCloseOpen(false)}
-								className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-							>
-								Cancelar
-							</button>
-							<button
-								type="button"
-								onClick={() => void handleConfirmClose()}
-								className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-							>
-								Cerrar
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
+			<UnsavedSettingsLeaveDialog
+				open={unsavedSettingsLeaveOpen}
+				onConfirm={() => {
+					const next = pendingTabRef.current;
+					pendingTabRef.current = null;
+					setUnsavedSettingsLeaveOpen(false);
+					if (next) setTab(next);
+				}}
+				onCancel={() => {
+					pendingTabRef.current = null;
+					setUnsavedSettingsLeaveOpen(false);
+				}}
+			/>
+			<ConfirmDialog
+				open={confirmCloseOpen}
+				title="Cerrar aplicación"
+				message="¿Desea cerrar la aplicación?"
+				confirmLabel="Cerrar"
+				cancelLabel="Cancelar"
+				variant="danger"
+				onConfirm={() => void handleConfirmClose()}
+				onCancel={() => setConfirmCloseOpen(false)}
+			/>
 		</div>
 	);
 }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type KeyboardEvent } from "react";
+import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { clearAdminPassword, getAdminAuthStatus, setAdminPassword } from "../../core/api";
 import { ADMIN_PASSWORD_MAX_LENGTH, ADMIN_PASSWORD_MIN_LENGTH } from "../../core/constants";
 import { formatInvokeError } from "../../core/errors";
@@ -20,6 +21,7 @@ export function AdminPasswordAdminSection() {
 	const [chgNew, setChgNew] = useState("");
 	const [chgConfirm, setChgConfirm] = useState("");
 	const [clearPwd, setClearPwd] = useState("");
+	const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
 
 	const refresh = useCallback(async () => {
 		const s = await getAdminAuthStatus();
@@ -71,20 +73,18 @@ export function AdminPasswordAdminSection() {
 		}
 	}
 
-	async function runClear() {
+	function requestClearPassword() {
 		setError(null);
 		setInfo(null);
 		if (!clearPwd.trim()) {
 			setError("Indique la contraseña actual de administrador");
 			return;
 		}
-		if (
-			!window.confirm(
-				"Se eliminará la contraseña de administrador. Cualquiera podrá entrar a Configuración hasta que defina una nueva. ¿Continuar?",
-			)
-		) {
-			return;
-		}
+		setClearConfirmOpen(true);
+	}
+
+	async function executeClearPassword() {
+		setClearConfirmOpen(false);
 		setBusy(true);
 		try {
 			await clearAdminPassword(clearPwd);
@@ -202,19 +202,30 @@ export function AdminPasswordAdminSection() {
 						onChange={(e) => setClearPwd(e.target.value)}
 						onKeyDown={(e) => {
 							stopEnterFromSubmittingParent(e);
-							if (e.key === "Enter" && !busy) void runClear();
+							if (e.key === "Enter" && !busy) void requestClearPassword();
 						}}
 					/>
 				</label>
 				<button
 					type="button"
 					disabled={busy}
-					onClick={() => void runClear()}
+					onClick={() => void requestClearPassword()}
 					className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-800 hover:bg-red-50 disabled:opacity-50"
 				>
 					{busy ? "Procesando…" : "Eliminar contraseña de administrador"}
 				</button>
 			</div>
+
+			<ConfirmDialog
+				open={clearConfirmOpen}
+				title="Eliminar contraseña de administrador"
+				message="Se eliminará la contraseña de administrador. Cualquiera podrá entrar a Configuración hasta que defina una nueva."
+				confirmLabel="Eliminar contraseña"
+				cancelLabel="Cancelar"
+				variant="danger"
+				onCancel={() => setClearConfirmOpen(false)}
+				onConfirm={() => void executeClearPassword()}
+			/>
 		</div>
 	);
 }

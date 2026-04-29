@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { eliminarIngreso, obtenerIngresos, resumenOxigenoRango } from "../../core/api";
 import type { ChartDataPoint } from "../../components/IncomeBarChart";
+import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { IncomeBarChart } from "../../components/IncomeBarChart";
 import { INGRESO_REGISTRADO_EVENT } from "../../core/constants";
 import { formatCurrency } from "../../core/currencyFormat";
@@ -81,6 +82,7 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 	const [oxygenRows, setOxygenRows] = useState<OxigenoResumenDia[]>([]);
 	const [oxygenLoading, setOxygenLoading] = useState(false);
 	const [oxygenError, setOxygenError] = useState<string | null>(null);
+	const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
 	const loadIngresos = useCallback(async () => {
 		setError(null);
@@ -172,7 +174,6 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 
 	const handleDelete = useCallback(
 		async (id: string) => {
-			if (!window.confirm("¿Confirmar eliminación del ingreso?")) return;
 			setDeletingId(id);
 			try {
 				await eliminarIngreso(id);
@@ -622,7 +623,7 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 													<button
 														type="button"
 														disabled={deletingId === row.id}
-														onClick={() => void handleDelete(row.id)}
+														onClick={() => setPendingDeleteId(row.id)}
 														className="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-40"
 													>
 														{deletingId === row.id ? "…" : "Eliminar"}
@@ -643,6 +644,22 @@ export function FinanceDashboard({ adminMode = false }: FinanceDashboardProps) {
 					Reporte CSV exportado correctamente
 				</div>
 			) : null}
+
+			<ConfirmDialog
+				open={pendingDeleteId !== null}
+				title="Eliminar ingreso"
+				message="¿Eliminar este ingreso de forma permanente? Esta acción no se puede deshacer."
+				confirmLabel="Eliminar"
+				cancelLabel="Cancelar"
+				variant="danger"
+				onCancel={() => setPendingDeleteId(null)}
+				onConfirm={() => {
+					const id = pendingDeleteId;
+					if (!id) return;
+					setPendingDeleteId(null);
+					void handleDelete(id);
+				}}
+			/>
 		</div>
 	);
 }

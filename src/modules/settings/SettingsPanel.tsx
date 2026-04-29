@@ -11,6 +11,7 @@ import { AdminPasswordAdminSection } from "./AdminPasswordAdminSection";
 import { AppUpdateSection } from "./AppUpdateSection";
 import { BackupRestoreSection } from "./BackupRestoreSection";
 import { StartupPasswordAdminSection } from "./StartupPasswordAdminSection";
+import { UnsavedSettingsLeaveDialog } from "../../components/UnsavedSettingsLeaveDialog";
 import { formatCurrency, parseCurrencyDigits } from "../../core/currencyFormat";
 import type {
 	AppSettings,
@@ -78,6 +79,7 @@ export function SettingsPanel({
 	const savedSettingsRef = useRef<string>(JSON.stringify(settings));
 	const [activeSection, setActiveSection] = useState<SettingsSectionId>("calendario");
 
+	const [unsavedLeaveOpen, setUnsavedLeaveOpen] = useState(false);
 	const [adminModeModalOpen, setAdminModeModalOpen] = useState(false);
 	const [adminModePwd, setAdminModePwd] = useState("");
 	const [adminModeErr, setAdminModeErr] = useState<string | null>(null);
@@ -152,12 +154,15 @@ export function SettingsPanel({
 
 	function handleCancel() {
 		if (isDirty()) {
-			if (
-				!window.confirm("Hay cambios sin guardar en la configuración. ¿Desea salir sin guardar?")
-			) {
-				return;
-			}
+			setUnsavedLeaveOpen(true);
+			return;
 		}
+		setDraft(settings);
+		onClose();
+	}
+
+	function confirmLeaveWithoutSaving() {
+		setUnsavedLeaveOpen(false);
 		setDraft(settings);
 		onClose();
 	}
@@ -1041,6 +1046,12 @@ export function SettingsPanel({
 					</div>
 				</div>
 			) : null}
+
+			<UnsavedSettingsLeaveDialog
+				open={unsavedLeaveOpen}
+				onConfirm={confirmLeaveWithoutSaving}
+				onCancel={() => setUnsavedLeaveOpen(false)}
+			/>
 		</div>
 	);
 }

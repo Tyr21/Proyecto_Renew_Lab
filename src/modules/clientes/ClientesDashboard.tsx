@@ -3,6 +3,7 @@ import { buscarClientes, eliminarCliente } from "../../core/api";
 import { formatInvokeError } from "../../core/errors";
 import { logger } from "../../core/logger";
 import type { AppSettings, Cliente } from "../../core/types";
+import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { ClienteModal } from "./ClienteModal";
 import { ClienteResumenModal } from "./ClienteResumenModal";
 
@@ -20,6 +21,7 @@ export function ClientesDashboard({ settings }: ClientesDashboardProps) {
 	const [clienteEditando, setClienteEditando] = useState<Cliente | null>(null);
 	const [resumenClienteId, setResumenClienteId] = useState<string | null>(null);
 	const [activeIndex, setActiveIndex] = useState(-1);
+	const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	const ejecutarBusqueda = useCallback(async (q: string) => {
@@ -119,8 +121,7 @@ export function ClientesDashboard({ settings }: ClientesDashboardProps) {
 		}
 	}
 
-	async function handleEliminar(id: string): Promise<boolean> {
-		if (!window.confirm("¿Confirmar eliminación del cliente?")) return false;
+	async function ejecutarEliminarCliente(id: string): Promise<boolean> {
 		try {
 			await eliminarCliente(id);
 			setResultados((prev) => prev.filter((c) => c.id !== id));
@@ -253,14 +254,26 @@ export function ClientesDashboard({ settings }: ClientesDashboardProps) {
 				adminMode={settings.adminMode}
 				onClose={() => setResumenClienteId(null)}
 				onEditar={(cl) => abrirEditar(cl)}
-				onEliminar={
-					settings.adminMode
-						? async (id) => {
-								const ok = await handleEliminar(id);
-								if (ok) setResumenClienteId(null);
-							}
-						: undefined
-				}
+				onEliminar={settings.adminMode ? (id) => setDeleteConfirmId(id) : undefined}
+			/>
+
+			<ConfirmDialog
+				open={deleteConfirmId !== null}
+				title="Eliminar cliente"
+				message="¿Eliminar este cliente de forma permanente? Esta acción no se puede deshacer."
+				confirmLabel="Eliminar"
+				cancelLabel="Cancelar"
+				variant="danger"
+				onCancel={() => setDeleteConfirmId(null)}
+				onConfirm={() => {
+					const id = deleteConfirmId;
+					if (!id) return;
+					setDeleteConfirmId(null);
+					void (async () => {
+						const ok = await ejecutarEliminarCliente(id);
+						if (ok) setResumenClienteId(null);
+					})();
+				}}
 			/>
 		</div>
 	);
