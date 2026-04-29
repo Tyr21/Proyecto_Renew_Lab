@@ -1,0 +1,5 @@
+# Finales de línea LF en el manifiesto Rust (evita working tree “sucio” con autocrlf en Windows).
+.gitattributes text eol=lf
+*.toml text eol=lf
+Cargo.lock text eol=lf
+*.rs text eol=lf
