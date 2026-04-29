@@ -1,0 +1,57 @@
+Implementar cifrado en reposo de la base SQLite en la app Tauri + rusqlite existente (Renew Lab, consultorio.db en app_data_dir):
+
+Motor: pasar rusqlite a un feature tipo bundled-sqlcipher / bundled-sqlcipher-vendored-openssl (o equivalente documentado para Tauri 2 + Rust 2021), abriendo la conexión con PRAGMA key = '...' o API recomendada por la variante elegida. Documentar en db.rs la decisión final (reemplazar o extender el bloque de comentarios actual sobre SQLCipher).
+Gestión de clave: no guardar la clave en código ni en settings_json. Usar el keyring del SO (p. ej. crate keyring con un service/user fijos y estables derivados del identifier de la app). Definir comportamiento en primer arranque (generar clave aleatoria fuerte, guardar en keyring, crear BD cifrada) vs arranques posteriores (leer clave, abrir BD).
+Migración desde BD sin cifrar: flujo único que detecte si el archivo actual es legible sin clave vs con clave; si existe consultorio.db en claro y hay clave en keyring (o viceversa), documentar y codificar la secuencia segura (backup previo, copia a temporal, ATTACH + sqlcipher_export o herramienta equivalente según build de SQLCipher), con rollback si falla.
+Respaldos: los .db copiados por backup.rs deben seguir siendo copias byte a byte del archivo cifrado; actualizar texto en MANUAL_USUARIO / ARQUITECTURA / README (ubicación de clave = keyring; pérdida de clave = pérdida de datos).
+Pruebas: ampliar o añadir tests que abran BD en memoria o temp con clave fija para validar migración mínima y pragma; donde no sea posible sin binario SQLCipher en CI, documentar limitación.
+Compatibilidad: mantener el resto de PRAGMAs actuales (foreign_keys, WAL si procede con SQLCipher, busy_timeout, etc.) según lo que permita el motor.
+(Criterio de éxito: app arranca en instalación nueva con BD cifrada; instalación existente migra sin pérdida con backup; cargo test y el CI actual siguen pasando o se ajustan con las dependencias necesarias.)
+
+Objetivo: aunque la BD operativa (consultorio.db) esté cifrada con clave en el keyring, el administrador debe poder generar, desde la aplicación (con modo administrador + contraseña de administrador), una copia sin cifrar o en formato estándar que pueda abrir con DB Browser / Excel / herramientas habituales.
+
+Comportamiento sugerido:
+
+Ubicación en producto: Configuración → Administración (o subsección “Datos / privacidad”), solo con admin_mode activo y revalidación de contraseña de admin antes de exportar (o un solo comando Tauri que compruebe el hash igual que otras operaciones sensibles).
+
+Formato mínimo viable:
+
+Opción A: exportar un archivo SQLite en claro (.db) mediante VACUUM INTO / copia a temporal usando una conexión estándar sin cipher, o attach + export al estilo documentado para migración (equivalente a “snapshot desbloqueado”).
+Opción B: exportar SQL dump (.sql) con schema + data para inspección y recarga en otra herramienta.
+(Elegir una o ambas; la A es la más cómoda para “abrir como la BD actual”.)
+Flujo de usuario:
+
+Botón “Exportar base para revisión / respaldo legible”.
+Diálogo nativo “Guardar como…” (misma UX que otros flujos con plugin-dialog).
+Mensaje claro: archivo sin cifrar, tratarlo como información sensible (no enviar por correo sin protección, borrar tras uso si no se necesita).
+Seguridad:
+
+Registrar en log (sin datos personales) que se ejecutó una exportación admin y la ruta elegida si es aceptable; o solo “exportación administrativa completada”.
+No dejar el archivo temporal en app_data_dir sin aviso; preferir solo la ruta que el usuario eligió.
+Documentación: actualizar MANUAL_USUARIO.md (Respaldos / datos) y ARQUITECTURA.md (cifrado + “escape hatch” admin) con: la BD diaria puede estar cifrada; para inspección manual el admin usa Exportar…
+
+Pruebas: test de integración que con BD en memoria/cifrada simulada se genere un archivo legible y sea abrible con rusqlite sin PRAGMA key.
+
+Recuerda que no tengo permisos de administrador, si en algún momento son necesarios quiero que sepas que podría abririr este proyecto en otra maquina Linux que si tengo permisos completos.
+
+Comentarios después de implementar
+
+Resumen de la implementación
+Backend (Rust)
+src-tauri/Cargo.toml: rusqlite con bundled-sqlcipher-vendored-openssl, más keyring, hex, rand. Cargo.lock regenerado con cargo generate-lockfile.
+src-tauri/src/db_keyring.rs: clave en keyring (com.premex.consultorio-renew-lab / consultorio_sqlcipher_key), PRAGMA key en forma x'hex', detección claro/cifrado, migración con .bak + ATTACH + sqlcipher_export, export_plain_to_path para el escape hatch.
+src-tauri/src/db.rs: open_connection según la matriz del plan, pub(crate) const DB_FILE, PRAGMAs tras la clave, comentario de diseño actualizado.
+src-tauri/src/lib.rs: mod db_keyring; arranque: abrir BD → ensure_persisted_admin_mode_off → leer ajustes → try_startup_backup; comando exportar_base_legible.
+src-tauri/src/backup.rs: validación/restauración con open_readonly_with_key; restore_from_backup_with_key para tests; pruebas con BD cifrada y TEST_KEY.
+src-tauri/src/backup_commands.rs: exportar_base_legible (admin_mode + contraseña + checkpoint + export).
+Frontend
+BackupRestoreSection.tsx: sección “Exportar copia legible”, diálogo Guardar como + modal de contraseña; lista de respaldos aclara copias cifradas.
+api.ts y constants.ts: exportarBaseLegible.
+Tauri / CI
+capabilities/default.json: dialog:allow-save.
+.github/workflows/ci.yml: paso Chocolatey → Strawberry Perl en los dos jobs Windows (OpenSSL embebido necesita perl para Configure).
+Documentación
+docs/MANUAL_USUARIO.md, docs/ARQUITECTURA.md, README.md: cifrado, keyring, respaldos cifrados, export admin, riesgo de pérdida de credenciales, Perl en Windows.
+Otro
+AppUpdateSection.tsx: corrección de disabled redundante que rompía tsc (phase !== "available" || phase === "downloading").
+
