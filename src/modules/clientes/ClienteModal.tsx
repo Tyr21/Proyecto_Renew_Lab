@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { actualizarCliente, crearCliente, listarPaquetesCliente } from "../../core/api";
+import {
+	actualizarClienteRespectingDuplicateNameConfirm,
+	crearClienteRespectingDuplicateNameConfirm,
+} from "../../core/clienteDuplicateConfirm";
+import { listarPaquetesCliente } from "../../core/api";
 import { formatInvokeError } from "../../core/errors";
 import { serviceLabelFromSettings } from "../../core/serviceLabels";
+import { useClienteHomonimiaAdvertencia } from "../../core/useClienteHomonimiaAdvertencia";
 import type {
 	AppSettings,
 	Cliente,
@@ -11,6 +16,7 @@ import type {
 	PaqueteVentaContinuePayload,
 } from "../../core/types";
 import { PaymentModal } from "../finances/PaymentModal";
+import { ClienteHomonimiaAdvertenciaBanner } from "./ClienteHomonimiaAdvertenciaBanner";
 import { PaqueteVentaModal } from "./PaqueteVentaModal";
 
 interface ClienteModalProps {
@@ -63,6 +69,13 @@ export function ClienteModal({
 	const [packagePaymentContext, setPackagePaymentContext] = useState<PackagePaymentContext | null>(
 		null,
 	);
+
+	const homonimiaAdvertencia = useClienteHomonimiaAdvertencia({
+		enabled: open,
+		nombres,
+		apellidos,
+		excluirClienteId: mode === "edit" ? initial?.id ?? null : null,
+	});
 
 	function handlePaqueteContinueToPayment(payload: PaqueteVentaContinuePayload) {
 		if (mode !== "edit" || !initial) return;
@@ -152,9 +165,9 @@ export function ClienteModal({
 		try {
 			let saved: Cliente;
 			if (mode === "create") {
-				saved = await crearCliente(input);
+				saved = await crearClienteRespectingDuplicateNameConfirm(input);
 			} else {
-				saved = await actualizarCliente(initial!.id, input);
+				saved = await actualizarClienteRespectingDuplicateNameConfirm(initial!.id, input);
 			}
 			onSaved(saved);
 		} catch (e) {
@@ -183,6 +196,8 @@ export function ClienteModal({
 						{error}
 					</div>
 				) : null}
+
+				<ClienteHomonimiaAdvertenciaBanner coincidencia={homonimiaAdvertencia} className="mb-4" />
 
 				<form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
 					{/* Nombres y Apellidos */}

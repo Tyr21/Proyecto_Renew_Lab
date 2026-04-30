@@ -7,14 +7,16 @@ import {
 import { validateAppointmentFormFields } from "../../core/appointmentFormValidation";
 import { countOverlappingSameService } from "../../core/appointmentOverlap";
 import {
-	actualizarCliente,
 	buscarClientes,
-	crearCliente,
 	createAppointment,
 	deleteAppointment,
 	listarPaquetesCliente,
 	updateAppointment,
 } from "../../core/api";
+import {
+	actualizarClienteRespectingDuplicateNameConfirm,
+	crearClienteRespectingDuplicateNameConfirm,
+} from "../../core/clienteDuplicateConfirm";
 import { CLIENTE_APELLIDO_PLACEHOLDER } from "../../core/constants";
 import { formatInvokeError } from "../../core/errors";
 import { gracePeriodBookingErrorMessage } from "../../core/leadTime";
@@ -463,13 +465,14 @@ export function AppointmentModal({
 			return;
 		}
 		setGuardandoCliente(true);
+		setError(null);
 		try {
 			const partes = patientFullName.trim().split(/\s+/);
 			const apellidos = partes.length > 1 ? partes[partes.length - 1]! : clienteOriginal.apellidos;
 			const nombres =
 				partes.length > 1 ? partes.slice(0, -1).join(" ") : (partes[0] ?? patientFullName);
 			const bm = birthdayMonth.trim() === "" ? null : Number.parseInt(birthdayMonth, 10);
-			await actualizarCliente(clienteOriginal.id, {
+			await actualizarClienteRespectingDuplicateNameConfirm(clienteOriginal.id, {
 				nombres,
 				apellidos,
 				documentType,
@@ -480,12 +483,13 @@ export function AppointmentModal({
 				birthdayMonth: bm != null && !Number.isNaN(bm) ? bm : null,
 				notas: clienteOriginal.notas,
 			});
-		} catch {
-			// Ignorar — la cita ya fue guardada
-		} finally {
-			setGuardandoCliente(false);
+			setMostrarConfirmacionCliente(false);
 			onSaved();
 			onClose();
+		} catch (e) {
+			setError(formatInvokeError(e) || "No se pudo actualizar la ficha del cliente.");
+		} finally {
+			setGuardandoCliente(false);
 		}
 	}
 
@@ -674,36 +678,42 @@ export function AppointmentModal({
 					return;
 				}
 			} else if (!clienteYaExistia) {
-				try {
-					const found = await buscarClientes(input.documentNumber);
-					const exacto = found.find((c) => c.documentNumber === input.documentNumber);
-					if (!exacto) {
-						const partes = input.patientFullName.trim().split(/\s+/);
-						const apellidos =
-							partes.length > 1 ? partes[partes.length - 1]! : CLIENTE_APELLIDO_PLACEHOLDER;
-						const nombres =
-							partes.length > 1
-								? partes.slice(0, -1).join(" ")
-								: (partes[0] ?? input.patientFullName);
-						await crearCliente({
-							nombres,
-							apellidos,
-							documentType: input.documentType,
-							documentNumber: input.documentNumber,
-							phoneDialCode: input.phoneDialCode,
-							phoneNationalNumber: input.phoneNationalNumber,
-							email: "",
-							birthdayMonth: input.birthdayMonth,
-							notas: "",
-						});
+					try {
+						const found = await buscarClientes(input.documentNumber);
+						const exacto = found.find((c) => c.documentNumber === input.documentNumber);
+						if (!exacto) {
+							const partes = input.patientFullName.trim().split(/\s+/);
+							const apellidos =
+								partes.length > 1 ? partes[partes.length - 1]! : CLIENTE_APELLIDO_PLACEHOLDER;
+							const nombres =
+								partes.length > 1
+									? partes.slice(0, -1).join(" ")
+									: (partes[0] ?? input.patientFullName);
+							await crearClienteRespectingDuplicateNameConfirm({
+								nombres,
+								apellidos,
+								documentType: input.documentType,
+								documentNumber: input.documentNumber,
+								phoneDialCode: input.phoneDialCode,
+								phoneNationalNumber: input.phoneNationalNumber,
+								email: "",
+								birthdayMonth: input.birthdayMonth,
+								notas: "",
+							});
+						}
+					} catch (err) {
+						setError(
+							formatInvokeError(err) ||
+								"No se pudo crear la ficha del cliente. La cita sí quedó guardada.",
+						);
+						applyPackagePaymentResultState(res);
+						setBusy(false);
+						return;
 					}
-				} catch {
-					// La cita ya fue creada — ignorar error de cliente
 				}
-			}
 
-			onSaved();
-			onClose();
+				onSaved();
+				onClose();
 		} catch (err) {
 			setError(
 				formatInvokeError(err) ||
@@ -789,7 +799,7 @@ export function AppointmentModal({
 								partes.length > 1
 									? partes.slice(0, -1).join(" ")
 									: (partes[0] ?? input.patientFullName);
-							await crearCliente({
+							await crearClienteRespectingDuplicateNameConfirm({
 								nombres,
 								apellidos,
 								documentType: input.documentType,
@@ -801,8 +811,13 @@ export function AppointmentModal({
 								notas: "",
 							});
 						}
-					} catch {
-						// La cita ya fue creada — ignorar error de cliente
+					} catch (err) {
+						setError(
+							formatInvokeError(err) ||
+								"No se pudo crear la ficha del cliente. La cita sí quedó guardada.",
+						);
+						setBusy(false);
+						return;
 					}
 				}
 

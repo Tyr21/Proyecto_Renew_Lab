@@ -1,5 +1,5 @@
 use chrono::{Local, Utc};
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
@@ -50,6 +50,9 @@ pub struct ClienteResumenDashboard {
 	pub proximas_citas: Vec<CitaResumenClienteRow>,
 }
 
+/// Prefijo en mensajes de error cuando hay homonimia; la UI puede pedir confirmación y reintentar con `confirm_duplicate_full_name`.
+pub(crate) const CONFIRM_DUPLICATE_FULL_NAME_PREFIX: &str = "[CONFIRM_DUPLICATE_FULL_NAME] ";
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CrearClienteInput {
@@ -62,6 +65,8 @@ pub struct CrearClienteInput {
 	pub email: String,
 	pub birthday_month: Option<i64>,
 	pub notas: String,
+	#[serde(default)]
+	pub confirm_duplicate_full_name: bool,
 }
 
 fn row_to_cliente(row: &rusqlite::Row<'_>) -> rusqlite::Result<ClienteRow> {
@@ -137,6 +142,164 @@ pub(crate) fn format_nombre_propio(s: &str) -> String {
 		.join(" ")
 }
 
+/// Otro cliente (distinto `excluir_id` si se informa) con los mismos nombres y apellidos ya normalizados en BD.
+pub(crate) fn encontrar_otro_cliente_mismo_nombre_apellidos(
+	conn: &Connection,
+	nombres_fmt: &str,
+	apellidos_fmt: &str,
+	excluir_id: Option<&str>,
+) -> Result<Option<ClienteRow>, String> {
+	if nombres_fmt.trim().is_empty() || apellidos_fmt.trim().is_empty() {
+		return Ok(None);
+	}
+	let dup_nombre: Option<ClienteRow> = if let Some(ex) = excluir_id {
+		let mut stmt = conn
+			.prepare(
+				r#"
+				SELECT id, nombres, apellidos, document_type, document_number,
+				       phone_dial_code, phone_national_number, email,
+				       birthday_month, notas, created_at, updated_at
+				FROM clientes
+				WHERE TRIM(nombres) = TRIM(?1) AND TRIM(apellidos) = TRIM(?2)
+				  AND TRIM(id) != TRIM(?3)
+				LIMIT 1
+			"#,
+			)
+			.map_err(error::db)?;
+		stmt
+			.query_row(params![nombres_fmt, apellidos_fmt, ex], row_to_cliente)
+			.optional()
+			.map_err(error::db)?
+	} else {
+		let mut stmt = conn
+			.prepare(
+				r#"
+				SELECT id, nombres, apellidos, document_type, document_number,
+				       phone_dial_code, phone_national_number, email,
+				       birthday_month, notas, created_at, updated_at
+				FROM clientes
+				WHERE TRIM(nombres) = TRIM(?1) AND TRIM(apellidos) = TRIM(?2)
+				LIMIT 1
+			"#,
+			)
+			.map_err(error::db)?;
+		stmt
+			.query_row(params![nombres_fmt, apellidos_fmt], row_to_cliente)
+			.optional()
+			.map_err(error::db)?
+	};
+	Ok(dup_nombre)
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClienteHomonimiaAdvertencia {
+	pub id: String,
+	pub nombres: String,
+	pub apellidos: String,
+	pub document_type: String,
+	pub document_number: String,
+}
+
+/// Para avisos en UI mientras se escribe (misma lógica que al guardar).
+#[tauri::command]
+pub fn advertencia_homonimia_cliente(
+	db: State<'_, DbConn>,
+	nombres: String,
+	apellidos: String,
+	excluir_cliente_id: Option<String>,
+) -> Result<Option<ClienteHomonimiaAdvertencia>, String> {
+	let nombres_fmt = format_nombre_propio(nombres.trim());
+	let apellidos_fmt = format_nombre_propio(apellidos.trim());
+	if nombres_fmt.is_empty() || apellidos_fmt.is_empty() {
+		return Ok(None);
+	}
+	let conn = db.lock().map_err(error::lock)?;
+	let ex = excluir_cliente_id
+		.as_deref()
+		.map(str::trim)
+		.filter(|s| !s.is_empty());
+	let row = encontrar_otro_cliente_mismo_nombre_apellidos(&conn, &nombres_fmt, &apellidos_fmt, ex)?;
+	Ok(row.map(|r| ClienteHomonimiaAdvertencia {
+		id: r.id,
+		nombres: r.nombres,
+		apellidos: r.apellidos,
+		document_type: r.document_type,
+		document_number: r.document_number,
+	}))
+}
+
+/// Comprueba otro registro con el mismo documento o el mismo nombre y apellidos (tras normalizar como al guardar).
+pub(crate) fn validar_duplicados_al_guardar_cliente(
+	conn: &Connection,
+	input: &CrearClienteInput,
+	nombres_fmt: &str,
+	apellidos_fmt: &str,
+	excluir_id: Option<&str>,
+) -> Result<(), String> {
+	let doc = input.document_number.trim();
+	let dup_doc: Option<ClienteRow> = if let Some(ex) = excluir_id {
+		let mut stmt = conn
+			.prepare(
+				r#"
+				SELECT id, nombres, apellidos, document_type, document_number,
+				       phone_dial_code, phone_national_number, email,
+				       birthday_month, notas, created_at, updated_at
+				FROM clientes
+				WHERE TRIM(document_number) = TRIM(?1) AND TRIM(id) != TRIM(?2)
+				LIMIT 1
+			"#,
+			)
+			.map_err(error::db)?;
+		stmt
+			.query_row(params![doc, ex], row_to_cliente)
+			.optional()
+			.map_err(error::db)?
+	} else {
+		let mut stmt = conn
+			.prepare(
+				r#"
+				SELECT id, nombres, apellidos, document_type, document_number,
+				       phone_dial_code, phone_national_number, email,
+				       birthday_month, notas, created_at, updated_at
+				FROM clientes
+				WHERE TRIM(document_number) = TRIM(?1)
+				LIMIT 1
+			"#,
+			)
+			.map_err(error::db)?;
+		stmt
+			.query_row(params![doc], row_to_cliente)
+			.optional()
+			.map_err(error::db)?
+	};
+	if dup_doc.is_some() {
+		return Err(format!(
+			"Ya existe un cliente con el número de documento {}.",
+			doc
+		));
+	}
+
+	if !input.confirm_duplicate_full_name {
+		if let Some(other) =
+			encontrar_otro_cliente_mismo_nombre_apellidos(conn, nombres_fmt, apellidos_fmt, excluir_id)?
+		{
+			let detalle = format!(
+				"Ya existe otro cliente con el mismo nombre y apellidos ({} {}), con documento {} {}. Dos personas con el mismo nombre completo son poco frecuentes: compruebe que no esté registrando otra vez a la misma persona con un documento distinto por error. Si son dos personas distintas (homónimos), confirme para continuar.",
+				other.nombres.trim(),
+				other.apellidos.trim(),
+				other.document_type.trim(),
+				other.document_number.trim()
+			);
+			return Err(format!(
+				"{}{}",
+				CONFIRM_DUPLICATE_FULL_NAME_PREFIX, detalle
+			));
+		}
+	}
+	Ok(())
+}
+
 #[tauri::command]
 pub fn crear_cliente(
 	db: State<'_, DbConn>,
@@ -146,6 +309,7 @@ pub fn crear_cliente(
 	let nombres = format_nombre_propio(input.nombres.trim());
 	let apellidos = format_nombre_propio(input.apellidos.trim());
 	let conn = db.lock().map_err(error::lock)?;
+	validar_duplicados_al_guardar_cliente(&conn, &input, &nombres, &apellidos, None)?;
 	let id = Uuid::new_v4().to_string();
 	let now = Utc::now().to_rfc3339();
 
@@ -176,7 +340,7 @@ pub fn crear_cliente(
 		let msg = e.to_string();
 		if msg.contains("UNIQUE constraint failed") {
 			format!(
-				"Ya existe un cliente con el documento {}",
+				"Ya existe un cliente con el número de documento {}.",
 				input.document_number.trim()
 			)
 		} else {
@@ -201,6 +365,7 @@ pub fn actualizar_cliente(
 		return Err("El id del cliente es obligatorio".into());
 	}
 	let conn = db.lock().map_err(error::lock)?;
+	validar_duplicados_al_guardar_cliente(&conn, &input, &nombres, &apellidos, Some(&id))?;
 	let now = Utc::now().to_rfc3339();
 
 	let rows_affected = conn
@@ -237,7 +402,7 @@ pub fn actualizar_cliente(
 			let msg = e.to_string();
 			if msg.contains("UNIQUE constraint failed") {
 				format!(
-					"Ya existe un cliente con el documento {}",
+					"Ya existe un cliente con el número de documento {}.",
 					input.document_number.trim()
 				)
 			} else {
@@ -270,6 +435,127 @@ mod format_tests {
 	#[test]
 	fn marcador_apellido_unico() {
 		assert_eq!(format_nombre_propio("."), ".");
+	}
+}
+
+#[cfg(test)]
+mod duplicate_validation_tests {
+	use rusqlite::Connection;
+
+	use super::{
+		format_nombre_propio, validar_duplicados_al_guardar_cliente, CrearClienteInput,
+		CONFIRM_DUPLICATE_FULL_NAME_PREFIX,
+	};
+
+	fn setup_schema(conn: &Connection) {
+		conn.execute_batch(
+			r#"
+			CREATE TABLE clientes (
+				id TEXT PRIMARY KEY,
+				nombres TEXT NOT NULL,
+				apellidos TEXT NOT NULL,
+				document_type TEXT NOT NULL,
+				document_number TEXT NOT NULL,
+				phone_dial_code TEXT NOT NULL DEFAULT '',
+				phone_national_number TEXT NOT NULL DEFAULT '',
+				email TEXT NOT NULL DEFAULT '',
+				birthday_month INTEGER,
+				notas TEXT NOT NULL DEFAULT '',
+				created_at TEXT NOT NULL,
+				updated_at TEXT NOT NULL
+			);
+			CREATE UNIQUE INDEX idx_clientes_document ON clientes(document_number);
+		"#,
+		)
+		.unwrap();
+	}
+
+	fn input(doc: &str, nombres: &str, apellidos: &str, confirm_name: bool) -> CrearClienteInput {
+		CrearClienteInput {
+			nombres: nombres.into(),
+			apellidos: apellidos.into(),
+			document_type: "CC".into(),
+			document_number: doc.into(),
+			phone_dial_code: "+57".into(),
+			phone_national_number: "".into(),
+			email: "".into(),
+			birthday_month: None,
+			notas: "".into(),
+			confirm_duplicate_full_name: confirm_name,
+		}
+	}
+
+	#[test]
+	fn rechaza_documento_duplicado_al_crear() {
+		let conn = Connection::open_in_memory().unwrap();
+		setup_schema(&conn);
+		conn.execute(
+			r#"INSERT INTO clientes VALUES ('a','Juan','Pérez','CC','1','','','',NULL,'','now','now')"#,
+			[],
+		)
+		.unwrap();
+		let n = format_nombre_propio("PEDRO");
+		let a = format_nombre_propio("GARCÍA");
+		let r = validar_duplicados_al_guardar_cliente(&conn, &input("1", "PEDRO", "GARCÍA", false), &n, &a, None);
+		assert!(r.is_err());
+		assert!(r.unwrap_err().contains("número de documento"));
+	}
+
+	#[test]
+	fn nombre_duplicado_devuelve_prefijo_confirmacion() {
+		let conn = Connection::open_in_memory().unwrap();
+		setup_schema(&conn);
+		conn.execute(
+			r#"INSERT INTO clientes VALUES ('a','Juan','Pérez','CC','99','','','',NULL,'','now','now')"#,
+			[],
+		)
+		.unwrap();
+		let n = format_nombre_propio("JUAN");
+		let a = format_nombre_propio("PÉREZ");
+		let err = validar_duplicados_al_guardar_cliente(
+			&conn,
+			&input("100", "JUAN", "PÉREZ", false),
+			&n,
+			&a,
+			None,
+		)
+		.unwrap_err();
+		assert!(err.starts_with(CONFIRM_DUPLICATE_FULL_NAME_PREFIX));
+	}
+
+	#[test]
+	fn permite_nombre_duplicado_si_confirma() {
+		let conn = Connection::open_in_memory().unwrap();
+		setup_schema(&conn);
+		conn.execute(
+			r#"INSERT INTO clientes VALUES ('a','Juan','Pérez','CC','99','','','',NULL,'','now','now')"#,
+			[],
+		)
+		.unwrap();
+		let n = format_nombre_propio("JUAN");
+		let a = format_nombre_propio("PÉREZ");
+		validar_duplicados_al_guardar_cliente(
+			&conn,
+			&input("100", "JUAN", "PÉREZ", true),
+			&n,
+			&a,
+			None,
+		)
+		.unwrap();
+	}
+
+	#[test]
+	fn actualizar_misma_fila_no_es_duplicado() {
+		let conn = Connection::open_in_memory().unwrap();
+		setup_schema(&conn);
+		conn.execute(
+			r#"INSERT INTO clientes VALUES ('x','Juan','Pérez','CC','7','','','',NULL,'','now','now')"#,
+			[],
+		)
+		.unwrap();
+		let n = format_nombre_propio("JUAN");
+		let a = format_nombre_propio("PÉREZ");
+		validar_duplicados_al_guardar_cliente(&conn, &input("7", "JUAN", "PÉREZ", false), &n, &a, Some("x")).unwrap();
 	}
 }
 

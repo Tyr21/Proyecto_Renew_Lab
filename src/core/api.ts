@@ -7,6 +7,7 @@ import type {
 	BackupFileInfo,
 	CitasPorMes,
 	Cliente,
+	ClienteHomonimiaAdvertencia,
 	ClienteInput,
 	ClienteResumenDashboard,
 	CrearIngresoInput,
@@ -193,6 +194,18 @@ export async function crearCliente(input: ClienteInput): Promise<Cliente> {
 
 export async function actualizarCliente(id: string, input: ClienteInput): Promise<Cliente> {
 	return appInvoke<Cliente>(TAURI_COMMANDS.actualizarCliente, { id, input });
+}
+
+export async function advertenciaHomonimiaCliente(
+	nombres: string,
+	apellidos: string,
+	excluirClienteId?: string | null,
+): Promise<ClienteHomonimiaAdvertencia | null> {
+	return appInvoke<ClienteHomonimiaAdvertencia | null>(TAURI_COMMANDS.advertenciaHomonimiaCliente, {
+		nombres,
+		apellidos,
+		excluirClienteId: excluirClienteId ?? null,
+	});
 }
 
 export async function buscarClientes(query: string): Promise<Cliente[]> {

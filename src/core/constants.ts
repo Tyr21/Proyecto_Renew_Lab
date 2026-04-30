@@ -75,6 +75,7 @@ export const TAURI_COMMANDS = {
 	estadisticasMetodosPago: "estadisticas_metodos_pago",
 	crearCliente: "crear_cliente",
 	actualizarCliente: "actualizar_cliente",
+	advertenciaHomonimiaCliente: "advertencia_homonimia_cliente",
 	buscarClientes: "buscar_clientes",
 	obtenerCliente: "obtener_cliente",
 	obtenerResumenClienteDashboard: "obtener_resumen_cliente_dashboard",

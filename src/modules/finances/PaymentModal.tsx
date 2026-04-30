@@ -1,11 +1,11 @@
 import { type FormEvent, useEffect, useState } from "react";
 import {
-	crearClienteYPaquete,
 	crearIngreso,
 	crearPaquete,
 	emitirFactura,
 	guardarBorradorFactura,
 } from "../../core/api";
+import { crearClienteYPaqueteRespectingDuplicateNameConfirm } from "../../core/clienteDuplicateConfirm";
 import { FACTURA_CHANGED_EVENT, INGRESO_REGISTRADO_EVENT } from "../../core/constants";
 import { formatCurrency, parseCurrencyDigits } from "../../core/currencyFormat";
 import { formatInvokeError } from "../../core/errors";
@@ -120,7 +120,7 @@ export function PaymentModal({
 					ingresoConcepto: concepto.trim() || packageCheckout.ingresoConcepto,
 				};
 				if (packageCheckout.nuevoCliente) {
-					const res = await crearClienteYPaquete({
+					const res = await crearClienteYPaqueteRespectingDuplicateNameConfirm({
 						cliente: packageCheckout.nuevoCliente,
 						...common,
 					});

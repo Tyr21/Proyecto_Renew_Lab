@@ -242,6 +242,8 @@ export function runE2EInvokeMock(cmd: string, args?: Record<string, unknown>): P
 			const c: Cliente = { id, ...input, createdAt: "", updatedAt: "" };
 			return Promise.resolve(c);
 		}
+		case TAURI_COMMANDS.advertenciaHomonimiaCliente:
+			return Promise.resolve(null);
 		case TAURI_COMMANDS.obtenerCliente: {
 			const input = (args as { id: string }).id;
 			const c: Cliente = {

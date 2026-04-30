@@ -545,6 +545,7 @@ pub fn crear_cliente_y_paquete(
 	let c = &input.cliente;
 	let nombres_fmt = clientes::format_nombre_propio(c.nombres.trim());
 	let apellidos_fmt = clientes::format_nombre_propio(c.apellidos.trim());
+	clientes::validar_duplicados_al_guardar_cliente(&conn, c, &nombres_fmt, &apellidos_fmt, None)?;
 	let paciente_nombre = format!("{} {}", nombres_fmt, apellidos_fmt)
 		.trim()
 		.to_string();
@@ -594,7 +595,7 @@ pub fn crear_cliente_y_paquete(
 		let msg = e.to_string();
 		if msg.contains("UNIQUE constraint failed") {
 			return Err(format!(
-				"Ya existe un cliente con el documento {}",
+				"Ya existe un cliente con el número de documento {}.",
 				c.document_number.trim()
 			));
 		}

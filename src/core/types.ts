@@ -266,6 +266,17 @@ export interface ClienteInput {
 	email: string;
 	birthdayMonth: number | null;
 	notas: string;
+	/** Tras confirmar homonimia en UI; solo debe enviarse en el reintento. */
+	confirmDuplicateFullName?: boolean;
+}
+
+/** Coincidencia de nombre+apellidos en BD (para aviso en UI, sin crear cliente). */
+export interface ClienteHomonimiaAdvertencia {
+	id: string;
+	nombres: string;
+	apellidos: string;
+	documentType: string;
+	documentNumber: string;
 }
 
 /** Cita resumida para la ficha del cliente (historial / próximas). */

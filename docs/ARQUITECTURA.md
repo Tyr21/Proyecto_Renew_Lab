@@ -37,6 +37,10 @@ Representa una cita agendada. Los nombres de columna coinciden con el modelo per
 
 Índice: `appointment_date` para consultas por rango (vista semanal).
 
+### Clientes (fichas)
+
+La tabla `clientes` tiene índice único por `document_number`. Antes de insertar o actualizar, el backend comprueba duplicidad explícita de documento (mensaje de error claro) y de **nombre + apellidos** ya persistidos con otro documento: en ese caso devuelve un error con prefijo `[CONFIRM_DUPLICATE_FULL_NAME]` para que la UI pida confirmación y reintente con `confirmDuplicateFullName` si el usuario indica que son homónimos distintos. El comando `advertencia_homonimia_cliente` expone la misma búsqueda de homonimia para **avisos preventivos** en pantalla mientras el usuario escribe (debounced en el cliente).
+
 ### Tabla `app_config`
 
 Una fila (`id = 1`) con `settings_json`: configuración global (domingos, formato de hora, duración por defecto, listas de tipos de documento/servicio, capacidades concurrentes, **precio sugerido por tipo de servicio** en moneda local, planes de paquete por servicio, **`billing`**, **`backup`**, **`oxygen`** — etiqueta de unidad, consumo teórico por sesión de cámara **K** y `service_type_id` para contar sesiones atendidas —, y **`adminMode`**). JSON antiguo sin campos nuevos se completa al deserializar con `#[serde(default)]`.

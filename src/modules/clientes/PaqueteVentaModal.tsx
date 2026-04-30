@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatCurrency, totalConIva } from "../../core/currencyFormat";
 import { serviceLabelFromSettings } from "../../core/serviceLabels";
+import { useClienteHomonimiaAdvertencia } from "../../core/useClienteHomonimiaAdvertencia";
 import type {
 	AppSettings,
 	ClienteInput,
 	PaqueteVentaContinuePayload,
 	ServicePackagePlanSetting,
 } from "../../core/types";
+import { ClienteHomonimiaAdvertenciaBanner } from "./ClienteHomonimiaAdvertenciaBanner";
 
 interface PaqueteVentaModalProps {
 	open: boolean;
@@ -37,6 +39,13 @@ export function PaqueteVentaModal({
 
 	const esClienteNuevo = Boolean(nuevoCliente);
 	const cid = clienteId?.trim() ?? "";
+
+	const homonimiaPaquete = useClienteHomonimiaAdvertencia({
+		enabled: open && esClienteNuevo && nuevoCliente != null,
+		nombres: nuevoCliente?.nombres ?? "",
+		apellidos: nuevoCliente?.apellidos ?? "",
+		excluirClienteId: null,
+	});
 
 	const plansForService = useMemo((): ServicePackagePlanSetting[] => {
 		const st = settings.serviceTypes.find((s) => s.id === serviceType);
@@ -130,6 +139,7 @@ export function PaqueteVentaModal({
 				<h2 id="paquete-venta-title" className="text-base font-semibold text-slate-800 mb-4">
 					Elegir plan de sesiones
 				</h2>
+				<ClienteHomonimiaAdvertenciaBanner coincidencia={homonimiaPaquete} className="mb-4" />
 				{esClienteNuevo && nuevoCliente ? (
 					<div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
 						<p className="font-medium text-slate-800">

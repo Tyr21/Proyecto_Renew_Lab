@@ -127,6 +127,7 @@ pub fn run() {
 			reports::estadisticas_metodos_pago,
 			clientes::crear_cliente,
 			clientes::actualizar_cliente,
+			clientes::advertencia_homonimia_cliente,
 			clientes::buscar_clientes,
 			clientes::obtener_cliente,
 			clientes::obtener_resumen_cliente_dashboard,
