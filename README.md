@@ -41,7 +41,9 @@ Otros comandos útiles:
 ```bash
 npm run dev          # Solo frontend (Vite)
 npm run build        # Compilar frontend (tsc + vite build)
-npm run test         # Pruebas Vitest (validación y solapes en TS)
+npm run test         # Pruebas Vitest (unitarias + reglas TS en src/)
+npm run test:components  # Solo `*.test.tsx` (rutas explícitas en `package.json`; amplíalas si añades tests)
+npm run test:e2e     # Playwright contra Vite (UI en navegador; ver abajo)
 npm run tauri dev    # Tauri + Vite (depuración)
 npm run tauri:dev:win   # Windows: Tauri + Vite con perfil WebView2 en %TEMP%
 npm run tauri build  # Empaquetado de la app de escritorio
@@ -75,6 +77,22 @@ cargo test
 ```
 
 Los criterios de producto de la Fase 2 y la lista de comandos de prueba están resumidos en [docs/PROJECT.md](docs/PROJECT.md).
+
+### Pruebas E2E (Playwright, UI en navegador)
+
+`npm run test:e2e` arranca Vite vía `playwright.config.ts` con **`VITE_E2E_MOCK_TAURI=true`**: el front usa **respuestas simuladas** en lugar del IPC real de Tauri (no ejercita SQLite ni comandos Rust). Sirve para validar flujos de la **interfaz** (arranque, formularios, navegación).
+
+**Requisito:** instalar el navegador de prueba al menos una vez:
+
+```bash
+npx playwright install chromium
+```
+
+Contraseña de inicio en escenarios que la activan: **`e2e-secret`** (fijada en el mock; ver `src/core/e2eInvokeMock.ts`).
+
+Para probar **IPC real** habría que usar la ruta oficial **Tauri + WebDriver** (binario o `tauri driver`) en una suite aparte; no está automatizada en este repo.
+
+El workflow de CI en PRs sigue siendo lint + Vitest + Rust; los E2E están en [`.github/workflows/e2e.yml`](.github/workflows/e2e.yml) (`workflow_dispatch` y opcionalmente `push` a `main`).
 
 ## IDE recomendado
 

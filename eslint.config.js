@@ -67,6 +67,14 @@ export default tseslint.config(
 		},
 	},
 	{
+		files: ["playwright.config.ts"],
+		languageOptions: {
+			globals: {
+				...globals.node,
+			},
+		},
+	},
+	{
 		files: ["scripts/**/*.{js,mjs,cjs}"],
 		languageOptions: {
 			ecmaVersion: 2022,

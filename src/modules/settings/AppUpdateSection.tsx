@@ -118,7 +118,7 @@ export function AppUpdateSection() {
 					type="button"
 					className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:opacity-50"
 					onClick={() => void install()}
-					disabled={phase !== "available" || phase === "downloading"}
+					disabled={phase !== "available"}
 				>
 					{phase === "downloading" ? "Instalando…" : "Descargar e instalar"}
 				</button>
