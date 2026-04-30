@@ -10,8 +10,11 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig(async () => ({
 	plugins: [tailwindcss(), react()],
 	test: {
-		environment: "node",
-		include: ["src/**/*.test.ts"],
+		setupFiles: ["./src/test/setupTests.ts"],
+		/** Tests TS puros en `src/core` siguen en node; componentes `*.test.tsx` usan jsdom por defecto. */
+		environment: "jsdom",
+		environmentMatchGlobs: [["**/*.test.ts", "node"]],
+		include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
 	},
 
 	// Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
