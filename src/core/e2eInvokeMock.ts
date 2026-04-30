@@ -225,6 +225,8 @@ export function runE2EInvokeMock(cmd: string, args?: Record<string, unknown>): P
 		}
 		case TAURI_COMMANDS.buscarClientes:
 			return Promise.resolve([] as Cliente[]);
+		case TAURI_COMMANDS.buscarClientePorDocumentoExacto:
+			return Promise.resolve(null as Cliente | null);
 		case TAURI_COMMANDS.listarPaquetesCliente:
 			return Promise.resolve([] as PaqueteCliente[]);
 		case TAURI_COMMANDS.crearCliente: {

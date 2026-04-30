@@ -12,6 +12,8 @@ import {
 	getAdminAuthStatus,
 	getAppointment,
 	getSettings,
+	buscarClientePorDocumentoExacto,
+	eliminarCliente,
 	getStartupAuthStatus,
 	listAppointmentsRange,
 	listarEventosRango,
@@ -23,9 +25,11 @@ import { showToast } from "./core/toastBus";
 import { check } from "@tauri-apps/plugin-updater";
 import { APP_VERSION, EVENTO_CHANGED_EVENT, INGRESO_REGISTRADO_EVENT } from "./core/constants";
 import { isSlotBookableWithGracePeriod } from "./core/leadTime";
-import type { AppSettings, Appointment, Evento } from "./core/types";
+import type { AppSettings, Appointment, Cliente, Evento } from "./core/types";
 import { addDays, getWeekDates, startOfWeekMonday, toISODateLocal } from "./core/weekUtils";
 import { AppointmentModal } from "./modules/appointments/AppointmentModal";
+import { ClienteModal } from "./modules/clientes/ClienteModal";
+import { ClienteResumenModal } from "./modules/clientes/ClienteResumenModal";
 import { EventoModal } from "./modules/calendar/EventoModal";
 import { TodayAgendaSidebar } from "./modules/calendar/TodayAgendaSidebar";
 import { WeekCalendarView } from "./modules/calendar/WeekCalendarView";
@@ -68,6 +72,10 @@ function App() {
 	const [helpOpen, setHelpOpen] = useState(false);
 	const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
 	const [unsavedSettingsLeaveOpen, setUnsavedSettingsLeaveOpen] = useState(false);
+	const [sidebarClienteResumenId, setSidebarClienteResumenId] = useState<string | null>(null);
+	const [sidebarClienteModalOpen, setSidebarClienteModalOpen] = useState(false);
+	const [sidebarClienteEditing, setSidebarClienteEditing] = useState<Cliente | null>(null);
+	const [sidebarClienteDeleteConfirmId, setSidebarClienteDeleteConfirmId] = useState<string | null>(null);
 	const pendingTabRef = useRef<Tab | null>(null);
 	/** Tras contraseña de inicio correcta, mientras se obtiene `getSettings`. */
 	const [postPasswordLoading, setPostPasswordLoading] = useState(false);
@@ -112,6 +120,30 @@ function App() {
 			setCalendarRefreshing(false);
 		}
 	}, [settings, fetchRange.start, fetchRange.end]);
+
+	const abrirFichaClienteDesdeCitaSidebar = useCallback(async (appointment: Appointment) => {
+		try {
+			const cliente = await buscarClientePorDocumentoExacto(
+				appointment.documentType,
+				appointment.documentNumber,
+			);
+			if (!cliente) {
+				showToast({
+					level: "info",
+					message:
+						"No hay un cliente registrado con ese tipo y número de documento. Cree el cliente en 👥 Clientes.",
+				});
+				return;
+			}
+			setSidebarClienteResumenId(cliente.id);
+		} catch (e) {
+			void logger.invokeError("calendario.fichaClienteDesdeSidebar", e);
+			showToast({
+				level: "error",
+				message: formatInvokeError(e) ?? "No se pudo obtener el cliente.",
+			});
+		}
+	}, []);
 
 	const loadSettingsAfterAuth = useCallback(async () => {
 		const s = await getSettings();
@@ -452,6 +484,7 @@ function App() {
 							appointments={appointments}
 							eventos={eventos}
 							onEventoClick={openEventoEdit}
+							onTodayAppointmentClienteClick={abrirFichaClienteDesdeCitaSidebar}
 							miniCalYear={miniCalYear}
 							miniCalMonth={miniCalMonth}
 							weekStartMonday={weekStartMonday}
@@ -529,6 +562,64 @@ function App() {
 				presetTime={eventoPresetTime}
 				adminMode={settings.adminMode ?? false}
 				onClose={() => setEventoModalOpen(false)}
+			/>
+			<ClienteResumenModal
+				open={sidebarClienteResumenId !== null}
+				clienteId={sidebarClienteResumenId}
+				settings={settings}
+				adminMode={settings.adminMode ?? false}
+				onClose={() => setSidebarClienteResumenId(null)}
+				onEditar={(cl) => {
+					setSidebarClienteResumenId(null);
+					setSidebarClienteEditing(cl);
+					setSidebarClienteModalOpen(true);
+				}}
+				onEliminar={
+					settings.adminMode ? (id) => setSidebarClienteDeleteConfirmId(id) : undefined
+				}
+			/>
+			<ClienteModal
+				open={sidebarClienteModalOpen}
+				settings={settings}
+				mode="edit"
+				initial={sidebarClienteEditing}
+				onClose={() => {
+					setSidebarClienteModalOpen(false);
+					setSidebarClienteEditing(null);
+				}}
+				onSaved={() => {
+					setSidebarClienteModalOpen(false);
+					setSidebarClienteEditing(null);
+					void refreshAppointments();
+				}}
+			/>
+			<ConfirmDialog
+				open={sidebarClienteDeleteConfirmId !== null}
+				title="Eliminar cliente"
+				message="¿Eliminar este cliente de forma permanente? Esta acción no se puede deshacer."
+				confirmLabel="Eliminar"
+				cancelLabel="Cancelar"
+				variant="danger"
+				onCancel={() => setSidebarClienteDeleteConfirmId(null)}
+				onConfirm={() => {
+					const id = sidebarClienteDeleteConfirmId;
+					if (!id) return;
+					setSidebarClienteDeleteConfirmId(null);
+					void (async () => {
+						try {
+							await eliminarCliente(id);
+							setSidebarClienteResumenId(null);
+							void refreshAppointments();
+							showToast({ level: "success", message: "Cliente eliminado" });
+						} catch (e) {
+							void logger.invokeError("clientes.eliminar.sidebar", e);
+							showToast({
+								level: "error",
+								message: formatInvokeError(e) ?? "No se pudo eliminar el cliente",
+							});
+						}
+					})();
+				}}
 			/>
 			<CitaEventNotifier />
 			<FinanceEventListener settings={settings} />

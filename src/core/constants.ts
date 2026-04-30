@@ -77,6 +77,7 @@ export const TAURI_COMMANDS = {
 	actualizarCliente: "actualizar_cliente",
 	advertenciaHomonimiaCliente: "advertencia_homonimia_cliente",
 	buscarClientes: "buscar_clientes",
+	buscarClientePorDocumentoExacto: "buscar_cliente_por_documento_exacto",
 	obtenerCliente: "obtener_cliente",
 	obtenerResumenClienteDashboard: "obtener_resumen_cliente_dashboard",
 	eliminarCliente: "eliminar_cliente",

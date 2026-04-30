@@ -212,6 +212,17 @@ export async function buscarClientes(query: string): Promise<Cliente[]> {
 	return appInvoke<Cliente[]>(TAURI_COMMANDS.buscarClientes, { query });
 }
 
+/** Cliente registrado que coincide exactamente con tipo y número de documento de la cita. */
+export async function buscarClientePorDocumentoExacto(
+	documentType: string,
+	documentNumber: string,
+): Promise<Cliente | null> {
+	return appInvoke<Cliente | null>(TAURI_COMMANDS.buscarClientePorDocumentoExacto, {
+		documentType,
+		documentNumber,
+	});
+}
+
 export async function obtenerCliente(id: string): Promise<Cliente> {
 	return appInvoke<Cliente>(TAURI_COMMANDS.obtenerCliente, { id });
 }

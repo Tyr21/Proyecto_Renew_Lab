@@ -439,6 +439,86 @@ mod format_tests {
 }
 
 #[cfg(test)]
+mod document_exact_lookup_tests {
+	use rusqlite::Connection;
+
+	use super::load_cliente_por_documento_exacto;
+
+	fn setup_schema(conn: &Connection) {
+		conn.execute_batch(
+			r#"
+			CREATE TABLE clientes (
+				id TEXT PRIMARY KEY,
+				nombres TEXT NOT NULL,
+				apellidos TEXT NOT NULL,
+				document_type TEXT NOT NULL,
+				document_number TEXT NOT NULL,
+				phone_dial_code TEXT NOT NULL DEFAULT '',
+				phone_national_number TEXT NOT NULL DEFAULT '',
+				email TEXT NOT NULL DEFAULT '',
+				birthday_month INTEGER,
+				notas TEXT NOT NULL DEFAULT '',
+				created_at TEXT NOT NULL,
+				updated_at TEXT NOT NULL
+			);
+			CREATE UNIQUE INDEX idx_clientes_document ON clientes(document_number);
+		"#,
+		)
+		.unwrap();
+	}
+
+	#[test]
+	fn encuentra_por_documento_exacto() {
+		let conn = Connection::open_in_memory().unwrap();
+		setup_schema(&conn);
+		conn.execute(
+			r#"INSERT INTO clientes VALUES ('id1','Ana','López','CC','12345','','','',NULL,'','now','now')"#,
+			[],
+		)
+		.unwrap();
+		let c = load_cliente_por_documento_exacto(&conn, "CC", "12345")
+			.unwrap()
+			.unwrap();
+		assert_eq!(c.id, "id1");
+		assert_eq!(c.document_number, "12345");
+	}
+
+	#[test]
+	fn respeta_trim() {
+		let conn = Connection::open_in_memory().unwrap();
+		setup_schema(&conn);
+		conn.execute(
+			r#"INSERT INTO clientes VALUES ('id1','Ana','López',' CC ',' 99 ','','','',NULL,'','now','now')"#,
+			[],
+		)
+		.unwrap();
+		let c = load_cliente_por_documento_exacto(&conn, "CC", "99").unwrap().unwrap();
+		assert_eq!(c.id, "id1");
+	}
+
+	#[test]
+	fn numero_vacio_devuelve_none() {
+		let conn = Connection::open_in_memory().unwrap();
+		setup_schema(&conn);
+		let r = load_cliente_por_documento_exacto(&conn, "CC", "   ").unwrap();
+		assert!(r.is_none());
+	}
+
+	#[test]
+	fn sin_coincidencia_devuelve_none() {
+		let conn = Connection::open_in_memory().unwrap();
+		setup_schema(&conn);
+		conn.execute(
+			r#"INSERT INTO clientes VALUES ('id1','Ana','López','CC','1','','','',NULL,'','now','now')"#,
+			[],
+		)
+		.unwrap();
+		let r = load_cliente_por_documento_exacto(&conn, "CC", "2").unwrap();
+		assert!(r.is_none());
+	}
+}
+
+#[cfg(test)]
 mod duplicate_validation_tests {
 	use rusqlite::Connection;
 
@@ -592,6 +672,47 @@ pub fn buscar_clientes(db: State<'_, DbConn>, query: String) -> Result<Vec<Clien
 		.map_err(error::db)?;
 
 	Ok(rows)
+}
+
+/// Coincidencia exacta tipo + número (misma lógica que el cruce citas ↔ ficha en `obtener_resumen_cliente_dashboard`).
+pub(crate) fn load_cliente_por_documento_exacto(
+	conn: &Connection,
+	document_type: &str,
+	document_number: &str,
+) -> Result<Option<ClienteRow>, String> {
+	let dt = document_type.trim();
+	let dn = document_number.trim();
+	if dn.is_empty() {
+		return Ok(None);
+	}
+	let mut stmt = conn
+		.prepare(
+			r#"
+			SELECT id, nombres, apellidos, document_type, document_number,
+			       phone_dial_code, phone_national_number, email,
+			       birthday_month, notas, created_at, updated_at
+			FROM clientes
+			WHERE TRIM(document_type) = TRIM(?1)
+			  AND TRIM(document_number) = TRIM(?2)
+			LIMIT 1
+		"#,
+		)
+		.map_err(error::db)?;
+
+	stmt
+		.query_row(params![dt, dn], row_to_cliente)
+		.optional()
+		.map_err(error::db)
+}
+
+#[tauri::command]
+pub fn buscar_cliente_por_documento_exacto(
+	db: State<'_, DbConn>,
+	document_type: String,
+	document_number: String,
+) -> Result<Option<ClienteRow>, String> {
+	let conn = db.lock().map_err(error::lock)?;
+	load_cliente_por_documento_exacto(&conn, &document_type, &document_number)
 }
 
 fn row_to_cita_resumen(row: &rusqlite::Row<'_>) -> rusqlite::Result<CitaResumenClienteRow> {

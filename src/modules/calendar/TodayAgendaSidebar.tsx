@@ -11,6 +11,8 @@ interface TodayAgendaSidebarProps {
 	appointments: Appointment[];
 	eventos: Evento[];
 	onEventoClick?: (ev: Evento) => void;
+	/** Abre la misma ficha del cliente que en 👥 Clientes (por documento de la cita). */
+	onTodayAppointmentClienteClick?: (a: Appointment) => void;
 	/** Estado del mini calendario */
 	miniCalYear: number;
 	miniCalMonth: number;
@@ -25,6 +27,7 @@ export function TodayAgendaSidebar({
 	appointments,
 	eventos,
 	onEventoClick,
+	onTodayAppointmentClienteClick,
 	miniCalYear,
 	miniCalMonth,
 	weekStartMonday,
@@ -116,35 +119,40 @@ export function TodayAgendaSidebar({
 						) : null}
 						<ul className="space-y-2">
 							{todayList.map((a) => (
-								<li
-									key={a.id}
-									className="rounded-lg border border-slate-100 bg-slate-50/80 px-2 py-2 text-sm"
-								>
-									<div className="flex items-center gap-1.5 font-medium text-slate-900">
-										<span className="line-clamp-2">{a.patientFullName}</span>
-										{a.isPaid ? (
-											<span
-												className="inline-block h-2 w-2 shrink-0 rounded-full bg-emerald-500"
-												title="Pagada"
-												aria-label="Cita pagada"
-											/>
-										) : null}
-										{a.paqueteId ? (
-											<span
-												className="shrink-0 rounded bg-violet-200/90 px-0.5 text-[0.55rem] font-semibold text-violet-900"
-												title="Paquete prepago"
-											>
-												Paq.
-											</span>
-										) : null}
-									</div>
-									<div className="mt-0.5 text-xs text-slate-600">
-										{serviceLabelFromSettings(settings, a.serviceType)}
-									</div>
-									<div className="mt-0.5 text-xs tabular-nums text-slate-700">
-										{formatTimeLabel(a.startTime, settings.timeDisplay)} –{" "}
-										{formatTimeLabel(a.endTime, settings.timeDisplay)}
-									</div>
+								<li key={a.id}>
+									<button
+										type="button"
+										onClick={() => onTodayAppointmentClienteClick?.(a)}
+										title="Ver ficha del cliente"
+										aria-label={`Ver ficha del cliente — ${a.patientFullName}, ${serviceLabelFromSettings(settings, a.serviceType)}`}
+										className="w-full cursor-pointer rounded-lg border border-slate-100 bg-slate-50/80 px-2 py-2 text-left text-sm hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+									>
+										<div className="flex items-center gap-1.5 font-medium text-slate-900">
+											<span className="line-clamp-2">{a.patientFullName}</span>
+											{a.isPaid ? (
+												<span
+													className="inline-block h-2 w-2 shrink-0 rounded-full bg-emerald-500"
+													title="Pagada"
+													aria-label="Cita pagada"
+												/>
+											) : null}
+											{a.paqueteId ? (
+												<span
+													className="shrink-0 rounded bg-violet-200/90 px-0.5 text-[0.55rem] font-semibold text-violet-900"
+													title="Paquete prepago"
+												>
+													Paq.
+												</span>
+											) : null}
+										</div>
+										<div className="mt-0.5 text-xs text-slate-600">
+											{serviceLabelFromSettings(settings, a.serviceType)}
+										</div>
+										<div className="mt-0.5 text-xs tabular-nums text-slate-700">
+											{formatTimeLabel(a.startTime, settings.timeDisplay)} –{" "}
+											{formatTimeLabel(a.endTime, settings.timeDisplay)}
+										</div>
+									</button>
 								</li>
 							))}
 						</ul>

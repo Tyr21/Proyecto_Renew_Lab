@@ -129,6 +129,7 @@ pub fn run() {
 			clientes::actualizar_cliente,
 			clientes::advertencia_homonimia_cliente,
 			clientes::buscar_clientes,
+			clientes::buscar_cliente_por_documento_exacto,
 			clientes::obtener_cliente,
 			clientes::obtener_resumen_cliente_dashboard,
 			clientes::eliminar_cliente,
