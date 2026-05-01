@@ -31,6 +31,7 @@ import type {
 	ServicioStats,
 	StartupAuthStatus,
 	AdminAuthStatus,
+	ClientesImportResult,
 } from "./types";
 
 export async function getStartupAuthStatus(): Promise<StartupAuthStatus> {
@@ -342,6 +343,16 @@ export async function listarRespaldosLocales(): Promise<BackupFileInfo[]> {
 export async function restaurarRespaldo(sourcePath: string, adminPassword: string): Promise<void> {
 	return appInvoke(TAURI_COMMANDS.restaurarRespaldo, {
 		sourcePath,
+		adminPassword,
+	});
+}
+
+export async function importarClientesDesdeXlsx(
+	filePath: string,
+	adminPassword: string,
+): Promise<ClientesImportResult> {
+	return appInvoke<ClientesImportResult>(TAURI_COMMANDS.importarClientesDesdeXlsx, {
+		filePath,
 		adminPassword,
 	});
 }

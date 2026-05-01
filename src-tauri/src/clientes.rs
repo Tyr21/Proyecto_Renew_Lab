@@ -300,16 +300,12 @@ pub(crate) fn validar_duplicados_al_guardar_cliente(
 	Ok(())
 }
 
-#[tauri::command]
-pub fn crear_cliente(
-	db: State<'_, DbConn>,
-	input: CrearClienteInput,
-) -> Result<ClienteRow, String> {
+/// Inserta un cliente en una conexión ya abierta (misma lógica que el comando `crear_cliente`).
+pub(crate) fn crear_cliente_en_conn(conn: &Connection, input: CrearClienteInput) -> Result<ClienteRow, String> {
 	validate_crear_cliente_input(&input)?;
 	let nombres = format_nombre_propio(input.nombres.trim());
 	let apellidos = format_nombre_propio(input.apellidos.trim());
-	let conn = db.lock().map_err(error::lock)?;
-	validar_duplicados_al_guardar_cliente(&conn, &input, &nombres, &apellidos, None)?;
+	validar_duplicados_al_guardar_cliente(conn, &input, &nombres, &apellidos, None)?;
 	let id = Uuid::new_v4().to_string();
 	let now = Utc::now().to_rfc3339();
 
@@ -348,7 +344,16 @@ pub fn crear_cliente(
 		}
 	})?;
 
-	load_cliente_by_id(&conn, &id)
+	load_cliente_by_id(conn, &id)
+}
+
+#[tauri::command]
+pub fn crear_cliente(
+	db: State<'_, DbConn>,
+	input: CrearClienteInput,
+) -> Result<ClienteRow, String> {
+	let conn = db.lock().map_err(error::lock)?;
+	crear_cliente_en_conn(&conn, input)
 }
 
 #[tauri::command]

@@ -3,6 +3,7 @@ mod appointment_model;
 mod backup;
 mod backup_commands;
 mod clientes;
+mod clientes_import;
 mod commands;
 mod db;
 mod error;
@@ -133,6 +134,7 @@ pub fn run() {
 			clientes::obtener_cliente,
 			clientes::obtener_resumen_cliente_dashboard,
 			clientes::eliminar_cliente,
+			clientes_import::importar_clientes_desde_xlsx,
 			paquetes::crear_paquete,
 			paquetes::crear_cliente_y_paquete,
 			paquetes::listar_paquetes_cliente,

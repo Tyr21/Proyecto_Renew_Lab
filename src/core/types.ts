@@ -279,6 +279,20 @@ export interface ClienteHomonimiaAdvertencia {
 	documentNumber: string;
 }
 
+/** Resultado de importar clientes desde un `.xlsx` (Configuración → Administración). */
+export interface ClientesImportRowError {
+	rowNumber: number;
+	message: string;
+}
+
+export interface ClientesImportResult {
+	imported: number;
+	skippedDuplicateInFile: number;
+	skippedExistingInDb: number;
+	skippedInvalid: number;
+	errors: ClientesImportRowError[];
+}
+
 /** Cita resumida para la ficha del cliente (historial / próximas). */
 export interface CitaResumenCliente {
 	id: string;

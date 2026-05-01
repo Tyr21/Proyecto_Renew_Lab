@@ -10,6 +10,7 @@ import { logger } from "../../core/logger";
 import { AdminPasswordAdminSection } from "./AdminPasswordAdminSection";
 import { AppUpdateSection } from "./AppUpdateSection";
 import { BackupRestoreSection } from "./BackupRestoreSection";
+import { ClientesImportSection } from "./ClientesImportSection";
 import { StartupPasswordAdminSection } from "./StartupPasswordAdminSection";
 import { UnsavedSettingsLeaveDialog } from "../../components/UnsavedSettingsLeaveDialog";
 import { formatCurrency, parseCurrencyDigits } from "../../core/currencyFormat";
@@ -962,6 +963,7 @@ export function SettingsPanel({
 
 							<StartupPasswordAdminSection adminModeActive={draft.adminMode ?? false} />
 							{(draft.adminMode ?? false) ? <AdminPasswordAdminSection /> : null}
+							<ClientesImportSection adminModeActive={draft.adminMode ?? false} />
 						</section>
 					)}
 

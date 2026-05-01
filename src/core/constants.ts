@@ -109,6 +109,7 @@ export const TAURI_COMMANDS = {
 	obtenerUltimaLecturaOxigeno: "obtener_ultima_lectura_oxigeno",
 	listarRespaldosLocales: "listar_respaldos_locales",
 	restaurarRespaldo: "restaurar_respaldo",
+	importarClientesDesdeXlsx: "importar_clientes_desde_xlsx",
 } as const;
 
 /** Prefijo y extensión de los archivos de respaldo (alineado con backend `backup.rs`). */

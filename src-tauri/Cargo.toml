@@ -31,6 +31,7 @@ kamadak-exif = "0.6"
 tauri-plugin-log = "2.8.0"
 tauri-plugin-dialog = "2"
 log = "0.4.29"
+calamine = "0.26"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-process = "2"
