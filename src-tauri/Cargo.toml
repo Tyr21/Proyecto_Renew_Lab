@@ -1,6 +1,6 @@
 [package]
 name = "tauri-app"
-version = "0.1.1"
+version = "0.1.0"
 description = "Consultorio Renew Lab — app de escritorio local (Tauri + SQLite) para gestionar citas, clientes, finanzas y facturación de consultorios de cámaras hiperbáricas y sueroterapia."
 authors = ["Lucas Peláez Ospina <lucasp19@hotmail.com>"]
 edition = "2021"

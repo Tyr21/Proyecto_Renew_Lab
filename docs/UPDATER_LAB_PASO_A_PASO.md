@@ -9,6 +9,36 @@ El repositorio debe ser **público** (o la URL raw del JSON debe abrirse **sin l
 
 ---
 
+## PC de prueba con la **0.1.0** correcta (mismas claves que la 0.1.1)
+
+La app **0.1.0** que tengas instalada debe salir del **mismo** `release:build:win:lab` que usarás después para la **0.1.1**, **sin** ejecutar `npm run updater:lab:init` entre medias (ese comando **regenera** `.updater-lab-demo` y rompe la pareja de firmas).
+
+**En el PC donde compilas:**
+
+1. **No** ejecutes `updater:lab:init` si ya lo hiciste antes y quieres conservar esas claves.
+2. Pon el proyecto en **0.1.0**:
+
+   ```powershell
+   npm run version:bump -- 0.1.0
+   npm run release:check
+   ```
+
+3. Compila el instalador de laboratorio:
+
+   ```powershell
+   npm run release:build:win:lab
+   ```
+
+4. Copia al PC de prueba (pendrive, red, etc.) **este archivo** y ejecútalo (instala o reinstala encima):
+
+   `src-tauri\target\release\bundle\nsis\Consultorio Renew Lab_0.1.0_x64-setup.exe`
+
+5. Opcional: vuelve la versión del repo a **0.1.1** para seguir desarrollando (`npm run version:bump -- 0.1.1`) **después** de haber guardado/copiado el `.exe` de 0.1.0 que necesitas.
+
+En el PC de prueba, si dudas, **desinstala** la app anterior desde *Aplicaciones* de Windows y luego instala este **0.1.0** nuevo.
+
+---
+
 ## Checklist — Ya tienes la **0.1.0** instalada en el PC de prueba
 
 Haz todo en el **PC donde compilas** salvo el último bloque.
