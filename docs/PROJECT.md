@@ -53,6 +53,10 @@ Comportamientos que deben mantenerse al evolucionar el código:
 
 ## Documentos relacionados
 
+- [PRINCIPIANTES_VERSIONES_Y_ACTUALIZACIONES.md](./PRINCIPIANTES_VERSIONES_Y_ACTUALIZACIONES.md) — vocabulario sencillo: instalador, versión, actualizaciones.
 - [MANUAL_USUARIO.md](./MANUAL_USUARIO.md) — guía de uso para personal del consultorio (pantallas, opciones, seguridad y actualizaciones in-app).
+- [UPDATES.md](./UPDATES.md) — referencia técnica del updater (HTTPS, minisign).
+- [RELEASE_QUICKSTART.md](./RELEASE_QUICKSTART.md) — checklist para publicar versiones y manifiesto del updater.
+- [UPDATER_LAB_PASO_A_PASO.md](./UPDATER_LAB_PASO_A_PASO.md) — prueba guiada del updater sin claves de producción.
 - [ARQUITECTURA.md](./ARQUITECTURA.md) — stack, base de datos, eventos.
 - [README.md](../README.md) — arranque rápido del entorno de desarrollo.

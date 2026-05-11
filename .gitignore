@@ -37,7 +37,11 @@ dist-ssr
 /certificate/
 src-tauri/tauri-signing.ci.json
 src-tauri/tauri-release.ci.json
+src-tauri/tauri-release.local.json
 
-# Claves minisign del updater (solo la pública va en tauri.conf.json versionado)
+# Laboratorio updater (claves locales; no commitear la privada)
+src-tauri/.updater-lab-demo
+src-tauri/.updater-lab-demo.pub
+src-tauri/tauri.updater-lab.json
 src-tauri/.updater-key.local
 src-tauri/.updater-key.local.pub

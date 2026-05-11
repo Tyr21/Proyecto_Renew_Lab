@@ -178,7 +178,7 @@ En esta sección la aplicación puede **comprobar** si existe una versión más 
 - Si no hay actualización disponible, verá un mensaje indicando que está al día. Si hay **fallo de red** o el servicio del proveedor no responde, verá un mensaje de error: puede **seguir trabajando** con normalidad hasta la próxima vez que intente actualizar.
 - **Windows SmartScreen** u otros avisos de seguridad pueden aparecer al ejecutar un instalador, sobre todo si no está firmado con un certificado de código costumbre; eso depende de Microsoft y de la política del consultorio, no del contenido de la base de datos.
 - **Datos del consultorio (citas, clientes, facturas, etc.):** la información se guarda en un **archivo de base de datos en el equipo**, en una carpeta de datos de usuario **independiente** de donde se instala el programa. En una **actualización normal por este mecanismo**, esa base **suele conservarse**; no por ello debe dejar de usar **Respaldos** (sección 7.5) y copias externas antes de cambios importantes.
-- Detalle técnico del canal (manifiesto HTTPS, publicación de versiones): [UPDATES.md](./UPDATES.md). Resumen para quien mantiene el despliegue: sección **12** de este manual.
+- Detalle técnico del canal (manifiesto HTTPS, publicación de versiones): [UPDATES.md](./UPDATES.md). Resumen para quien mantiene el despliegue: sección **12** de este manual. **Introducción en lenguaje sencillo:** [PRINCIPIANTES_VERSIONES_Y_ACTUALIZACIONES.md](./PRINCIPIANTES_VERSIONES_Y_ACTUALIZACIONES.md).
 
 ### 7.8 Administración
 
@@ -249,6 +249,7 @@ Con el modo administrador activo puede **cambiar** o **eliminar** la contraseña
 
 Para desarrolladores o personal de soporte IT:
 
+- [PRINCIPIANTES_VERSIONES_Y_ACTUALIZACIONES.md](./PRINCIPIANTES_VERSIONES_Y_ACTUALIZACIONES.md) — instalador, versiones y actualizaciones, explicado sin jerga.
 - [PROJECT.md](./PROJECT.md) — visión del producto y fases.
 - [ARQUITECTURA.md](./ARQUITECTURA.md) — detalle técnico de datos y comportamiento del sistema.
 
@@ -265,7 +266,8 @@ Esta sección aclara **quién hace qué** cuando existe el canal de **actualizac
 
 ### 12.2 Quien mantiene o distribuye la aplicación (IT / desarrollador)
 
-- Publica una **nueva versión** según el flujo del repositorio: versión en `package.json`, cambios en registro de versiones, tag `vX.Y.Z`, artefactos de instalador y firma de actualización (minisign), y **manifiesto JSON** servido por **HTTPS** con la URL y firma del paquete adecuado para Windows. Guía detallada: [UPDATES.md](./UPDATES.md) y sección _Releases_ del [README.md](../README.md).
+- Publica una **nueva versión** según el flujo del repositorio: versión en `package.json`, cambios en registro de versiones, tag `vX.Y.Z`, artefactos de instalador y firma de actualización (minisign), y **manifiesto JSON** servido por **HTTPS** con la URL y firma del paquete adecuado para Windows.
+- Guías: técnica en [UPDATES.md](./UPDATES.md) y sección _Releases_ del [README.md](../README.md); **lenguaje llano** en [PRINCIPIANTES_VERSIONES_Y_ACTUALIZACIONES.md](./PRINCIPIANTES_VERSIONES_Y_ACTUALIZACIONES.md) y checklist en [RELEASE_QUICKSTART.md](./RELEASE_QUICKSTART.md).
 - Se asegura de que el **identificador** de la aplicación en Tauri **no cambie** entre versiones si se desea conservar la **misma carpeta de datos** en cada equipo (misma “identidad” de app = misma ruta de base de datos por defecto).
 - Opcionalmente firma el instalador con **certificado de código** (Authenticode) para mejorar la experiencia con **SmartScreen**; es independiente de la firma minisign del canal updater.
 

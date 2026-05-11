@@ -4,10 +4,13 @@ Aplicación de **escritorio local** para gestionar citas de **cámaras hiperbár
 
 ## Documentación canónica
 
+- **[docs/PRINCIPIANTES_VERSIONES_Y_ACTUALIZACIONES.md](docs/PRINCIPIANTES_VERSIONES_Y_ACTUALIZACIONES.md)** — ideas básicas (instalador, versión, actualización) sin jerga.
 - **[docs/PROJECT.md](docs/PROJECT.md)** — visión del producto, fases e hitos.
 - **[docs/ARQUITECTURA.md](docs/ARQUITECTURA.md)** — stack, esquema de datos y eventos de dominio.
 - **[docs/MANUAL_USUARIO.md](docs/MANUAL_USUARIO.md)** — manual de uso (consultorio); incluye **7.7** y **12** sobre actualizaciones y datos.
-- **[docs/UPDATES.md](docs/UPDATES.md)** — actualizaciones in-app (manifiesto HTTPS, minisign, publicación).
+- **[docs/UPDATES.md](docs/UPDATES.md)** — actualizaciones in-app (referencia técnica). Si te abruma, lee antes [docs/PRINCIPIANTES_VERSIONES_Y_ACTUALIZACIONES.md](docs/PRINCIPIANTES_VERSIONES_Y_ACTUALIZACIONES.md).
+- **[docs/RELEASE_QUICKSTART.md](docs/RELEASE_QUICKSTART.md)** — checklist: desarrollo diario y publicar actualización (`release:build:win`, `release:write-manifest`).
+- **[docs/UPDATER_LAB_PASO_A_PASO.md](docs/UPDATER_LAB_PASO_A_PASO.md)** — prueba del updater en laboratorio (sin tocar claves de producción).
 
 ## Requisitos
 
@@ -46,8 +49,13 @@ npm run test:components  # Solo `*.test.tsx` (rutas explícitas en `package.json
 npm run test:e2e     # Playwright contra Vite (UI en navegador; ver abajo)
 npm run tauri dev    # Tauri + Vite (depuración)
 npm run tauri:dev:win   # Windows: Tauri + Vite con perfil WebView2 en %TEMP%
-npm run tauri build  # Empaquetado de la app de escritorio
+npm run tauri build  # Empaquetado de la app de escritorio (sin .sig para updater; ver docs/RELEASE_QUICKSTART.md)
+npm run release:build:win:lab   # Release lab: merge updater de prueba + firmas .sig (usa .updater-lab-demo)
+npm run updater:lab:init   # Genera claves y tauri.updater-lab.json para pruebas del updater
+npm run release:write-manifest  # Regenera docs/releases/latest.json; usar con --url "https://...exe"
 ```
+
+Para publicar el manifiesto HTTPS del updater tras colgar el instalador, véase [docs/RELEASE_QUICKSTART.md](docs/RELEASE_QUICKSTART.md).
 
 ### Calidad de código
 
@@ -111,6 +119,8 @@ La versión del producto vive en **`package.json`** (única fuente de verdad).
 4. `git add -A && git commit -m "chore(release): vX.Y.Z"`.
 5. `git tag vX.Y.Z`.
 6. `git push && git push --tags`.
+
+7. Tras subir el **`.exe` y `.sig`** del release a una URL HTTPS (p. ej. assets del release en GitHub), genere el manifiesto y púselo en git: `npm run release:write-manifest -- --url "https://..."` → commit de `docs/releases/latest.json`. Checklist detallada: [docs/RELEASE_QUICKSTART.md](docs/RELEASE_QUICKSTART.md).
 
 El push del tag dispara [`.github/workflows/ci.yml`](.github/workflows/ci.yml): tras pasar lint/tests/`clippy`, el job `release-build` construye los instaladores Windows (MSI + NSIS), genera firmas **minisign** (`.sig`) para el updater y publica como artifact `tauri-installers-vX.Y.Z` (instaladores + `.sig`). Ese job **requiere** el secreto `TAURI_SIGNING_PRIVATE_KEY` (par alineado con `plugins.updater.pubkey` en `tauri.conf.json`); véase [docs/UPDATES.md](docs/UPDATES.md). Si están configurados los GitHub Secrets de **firma de código** (Authenticode), los artefactos salen firmados; si no, el build sigue siendo válido pero Windows puede mostrar advertencias de SmartScreen en descargas (ver más abajo).
 

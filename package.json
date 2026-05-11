@@ -1,7 +1,7 @@
 {
 	"name": "tauri-app",
 	"private": true,
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"type": "module",
 	"engines": {
 		"node": ">=20.0.0 <25",
@@ -21,6 +21,10 @@
 		"format:check": "prettier --check .",
 		"version:bump": "node scripts/version-bump.mjs",
 		"release:check": "node scripts/release-check.mjs",
+		"release:build:win": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release-build-windows.ps1",
+		"release:build:win:lab": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release-build-windows-lab.ps1",
+		"release:write-manifest": "node scripts/write-release-manifest.mjs",
+		"updater:lab:init": "node scripts/updater-lab-init.mjs",
 		"tauri": "tauri",
 		"tauri:dev:win": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/tauri-dev-windows.ps1"
 	},

@@ -1,6 +1,10 @@
 # Actualizaciones in-app (Tauri Updater)
 
+> **¿Te resulta muy técnico?** Empieza por [PRINCIPIANTES_VERSIONES_Y_ACTUALIZACIONES.md](./PRINCIPIANTES_VERSIONES_Y_ACTUALIZACIONES.md). Para practicar sin miedo: [UPDATER_LAB_PASO_A_PASO.md](./UPDATER_LAB_PASO_A_PASO.md).
+
 **Importante:** el valor de `plugins.updater.pubkey` en `src-tauri/tauri.conf.json` debe formar **par minisign** con el secreto `TAURI_SIGNING_PRIVATE_KEY` en GitHub Actions. Si acaba de clonar el repositorio, genere un par nuevo (`npx tauri signer generate`), actualice la clave pública en `tauri.conf.json` y configure el secreto con la clave privada antes del primer release con updater.
+
+**Flujo resumido (checklist):** [RELEASE_QUICKSTART.md](./RELEASE_QUICKSTART.md) — desarrollo día a día, `release:build:win`, `release:write-manifest`.
 
 Esta aplicación usa el plugin oficial **tauri-plugin-updater**: el binario comprueba un manifiesto JSON en **HTTPS**, descarga el instalador publicado y verifica la firma **minisign** antes de instalar.
 
