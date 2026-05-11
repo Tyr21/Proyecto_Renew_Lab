@@ -1,6 +1,11 @@
 {
 	"version": "0.1.0",
-	"notes": "Plantilla laboratorio updater. Ver docs/UPDATER_LAB_PASO_A_PASO.md para generar el manifiesto con release:write-manifest.",
+	"notes": "Laboratorio: tras compilar, sustituye url y signature con npm run release:write-manifest (ver UPDATER_LAB_PASO_A_PASO.md). Mientras tanto, example.com cumple el formato; la app dirá que no hay actualización si la versión coincide.",
 	"pub_date": "2026-05-08T00:00:00Z",
-	"platforms": {}
+	"platforms": {
+		"windows-x86_64": {
+			"url": "https://example.com/",
+			"signature": "placeholder-sustituir-con-release-write-manifest-tras-publicar-tu-exe"
+		}
+	}
 }
